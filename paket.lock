@@ -106,7 +106,7 @@ NUGET
     Fake.Net.Http (5.20.4)
       Fake.Core.Trace (>= 5.20.4)
       FSharp.Core (>= 4.7.2)
-    Farmer (1.6.8)
+    Farmer (1.6.9)
       FSharp.Core (>= 5.0)
     FParsec (1.1.1)
       FSharp.Core (>= 4.3.4)

@@ -2,8 +2,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
-      <LangVersion>preview</LangVersion>
-      <OutputType>Exe</OutputType>
+    <LangVersion>preview</LangVersion>
+    <OutputType>Exe</OutputType>
+    <TargetLatestRuntimePatch>true</TargetLatestRuntimePatch>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Main.fs" />
