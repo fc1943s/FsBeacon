@@ -22,10 +22,10 @@ module Main =
             let root =
                 match Environment.GetEnvironmentVariable "FSBEACON_HUB_DATA_PATH" with
                 | ""
-                | null -> "."
+                | null -> "./data"
                 | path -> path
 
-            let path = Path.Combine (root, "data", username, $"{key}")
+            let path = Path.Combine (root, username, $"{key}")
             //            printfn $"getPath. username={username} key={key} / path={path}"
             path
 

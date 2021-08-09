@@ -11,7 +11,7 @@ module Program =
         printfn "all done! Template written to output.json"
 
         Peers.deployment
-        |> Deploy.execute (nameof Peers) []
+        |> Deploy.execute $"{nameof FsBeacon}-{nameof Peers}" []
         |> printfn "%A"
 
         0
