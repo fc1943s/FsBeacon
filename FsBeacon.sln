@@ -1,0 +1,53 @@
+﻿Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "repo", "repo", "{AC1CE2EB-72D2-480C-889B-C4940CBC5578}"
+	ProjectSection(SolutionItems) = preProject
+		paket.dependencies = paket.dependencies
+		README.md = README.md
+		.config/dotnet-tools.json = .config/dotnet-tools.json
+		.github/workflows/build.yml = .github/workflows/build.yml
+		.gitignore = .gitignore
+		.editorconfig = .editorconfig
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{74A00DAC-A1C6-400D-8181-30373D536EB9}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Run Configurations", "Run Configurations", "{3598B239-B2BD-440B-B534-8007D49B898B}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FsBeacon.ARM.Peers", "src\FsBeacon.ARM.Peers\FsBeacon.ARM.Peers.fsproj", "{D3F9EAE1-607E-43EA-B691-0A7C0FEA2316}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FsBeacon.HubPeer", "src\FsBeacon.HubPeer\FsBeacon.HubPeer.fsproj", "{39D13AB5-B694-462D-A446-8D3DBD08CA11}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FsBeacon.GunPeer", "src\FsBeacon.GunPeer\FsBeacon.GunPeer.fsproj", "{C7729DCE-9AD3-4406-B235-92BC0C83E65C}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FsBeacon.Shared", "src\FsBeacon.Shared\FsBeacon.Shared.fsproj", "{18B0B008-6C03-4452-97B4-18F9EDED9B87}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{D3F9EAE1-607E-43EA-B691-0A7C0FEA2316}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D3F9EAE1-607E-43EA-B691-0A7C0FEA2316}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D3F9EAE1-607E-43EA-B691-0A7C0FEA2316}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D3F9EAE1-607E-43EA-B691-0A7C0FEA2316}.Release|Any CPU.Build.0 = Release|Any CPU
+		{39D13AB5-B694-462D-A446-8D3DBD08CA11}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{39D13AB5-B694-462D-A446-8D3DBD08CA11}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{39D13AB5-B694-462D-A446-8D3DBD08CA11}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{39D13AB5-B694-462D-A446-8D3DBD08CA11}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C7729DCE-9AD3-4406-B235-92BC0C83E65C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C7729DCE-9AD3-4406-B235-92BC0C83E65C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C7729DCE-9AD3-4406-B235-92BC0C83E65C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C7729DCE-9AD3-4406-B235-92BC0C83E65C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{18B0B008-6C03-4452-97B4-18F9EDED9B87}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{18B0B008-6C03-4452-97B4-18F9EDED9B87}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{18B0B008-6C03-4452-97B4-18F9EDED9B87}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{18B0B008-6C03-4452-97B4-18F9EDED9B87}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{D3F9EAE1-607E-43EA-B691-0A7C0FEA2316} = {74A00DAC-A1C6-400D-8181-30373D536EB9}
+		{39D13AB5-B694-462D-A446-8D3DBD08CA11} = {74A00DAC-A1C6-400D-8181-30373D536EB9}
+		{C7729DCE-9AD3-4406-B235-92BC0C83E65C} = {74A00DAC-A1C6-400D-8181-30373D536EB9}
+		{18B0B008-6C03-4452-97B4-18F9EDED9B87} = {74A00DAC-A1C6-400D-8181-30373D536EB9}
+	EndGlobalSection
+EndGlobal
