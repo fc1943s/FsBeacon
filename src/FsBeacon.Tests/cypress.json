@@ -1,0 +1,7 @@
+{
+  "baseUrl": "https://localhost:9762",
+  "chromeWebSecurity": false,
+  "integrationFolder": "src/Tests",
+  "testFiles": "**/*.spec.fs.js",
+  "video": true
+}

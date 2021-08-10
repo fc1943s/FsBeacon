@@ -204,11 +204,11 @@ module Main =
                             .AllowCredentials()
                             .AllowAnyHeader()
                             .WithOrigins [|
-                                "https://localhost:33929"
+                                "https://localhost:9769"
                             |]
                         |> ignore)
 
-                url "https://0.0.0.0:33921/"
+                url "https://0.0.0.0:9761/"
                 use_gzip
                 disable_diagnostics
                 use_developer_exceptions

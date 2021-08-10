@@ -8,7 +8,8 @@ RUN dotnet paket restore
 COPY . .
 RUN dotnet publish src/FsBeacon.HubPeer/FsBeacon.HubPeer.fsproj --runtime linux-x64 --configuration Release --output /app
 
-FROM mcr.microsoft.com/dotnet/aspnet:6.0-focal
+FROM mcr.microsoft.com/dotnet/sdk:6.0-focal
 WORKDIR /app
+RUN dotnet dev-certs https --trust
 COPY --from=build /app /app
 ENTRYPOINT ["dotnet", "FsBeacon.HubPeer.dll"]

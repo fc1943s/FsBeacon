@@ -99,7 +99,7 @@ module Peers =
             }
 
     module Hub =
-        let serverPort = Port 33929
+        let serverPort = Port 9769
 
         let rec hubPeer (ContainerId containerId) (Storage.FileShareId fileShareId) =
             let rec ``share-hub-peer`` = nameof ``share-hub-peer``
