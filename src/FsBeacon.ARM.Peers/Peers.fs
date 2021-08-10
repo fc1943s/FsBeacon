@@ -99,7 +99,7 @@ module Peers =
             }
 
     module Hub =
-        let serverPort = Port 9769
+        let serverPort = Port 9761
 
         let rec hubPeer (ContainerId containerId) (Storage.FileShareId fileShareId) =
             let rec ``share-hub-peer`` = nameof ``share-hub-peer``
@@ -120,12 +120,10 @@ module Peers =
                         ``share-hub-peer``
                         [
                             let projectDir = "FsBeacon.HubPeer"
+                            let certId = $"{containerId}.eastus.azurecontainer.io"
 
-                            "cert.pem",
-                            (File.ReadAllBytes $"../{projectDir}/ssl/{containerId}.eastus.azurecontainer.io.pem")
-
-                            "key.pem",
-                            (File.ReadAllBytes $"../{projectDir}/ssl/{containerId}.eastus.azurecontainer.io-key.pem")
+                            $"{certId}.pem", (File.ReadAllBytes $"../{projectDir}/ssl/{certId}.pem")
+                            $"{certId}-key.pem", (File.ReadAllBytes $"../{projectDir}/ssl/{certId}-key.pem")
                         ]
                     volume_mount.azureFile
                         fileShareId
@@ -143,8 +141,6 @@ module Peers =
 
                         env_vars [
                             "FSBEACON_HUB_DATA_PATH", $"/data/{fileShareId}/{containerId}-hubdata"
-                            "HTTPS_KEY", "/app/key.pem"
-                            "HTTPS_CERT", "/app/cert.pem"
                         ]
 
                         add_public_ports [

@@ -10,6 +10,7 @@ RUN dotnet publish src/FsBeacon.HubPeer/FsBeacon.HubPeer.fsproj --runtime linux-
 
 FROM mcr.microsoft.com/dotnet/sdk:6.0-focal
 WORKDIR /app
-RUN dotnet dev-certs https --trust
+RUN dotnet dev-certs https -ep /usr/local/share/ca-certificates/aspnet/https.crt --format PEM
+RUN update-ca-certificates
 COPY --from=build /app /app
 ENTRYPOINT ["dotnet", "FsBeacon.HubPeer.dll"]
