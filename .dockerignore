@@ -1,0 +1,12 @@
+**/Dockerfile
+**/platforms
+**/bin
+**/obj
+**/.cache
+**/*.fs.js
+**/.parcel-cache
+**/node_modules
+**/.fable
+**/.git
+**/.paket
+**/.run
