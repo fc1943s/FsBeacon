@@ -3,6 +3,9 @@ name: build
 on:
   push:
     branches: [ main ]
+    tags: [ 'v*.*.*' ]
+  pull_request:
+    branches: [ main ]
 
 jobs:
   build:
@@ -22,3 +25,47 @@ jobs:
       - run: dotnet tool restore
       - run: dotnet paket restore
       - run: dotnet build
+
+      - run: sudo apt-get install libnss3-tools
+
+#      - uses: cypress-io/github-action@v2
+#        with:
+#          working-directory: ./src/FsBeacon.Tests
+#          build: npx cypress info
+#          start: yarn serve
+#          command: yarn cypress-run
+
+      - uses: actions/upload-artifact@v2
+        if: failure()
+        with:
+          name: cypress-screenshots
+          path: ./src/FsBeacon.Tests/cypress/screenshots
+
+      - uses: actions/upload-artifact@v2
+        if: failure()
+        with:
+          name: cypress-videos
+          path: ./src/FsBeacon.Tests/cypress/videos
+
+
+      - uses: actions/checkout@v2
+
+      - uses: docker/login-action@v1
+        if: github.event_name != 'pull_request'
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - id: meta
+        uses: docker/metadata-action@v3
+        with:
+          images: ghcr.io/${{ github.repository }}
+
+      - uses: docker/build-push-action@v2
+        with:
+          context: .
+          file: src/FsBeacon.HubPeer/Dockerfile
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}

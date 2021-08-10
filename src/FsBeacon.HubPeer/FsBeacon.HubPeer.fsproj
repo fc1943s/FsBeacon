@@ -10,6 +10,8 @@
     <Compile Include="Main.fs" />
     <Content Include="paket.references" />
     <Content Include=".gitignore" />
+    <Content Include="Dockerfile" />
+    <Content Include=".dockerignore" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\FsBeacon.Shared\FsBeacon.Shared.fsproj" />
