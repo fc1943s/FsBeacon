@@ -139,7 +139,7 @@ module Peers =
                 add_instances [
                     containerInstance {
                         name (nameof containerInstance)
-                        image "mcr.microsoft.com/dotnet/sdk:6.0-alpine"
+                        image "ghcr.io/fc1943s/fsbeacon:main"
 
                         env_vars [
                             "FSBEACON_HUB_DATA_PATH", $"/data/{fileShareId}/{containerId}-hubdata"
@@ -156,32 +156,6 @@ module Peers =
                         memory 0.2<Gb>
                         add_volume_mount fileShareId $"/data/{fileShareId}"
                         add_volume_mount ``share-hub-peer`` "/app"
-
-                        command_line [
-                            "/bin/sh"
-                            "-c"
-                            [
-                                "cd /app"
-                                "apk add --no-cache git"
-                                "rm -rf FsBeacon"
-                                "git clone https://github.com/fc1943s/FsBeacon.git"
-                                "cd FsBeacon/src/FsBeacon.HubPeer"
-                                "dotnet tool restore"
-                                "dotnet paket restore"
-                                "dotnet restore"
-                                "echo publishing..."
-                                "dotnet publish -v d --no-restore --output /app --configuration Release"
-                                "dotnet build -v d --no-restore --configuration Release"
-                                "ls -al"
-                                "cd /app"
-                                "ls -al"
-                                "echo starting..."
-                                "while true; do dotnet FsBeacon.HubPeer.dll && break"
-                                "sleep 30"
-                                "done"
-                            ]
-                            |> String.concat "; "
-                        ]
                     }
                 ]
             }
