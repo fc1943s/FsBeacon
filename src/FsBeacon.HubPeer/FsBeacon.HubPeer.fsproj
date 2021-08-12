@@ -5,6 +5,9 @@
     <LangVersion>preview</LangVersion>
     <OutputType>Exe</OutputType>
     <TargetLatestRuntimePatch>true</TargetLatestRuntimePatch>
+      <Target Name="PrePublishTarget" AfterTargets="Publish">
+          <Exec Command="dotnet paket restore" />
+      </Target>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Main.fs" />
