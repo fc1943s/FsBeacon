@@ -1,0 +1,8 @@
+{
+  "scripts": {
+    "start": "concurrently \"cd FsBeacon.GunPeer && yarn start\" \"cd FsBeacon.HubPeer && dotnet run\""
+  },
+  "devDependencies": {
+    "concurrently": "~6.2"
+  }
+}

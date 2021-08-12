@@ -204,7 +204,8 @@ module Main =
                             .AllowCredentials()
                             .AllowAnyHeader()
                             .WithOrigins [|
-                                "https://localhost:9769"
+                                "https://localhost:33929"
+                                "https://localhost:33922"
                             |]
                         |> ignore)
 
