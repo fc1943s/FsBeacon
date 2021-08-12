@@ -3,6 +3,8 @@ namespace FsUi.Components
 open Fable.Core
 open FsCore
 open Fable.Core.JsInterop
+open FsCore
+open Fable.Core
 open FsCore.Model
 open Feliz
 open FsJs
@@ -167,6 +169,7 @@ module GunObserver =
 
                                 printfn
                                     $"GunObserver.render: Auth occurred without username.
+                                    user.is={user.is |> Js.objectKeys}
                                     user.is={user.is |> JS.JSON.stringify}
                                     "
                         else
