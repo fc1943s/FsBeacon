@@ -68,9 +68,9 @@ jobs:
           file: src/FsBeacon.HubPeer/Dockerfile
           push: ${{ github.event_name != 'pull_request' }}
           tags: |
-            type=raw,value=hub-main
-            type=sha
             type=ref,event=branch
+            type=sha
+            hub-main
           labels: ${{ steps.hubpeer_meta.outputs.labels }}
 
       - id: gunpeer_meta
@@ -84,7 +84,7 @@ jobs:
           file: src/FsBeacon.GunPeer/Dockerfile
           push: ${{ github.event_name != 'pull_request' }}
           tags: |
-            type=raw,value=hub-main
-            type=sha
             type=ref,event=branch
+            type=sha
+            gun-main
           labels: ${{ steps.gunpeer_meta.outputs.labels }}
