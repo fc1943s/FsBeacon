@@ -63,7 +63,7 @@ module Peers =
                 add_instances [
                     containerInstance {
                         name (nameof containerInstance)
-                        image "node:16.5-alpine"
+                        image "ghcr.io/fc1943s/fsbeacon:gun-main"
 
                         env_vars [
                             "GUN_FILE", $"/data/{fileShareId}/{containerId}-radata"
@@ -80,20 +80,6 @@ module Peers =
                         memory 0.2<Gb>
                         add_volume_mount fileShareId $"/data/{fileShareId}"
                         add_volume_mount ``share-gun-peer`` "/app"
-
-                        command_line [
-                            "/bin/sh"
-                            "-c"
-                            [
-                                "cd /app"
-                                "apk add --no-cache git"
-                                "yarn install"
-                                "while true; do yarn start && break"
-                                "sleep 30"
-                                "done"
-                            ]
-                            |> String.concat "; "
-                        ]
                     }
                 ]
             }
@@ -137,7 +123,7 @@ module Peers =
                 add_instances [
                     containerInstance {
                         name (nameof containerInstance)
-                        image "ghcr.io/fc1943s/fsbeacon:main"
+                        image "ghcr.io/fc1943s/fsbeacon:hub-main"
 
                         env_vars [
                             "FSBEACON_HUB_DATA_PATH", $"/data/{fileShareId}/{containerId}-hubdata"

@@ -1,8 +1,8 @@
 {
   "scripts": {
     "gun":"cd src/FsBeacon.GunPeer && yarn install && yarn start",
-    "hub":"cd src/FsBeacon.HubPeer && dotnet tool restore && dotnet paket restore && dotnet run",
-    "start": "pwd && ls -al && concurrently \"yarn:gun\" \"yarn:hub\""
+    "x": "src/FsBeacon.GunPeer/ssl",
+    "start": "yarn gun"
   },
   "devDependencies": {
     "concurrently": "~6.2"

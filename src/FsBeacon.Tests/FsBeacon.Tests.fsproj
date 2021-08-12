@@ -4,5 +4,19 @@
     <TargetFramework>net6.0</TargetFramework>
     <LangVersion>preview</LangVersion>
   </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="src\Main.fs" />
+    <TypeScriptCompile Include="src\index.ts" />
+    <Compile Include="src\App.fs" />
+    <TypeScriptCompile Include="src\react-app-env.d.ts" />
+    <Content Include="src\react-app-env.d.js" />
+    <Content Include="src\setupProxy.js" />
+    <Content Include="src\wdyr.js" />
+    <Content Include="tsconfig.json" />
+    <Content Include="paket.references" />
+    <Content Include="yarn.lock" />
+    <Content Include="package.json" />
+    <Content Include="cypress.json" />
+  </ItemGroup>
   <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>

@@ -5,9 +5,14 @@ source https://api.nuget.org/v3/index.json
 
 nuget FSharp.Core ~> 5.0
 
+
 // FsBeacon.HubPeer
 nuget Fable.SignalR.Saturn ~> 0.11
 nuget FSharp.Control.AsyncSeq ~> 3.0
+
+
+// FsBeacon.Tests
+nuget Feliz
 
 // Build
 nuget Fake.Core.Target ~> 5.20 prerelease
@@ -16,3 +21,21 @@ nuget Fake.IO.FileSystem ~> 5.20 prerelease
 
 // Deploy
 nuget Farmer ~> 1.6
+
+
+
+// FsCore
+
+// FsJs
+nuget Fable.DateFunctions ~> 3.6
+nuget Fable.Extras ~> 0.4
+nuget Thoth.Json ~> 6.0
+
+// FsStore
+nuget Fable.SignalR ~> 0.11
+
+nuget Fable.Jester ~> 0.33
+nuget Fable.ReactTestingLibrary ~> 0.33
+
+// FsUi
+nuget Feliz.Router ~> 3.8

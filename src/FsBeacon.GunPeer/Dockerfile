@@ -9,4 +9,5 @@ COPY src/FsBeacon.GunPeer /app
 FROM node:16.5-alpine
 WORKDIR /app
 COPY --from=build /app /app
+EXPOSE 8765
 ENTRYPOINT ["yarn", "start"]
