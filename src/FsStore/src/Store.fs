@@ -555,7 +555,7 @@ ticks={ticks}
         skipping subscribe, no gun atom node.")
             }
 
-        let debouncedSubscribe = JS.debounce (subscribe >> Promise.start) 100
+        let debouncedSubscribe = Js.debounce (subscribe >> Promise.start) 100
 
         let putFromUi newValue =
             promise {
@@ -570,7 +570,7 @@ ticks={ticks}
 
                         let! newValueJson =
                             promise {
-                                if newValue |> JS.ofNonEmptyObj |> Option.isNone then
+                                if newValue |> Js.ofNonEmptyObj |> Option.isNone then
                                     return null
                                 else
                                     let! (Gun.EncryptedSignedValue encrypted) =
@@ -696,7 +696,7 @@ skipping gun put. no gun atom node.
         let batchPutFromUi newValue =
             Batcher.batch (Batcher.BatchType.Set (fun () -> putFromUi newValue))
 
-        let debouncedPutFromUi = JS.debounce batchPutFromUi 100
+        let debouncedPutFromUi = Js.debounce batchPutFromUi 100
 
         let rec wrapper =
             Primitives.selector
@@ -822,7 +822,7 @@ newValue={newValue} jsTypeof-newValue={jsTypeof newValue}
 
                                 lastValue <- Some (DateTime.Now.Ticks, newValue)
 
-                                if JS.jestWorkerId then
+                                if Js.jestWorkerId then
                                     match splitAtomPath atomPath with
                                     | Some (root, guid) ->
                                         let newSet =
@@ -891,7 +891,7 @@ newValue={newValue} jsTypeof-newValue={jsTypeof newValue}
                     let userAtom = internalAtom (syncEngine.GetUsername ())
 
                     let result =
-                        if not JS.jestWorkerId then
+                        if not Js.jestWorkerId then
                             Store.value getter userAtom
                         else
                             match syncEngine.GetAtomPath () with
@@ -1178,7 +1178,7 @@ newValue={newValue} jsTypeof-newValue={jsTypeof newValue}
                                                     skipping subscribe, no gun atom node.")
             }
 
-        let debouncedSubscribe = JS.debounce (subscribe >> Promise.start) 100
+        let debouncedSubscribe = Js.debounce (subscribe >> Promise.start) 100
 
         let unsubscribe () =
             match lastSubscription with

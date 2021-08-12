@@ -5,7 +5,7 @@ open FsUi.Bindings
 
 module InputLabelIconButton =
     let inline InputLabelIconButton props =
-        UI.iconButton
+        Ui.iconButton
             (fun x ->
                 x.border <- "0"
                 x.color <- "heliotrope"

@@ -43,13 +43,13 @@ module Input =
     [<ReactComponent>]
     let Input
         (input: {| CustomProps: IProps<'TValue, 'TKey> -> unit
-                   Props: UI.IChakraProps -> unit |})
+                   Props: Ui.IChakraProps -> unit |})
         =
         let fontSize = Store.useValue Atoms.Ui.fontSize
 
         let props, customProps =
             React.useMemo (
-                (fun () -> JS.newObj input.Props, JS.newObj input.CustomProps),
+                (fun () -> Js.newObj input.Props, Js.newObj input.CustomProps),
                 [|
                     box input.CustomProps
                     box input.Props
@@ -117,7 +117,7 @@ module Input =
             Store.useCallbackRef
                 (fun _ _ _ ->
                     promise {
-                        inputRef.current.dispatchEvent (JS.createEvent "change" {| bubbles = true |})
+                        inputRef.current.dispatchEvent (Js.createEvent "change" {| bubbles = true |})
                         |> ignore
                     })
 
@@ -205,7 +205,7 @@ module Input =
                 |]
             )
 
-        UI.stack
+        Ui.stack
             (fun x ->
                 x.spacing <- "5px"
                 x.flex <- "1")
@@ -221,12 +221,12 @@ module Input =
                             Props = fun _ -> ()
                         |}
 
-                UI.box
+                Ui.box
                     (fun x ->
                         x.position <- "relative"
                         x.flex <- "1")
                     [
-                        (if customProps.textarea then UI.textarea else UI.input)
+                        (if customProps.textarea then Ui.textarea else Ui.input)
                             (fun x ->
                                 x.onChange <- onChange
 
@@ -239,7 +239,7 @@ module Input =
                                         }
 
                                 x.ref <- inputRef
-                                x._focus <- JS.newObj (fun x -> x.borderColor <- "heliotrope")
+                                x._focus <- Js.newObj (fun x -> x.borderColor <- "heliotrope")
                                 x.borderColor <- "gray.30"
                                 x.borderRadius <- "4px"
                                 x.backgroundColor <- "gray.10"
@@ -346,7 +346,7 @@ module Input =
 
                         match rightButton with
                         | Some rightButton ->
-                            UI.stack
+                            Ui.stack
                                 (fun x ->
                                     x.position <- "absolute"
                                     x.right <- "1px"
@@ -365,9 +365,9 @@ module Input =
     let inline LeftIconInput
         (input: {| Icon: ReactElement
                    CustomProps: IProps<'TValue, 'TKey> -> unit
-                   Props: UI.IChakraProps -> unit |})
+                   Props: Ui.IChakraProps -> unit |})
         =
-        UI.flex
+        Ui.flex
             (fun x ->
                 x.flex <- "1"
                 x.position <- "relative")
@@ -381,7 +381,7 @@ module Input =
                                 input.Props x
                     |}
 
-                UI.flex
+                Ui.flex
                     (fun x ->
                         x.position <- "absolute"
                         x.left <- "12px"

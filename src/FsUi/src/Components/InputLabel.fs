@@ -10,9 +10,9 @@ module InputLabel =
         (input: {| Label: ReactElement
                    Hint: ReactElement option
                    HintTitle: ReactElement option
-                   Props: UI.IChakraProps -> unit |})
+                   Props: Ui.IChakraProps -> unit |})
         =
-        UI.flex
+        Ui.flex
             input.Props
             [
                 input.Label

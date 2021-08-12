@@ -4,8 +4,8 @@ open FsUi.Bindings
 
 
 module TransparentIconButton =
-    let inline TransparentIconButton (input: {| Props: UI.IChakraProps -> unit |}) =
-        UI.iconButton
+    let inline TransparentIconButton (input: {| Props: Ui.IChakraProps -> unit |}) =
+        Ui.iconButton
             (fun x ->
                 x.backgroundColor <- "transparent"
                 x.variant <- "outline"

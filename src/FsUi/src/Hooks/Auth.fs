@@ -144,7 +144,7 @@ module rec Auth =
                         let gun = Store.value getter Selectors.Gun.gun
                         let user = gun.user ()
 
-                        printfn $"Auth.useSignUp. user.is={user.is |> JS.objectKeys}"
+                        printfn $"Auth.useSignUp. user.is={user.is |> Js.objectKeys}"
 
                         let! ack = Gun.createUser user (Gun.Alias username) (Gun.Pass password)
 

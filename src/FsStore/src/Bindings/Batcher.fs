@@ -22,7 +22,7 @@ module Batcher =
         let lock = fun () -> ()
 
         fun (x: 'TKey) ->
-            JS.jsCall newFn x lock
+            Js.jsCall newFn x lock
             ()
 
     [<RequireQualifiedAccess>]

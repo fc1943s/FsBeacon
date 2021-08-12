@@ -175,4 +175,3 @@ module HooksMagic =
 //    let inline useSetStatePrev<'T> atom =
 //        let setter = jotaiUtils.useUpdateAtom<'T> atom
 //        fun (value: 'T -> 'T) -> setter (unbox value)
-

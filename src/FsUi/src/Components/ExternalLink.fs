@@ -16,12 +16,12 @@ module ExternalLink =
     let inline ExternalLink
         (input: {| Link: ReactElement
                    Href: string
-                   Props: UI.IChakraProps -> unit |})
+                   Props: Ui.IChakraProps -> unit |})
         =
         Tooltip.wrap
             (str input.Href)
             [
-                UI.link
+                Ui.link
                     (fun x ->
                         x.href <- input.Href
                         x.isExternal <- true

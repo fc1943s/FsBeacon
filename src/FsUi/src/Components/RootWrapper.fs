@@ -1,5 +1,6 @@
 namespace FsUi.Components
 
+open Fable.Core
 open FsStore
 open FsUi.State
 open Fable.React
@@ -17,10 +18,20 @@ module RootWrapper =
 
         Profiling.addCount "ThemeLoader().render"
 
-        UI.provider
-            (fun x -> x.theme <- theme)
+        let newTheme =
+            React.useMemo (
+                (fun () -> Ui.react.extendTheme (JsInterop.toPlainJsObj ({|  |} ++ theme))),
+                [|
+                    box theme
+                |]
+            )
+
+//        printfn $"ThemeLoader newTheme={JS.JSON.stringify newTheme} theme={theme}"
+
+        Ui.provider
+            (fun x -> x.theme <- newTheme)
             [
-                (if darkMode then UI.darkMode else UI.lightMode)
+                (if darkMode then Ui.darkMode else Ui.lightMode)
                     (fun _ -> ())
                     [
                         React.router [

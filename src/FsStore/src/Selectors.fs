@@ -145,8 +145,8 @@ lastValue={lastValue}
                                                      match x.alias with
                                                      | Some (GunUserAlias.Alias username) -> username
                                                      | _ -> Alias null)}
-                            user().is={user.is |> JS.objectKeys}
-                            user().__.sea={user.__.sea |> JS.objectKeys}..."
+                            user().is={user.is |> Js.objectKeys}
+                            user().__.sea={user.__.sea |> Js.objectKeys}..."
 
                     user :> Types.IGunNode)
 

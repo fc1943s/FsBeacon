@@ -154,7 +154,7 @@ module GunObserver =
                                 // @@@@ getImmutableUsername pub
 
                                 printfn
-                                    $"GunObserver.render: Auth occurred without username: {user.is |> JS.objectKeys}"
+                                    $"GunObserver.render: Auth occurred without username: {user.is |> Js.objectKeys}"
                         else
                             printfn $"GunObserver.render: already disposed gun={gun}")
                 )),

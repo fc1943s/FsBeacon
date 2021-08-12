@@ -9,7 +9,7 @@ module TestComponent =
     [<ReactComponent>]
     let TestComponent () =
 
-        UI.box
+        Ui.box
             (fun _ -> ())
             [
                 str "ready"

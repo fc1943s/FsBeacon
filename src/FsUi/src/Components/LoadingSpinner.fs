@@ -5,19 +5,19 @@ open FsUi.Bindings
 
 module LoadingSpinner =
     let inline LoadingSpinner () =
-        UI.center
+        Ui.center
             (fun x -> x.flex <- "1")
             [
-                UI.stack
+                Ui.stack
                     (fun x -> x.alignItems <- "center")
                     [
                         Spinner.Spinner (fun _ -> ())
-                        UI.str "Loading..."
+                        Ui.str "Loading..."
                     ]
             ]
 
     let inline InlineLoadingSpinner () =
-        UI.flex
+        Ui.flex
             (fun x -> x.alignItems <- "center")
             [
                 Spinner.Spinner

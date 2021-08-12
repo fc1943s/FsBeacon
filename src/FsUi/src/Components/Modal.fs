@@ -7,7 +7,7 @@ open FsUi.Bindings
 
 module Modal =
     type IProps =
-        inherit UI.IChakraProps
+        inherit Ui.IChakraProps
 
     [<RequireQualifiedAccess>]
     type LocalState =
@@ -38,26 +38,26 @@ module Modal =
         if not props.isOpen && localState = LocalState.Closed then
             nothing
         else
-            UI.modal
+            Ui.modal
                 (fun x ->
                     //                x.isCentered <- true
                     x.isLazy <- true
                     x.isOpen <- props.isOpen
                     x.onClose <- props.onClose)
                 [
-                    UI.modalOverlay (fun _ -> ()) []
-                    UI.modalContent
+                    Ui.modalOverlay (fun _ -> ()) []
+                    Ui.modalContent
                         (fun x ->
                             x.backgroundColor <- "gray.13"
                             x.maxWidth <- "95vw"
                             x.maxHeight <- "80vh"
                             x.overflow <- "auto")
                         [
-                            UI.modalBody
+                            Ui.modalBody
                                 (fun x -> x.padding <- "40px")
                                 [
                                     yield! props.children
                                 ]
-                            UI.modalCloseButton (fun _ -> ()) []
+                            Ui.modalCloseButton (fun _ -> ()) []
                         ]
                 ]

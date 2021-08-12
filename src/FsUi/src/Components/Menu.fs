@@ -10,17 +10,17 @@ open FsCore
 
 module Menu =
     [<ReactComponent>]
-    let FakeMenuButton (cmp: (UI.IChakraProps -> unit) -> ReactElement) (props: UI.IChakraProps -> unit) =
-        let menuContext = UI.react.useMenuContext ()
+    let FakeMenuButton (cmp: (Ui.IChakraProps -> unit) -> ReactElement) (props: Ui.IChakraProps -> unit) =
+        let menuContext = Ui.react.useMenuContext ()
 
         let menuButtonProps =
             match menuContext |> Option.ofObjUnbox with
-            | Some _ -> UI.react.useMenuButton (box {|  |})
-            | None -> React.useMemo ((fun () -> JS.newObj (fun _ -> ())), [||])
+            | Some _ -> Ui.react.useMenuButton (box {|  |})
+            | None -> React.useMemo ((fun () -> Js.newObj (fun _ -> ())), [||])
 
         cmp
             (fun x ->
-                x.``as`` <- UI.react.Box
+                x.``as`` <- Ui.react.Box
                 x.tabIndex <- 0
                 x <+ menuButtonProps
 
@@ -46,9 +46,9 @@ module Menu =
         (input: {| Tooltip: string
                    Trigger: ReactElement
                    Body: seq<ReactElement>
-                   MenuListProps: UI.IChakraProps -> unit |})
+                   MenuListProps: Ui.IChakraProps -> unit |})
         =
-        UI.menu
+        Ui.menu
             (fun x ->
                 x.isLazy <- true
                 x.closeOnSelect <- false)
@@ -58,9 +58,9 @@ module Menu =
                     [
                         input.Trigger
                     ]
-                UI.menuList
+                Ui.menuList
                     (fun x ->
-                        x.``as`` <- UI.react.Stack
+                        x.``as`` <- Ui.react.Stack
                         x.spacing <- "2px"
                         x.backgroundColor <- "gray.13"
                         input.MenuListProps x)

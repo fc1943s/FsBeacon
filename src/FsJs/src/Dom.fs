@@ -91,7 +91,7 @@ module Dom =
                     IsElectron = jsTypeof window?electronApi = "object"
                     IsExtension = window.location.protocol = "chrome-extension:"
                     GitHubPages = window.location.host.EndsWith "github.io"
-                    IsTesting = JS.jestWorkerId || window?Cypress <> null
+                    IsTesting = Js.jestWorkerId || window?Cypress <> null
                 }
 
             printfn $"deviceInfo={JS.JSON.stringify deviceInfo}"
@@ -159,7 +159,7 @@ module Dom =
                 else
                     printfn "waitFor: false. waiting..."
 
-                    do! JS.sleep 100
+                    do! Js.sleep 100
                     return! waitFor fn
         }
 
@@ -174,7 +174,7 @@ module Dom =
                 | null ->
                     printfn "waitForObject: null. waiting..."
 
-                    do! JS.sleep 100
+                    do! Js.sleep 100
                     return! waitForObject fn
                 | _ -> return obj
         }
@@ -190,10 +190,10 @@ module Dom =
                 | Some obj -> return obj
                 | None ->
                     if deviceInfo.IsTesting then
-                        do! JS.sleep 0
+                        do! Js.sleep 0
                     else
                         consoleLog ("waitForSome: none. waiting...", fn.ToString ())
-                        do! JS.sleep 100
+                        do! Js.sleep 100
 
                     return! waitForSome fn
         }

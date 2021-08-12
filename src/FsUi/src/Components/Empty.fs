@@ -8,7 +8,7 @@ open FsUi.Bindings
 module Empty =
     [<ReactComponent>]
     let Empty props =
-        UI.box
+        Ui.box
             (fun x -> props x)
             [
                 str ""

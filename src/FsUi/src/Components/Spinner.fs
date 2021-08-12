@@ -5,7 +5,7 @@ open FsUi.Bindings
 
 module Spinner =
     let inline Spinner props =
-        UI.spinner
+        Ui.spinner
             (fun x ->
                 x.size <- "xl"
                 props x)

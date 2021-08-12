@@ -9,7 +9,7 @@ open Fable.React
 open Feliz
 
 
-module UI =
+module Ui =
     open React
 
     type IBreakpoints<'T> =
@@ -270,7 +270,7 @@ module UI =
 //        renderComponent cmp newProps children
 
     let inline renderChakraComponent (cmp: obj) (props: IChakraProps -> unit) children =
-        renderComponent cmp (JS.newObj props) children
+        renderComponent cmp (Js.newObj props) children
 
     //        chakraMemo
 //            {|
@@ -484,15 +484,14 @@ module UI =
         abstract duration : int with get, set
         abstract isClosable : bool with get, set
 
-    let inline useDisclosure () =
-        react.useDisclosure ()
+    let inline useDisclosure () = react.useDisclosure ()
 
     let useToast () =
         let toast = react.useToast ()
 
         let toastFn (props: IToastProps -> unit) =
             toast.Invoke (
-                JS.newObj
+                Js.newObj
                     (fun (x: IToastProps) ->
                         x.title <- "Error"
                         x.status <- "error"

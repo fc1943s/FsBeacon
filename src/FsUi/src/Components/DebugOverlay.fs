@@ -76,7 +76,7 @@ module DebugOverlay =
 //                        str "test1"
 //                    ]
 
-            UI.box
+            Ui.box
                 (fun x ->
                     x.width <- "min-content"
                     x.height <- if showDebug then "60%" else "initial"

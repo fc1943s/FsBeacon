@@ -19,7 +19,7 @@ module DropdownMenuButton =
                         (if input.Checked then
                              Icons.fi.FiCheck |> Icons.render
                          else
-                             UI.box (fun x -> x.width <- "11px") []),
+                             Ui.box (fun x -> x.width <- "11px") []),
                         Button.IconPosition.Left
                     )
                 Props =

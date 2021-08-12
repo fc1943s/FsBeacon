@@ -12,13 +12,13 @@ module Tooltip =
         let ref = React.useElementRef ()
         let hovered = Listener.useElementHover ref
 
-        UI.box
+        Ui.box
             (fun x ->
                 x.``as`` <- "span"
                 x.ref <- ref
                 wrapperProps x)
             [
-                UI.tooltip
+                Ui.tooltip
                     (fun x ->
                         x.isLazy <- true
                         x.isOpen <- hovered

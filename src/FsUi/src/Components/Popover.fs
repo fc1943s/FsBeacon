@@ -12,15 +12,15 @@ module Popover =
         (input: {| Trigger: ReactElement
                    CloseButton: bool
                    Padding: string option
-                   Body: UI.Disclosure * (unit -> IRefValue<unit>) -> ReactElement list
-                   Props: UI.IChakraProps -> unit |})
+                   Body: Ui.Disclosure * (unit -> IRefValue<unit>) -> ReactElement list
+                   Props: Ui.IChakraProps -> unit |})
         =
-        let disclosure = UI.useDisclosure ()
+        let disclosure = Ui.useDisclosure ()
 
         let initialFocusRef = React.useRef ()
 
         if not disclosure.isOpen then
-            UI.box
+            Ui.box
                 (fun x ->
                     x.display <- "inline"
 
@@ -34,10 +34,10 @@ module Popover =
                     input.Trigger
                 ]
         else
-            UI.box
+            Ui.box
                 (fun x -> x.display <- "inline")
                 [
-                    UI.popover
+                    Ui.popover
                         (fun x ->
                             //                            x.isLazy <- true
 
@@ -52,10 +52,10 @@ module Popover =
                             x.onClose <- fun x -> promise { disclosure.onClose x }
                             input.Props x)
                         [
-                            UI.popoverTrigger
+                            Ui.popoverTrigger
                                 (fun _ -> ())
                                 [
-                                    UI.box
+                                    Ui.box
                                         (fun x -> x.display <- "inline")
                                         [
                                             input.Trigger
@@ -72,14 +72,14 @@ module Popover =
                             match input.Body (disclosure, fetchInitialFocusRef) with
                             | [ x ] when x = nothing -> nothing
                             | content ->
-                                UI.popoverContent
+                                Ui.popoverContent
                                     (fun x ->
                                         x.width <- "auto"
                                         x.border <- "0"
                                         x.boxShadow <- "lg"
                                         x.borderRadius <- "0")
                                     [
-                                        UI.popoverArrow (fun _ -> ()) []
+                                        Ui.popoverArrow (fun _ -> ()) []
 
                                         if not input.CloseButton then
                                             nothing
@@ -111,7 +111,7 @@ module Popover =
                                                     Children = []
                                                 |}
 
-                                        UI.popoverBody
+                                        Ui.popoverBody
                                             (fun x ->
                                                 x.padding <- input.Padding |> Option.defaultValue "15px"
                                                 x.backgroundColor <- "gray.13"
@@ -127,7 +127,7 @@ module Popover =
 
     let inline Popover
         (input: {| Trigger: ReactElement
-                   Body: UI.Disclosure * (unit -> IRefValue<unit>) -> ReactElement list |})
+                   Body: Ui.Disclosure * (unit -> IRefValue<unit>) -> ReactElement list |})
         =
         CustomPopover
             {| input with
@@ -138,7 +138,7 @@ module Popover =
 
     let inline MenuItemPopover
         (input: {| Trigger: ReactElement
-                   Body: UI.Disclosure * (unit -> IRefValue<unit>) -> ReactElement list |})
+                   Body: Ui.Disclosure * (unit -> IRefValue<unit>) -> ReactElement list |})
         =
         CustomPopover
             {| input with
@@ -148,7 +148,7 @@ module Popover =
             |}
 
     [<ReactComponent>]
-    let CustomConfirmPopover (props: UI.IChakraProps -> unit) closeButton trigger onConfirm children =
+    let CustomConfirmPopover (props: Ui.IChakraProps -> unit) closeButton trigger onConfirm children =
         let isMounted = React.useIsMounted ()
 
         CustomPopover
@@ -160,7 +160,7 @@ module Popover =
                 Body =
                     fun (disclosure, fetchInitialFocusRef) ->
                         [
-                            UI.stack
+                            Ui.stack
                                 (fun x -> x.spacing <- "10px")
                                 [
                                     let mutable initialFocusRefFetched = false
@@ -176,7 +176,7 @@ module Popover =
 
                                     yield! children
 
-                                    UI.box
+                                    Ui.box
                                         (fun _ -> ())
                                         [
                                             Button.Button

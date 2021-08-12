@@ -6,7 +6,6 @@ open FsStore.Model
 open FsUi.Bindings
 open FsCore
 open Feliz
-open Fable.Core
 open Fable.Core.JsInterop
 open Fable.React
 
@@ -14,12 +13,12 @@ open Fable.React
 module Accordion =
     [<ReactComponent>]
     let AccordionItem title children =
-        UI.accordionItem
+        Ui.accordionItem
             (fun x ->
                 if children
                    |> Seq.exists
                        (fun cmp ->
-                           let props: {| props: UI.IChakraProps |} = unbox cmp
+                           let props: {| props: Ui.IChakraProps |} = unbox cmp
 
                            match props.props.flex with
                            | String.ValidString _ -> true
@@ -34,21 +33,21 @@ module Accordion =
 //                x.flexBasis <- unbox "auto"
                 x.display <- "flex")
             [
-                UI.accordionButton
+                Ui.accordionButton
                     (fun x ->
                         x.backgroundColor <- "gray.16"
                         x.tabIndex <- -1)
                     [
-                        UI.box
+                        Ui.box
                             (fun _ -> ())
                             [
                                 title
                             ]
-                        UI.spacer (fun _ -> ()) []
-                        UI.accordionIcon (fun _ -> ()) []
+                        Ui.spacer (fun _ -> ()) []
+                        Ui.accordionIcon (fun _ -> ()) []
                     ]
 
-                UI.accordionPanel
+                Ui.accordionPanel
                     (fun x ->
                         x.flex <- "1"
                         x.flexDirection <- "column"
@@ -63,7 +62,7 @@ module Accordion =
     let Accordion
         (input: {| Items: (ReactElement * ReactElement) list
                    Atom: Atom<string []>
-                   Props: UI.IChakraProps -> unit |})
+                   Props: Ui.IChakraProps -> unit |})
         =
         let atomValue, setAtomValue = Store.useState input.Atom
 
@@ -99,7 +98,7 @@ module Accordion =
                 |]
             )
 
-        UI.accordion
+        Ui.accordion
             (fun x ->
                 x.allowMultiple <- true
                 x.reduceMotion <- true
@@ -119,7 +118,7 @@ module Accordion =
                     |> Array.map fst
                     |> function
                         | [||] -> x.defaultIndex
-                        | index -> index |> JS.toJsArray
+                        | index -> index |> Js.toJsArray
 
                 x.onChange <-
                     fun (indexes: obj) ->

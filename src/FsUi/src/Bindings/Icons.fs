@@ -73,8 +73,8 @@ module Icons =
 
     let inline render cmp = React.bindComponent () [] cmp
 
-    let inline renderWithProps (props: UI.IChakraProps -> unit) cmp =
-        UI.box
+    let inline renderWithProps (props: Ui.IChakraProps -> unit) cmp =
+        Ui.box
             (fun x ->
                 x.``as`` <- cmp
                 props x)

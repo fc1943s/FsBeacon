@@ -7,7 +7,7 @@ open FsUi.Bindings
 
 module MenuItem =
     let inline MenuItem icon label onClick props =
-        UI.menuItem
+        Ui.menuItem
             (fun x ->
                 x.closeOnSelect <- true
 
@@ -26,7 +26,7 @@ module MenuItem =
                 x.marginBottom <- "2px"
                 x.color <- "gray.87"
 
-                x._hover <- JS.newObj (fun x -> x.backgroundColor <- "gray.10")
+                x._hover <- Js.newObj (fun x -> x.backgroundColor <- "gray.10")
 
                 x.onClick <-
                     fun e ->

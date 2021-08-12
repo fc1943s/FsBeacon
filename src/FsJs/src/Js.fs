@@ -18,7 +18,7 @@ module Operators =
     let inline (<.>) obj key = emitJsExpr (obj, key) "$0[$1]"
 
 
-module JS =
+module Js =
     let inline isInstanceOf (typeName: string) (obj: obj) : bool =
         emitJsExpr (obj, typeName) "(w => $0 instanceof w[$1])(window)"
 

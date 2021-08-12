@@ -23,7 +23,7 @@ module Dropdown =
         let visible, setVisible = React.useState false
         let darkMode = Store.useValue Atoms.Ui.darkMode
 
-        UI.flex
+        Ui.flex
             (fun x ->
                 x.direction <- "column"
                 x.overflow <- "auto"
@@ -37,7 +37,7 @@ module Dropdown =
                 if not visible then
                     nothing
                 else
-                    UI.box
+                    Ui.box
                         (fun x ->
                             x.flex <- "1"
                             x.flexDirection <- "column"
@@ -74,7 +74,7 @@ module Dropdown =
                 Left = false
                 Trigger =
                     fun visible setVisible ->
-                        UI.box
+                        Ui.box
                             (fun x -> x.position <- "relative")
                             [
                                 Input.Input
@@ -121,7 +121,7 @@ module Dropdown =
                 x.onFormat <- Some Enum.name)
             (fun onHide ->
                 [
-                    UI.stack
+                    Ui.stack
                         (fun x ->
                             x.flex <- "1"
                             x.spacing <- "1px"
@@ -183,12 +183,12 @@ module Dropdown =
                 Body =
                     fun onHide ->
                         [
-                            UI.stack
+                            Ui.stack
                                 (fun x -> x.spacing <- "10px")
                                 [
                                     yield! children onHide
 
-                                    UI.box
+                                    Ui.box
                                         (fun _ -> ())
                                         [
                                             Button.Button

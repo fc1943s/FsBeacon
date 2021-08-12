@@ -14,7 +14,7 @@ module Hint =
     let Hint (props: IProps -> unit) =
         let props =
             React.useMemo (
-                (fun () -> JS.newObj props),
+                (fun () -> Js.newObj props),
                 [|
                     box props
                 |]
@@ -33,12 +33,12 @@ module Hint =
                         [
                             match props.hintTitle with
                             | Some hintTitle ->
-                                UI.box
+                                Ui.box
                                     (fun x ->
                                         x.paddingBottom <- "12px"
                                         x.fontSize <- "1.3rem")
                                     [
-                                        UI.icon
+                                        Ui.icon
                                             (fun x ->
                                                 x.``as`` <- Icons.bs.BsQuestionCircle
                                                 x.marginTop <- "-3px"
