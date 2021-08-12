@@ -286,6 +286,7 @@ lastValue={lastValue}
                                                 Dom.log
                                                     (fun () -> $"Selectors.hub onMsg msg={msg}. skipping. not handled ")))
 
+                        printfn $"hub connection selector. username={username} hubUrl={hubUrl}. starting connection..."
                         connection.startNow ()
                         Some connection
                     | _ -> None)

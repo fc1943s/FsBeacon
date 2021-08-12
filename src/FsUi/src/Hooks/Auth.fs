@@ -158,7 +158,7 @@ module rec Auth =
                                       ok = Some 0
                                       pub = Some _
                                   } ->
-                                    do! Gun.putPublicHash gun username
+//                                    do! Gun.putPublicHash gun username
 
 
                                     //            match! Gun.put (gun.get("#").get hash) data with

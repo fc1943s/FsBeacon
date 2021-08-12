@@ -44,7 +44,7 @@
 
     "@pmmmwh/react-refresh-webpack-plugin": "~0.4",
 
-    "gun": "amark/gun.git#manhattan",
+    "gun": "amark/gun.git#master",
     "@peculiar/asn1-schema": "~2.0",
 
     "@microsoft/signalr": "6.0.0-preview.7.21378.6",

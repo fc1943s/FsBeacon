@@ -67,14 +67,8 @@ module Gun =
     [<Erase>]
     type GunNodeSlice = GunNodeSlice of value: string
 
-    type GunNodeSlice with
-        static member inline Value (GunNodeSlice value) = value
-
     [<Erase>]
     type GunPeer = GunPeer of url: string
-
-    type GunPeer with
-        static member inline Value (GunPeer url) = url
 
     [<Erase>]
     type ValueHash = ValueHash of hash: string
@@ -104,6 +98,14 @@ module Gun =
 
     [<Erase>]
     type RadQuery = RadQuery of query: {| ``.``: {| ``*``: Pub |} |}
+
+    type GunNodeSlice with
+        static member inline Value (GunNodeSlice value) = value
+
+    type GunPeer with
+        static member inline Value (GunPeer url) = url
+
+    let inline radQuery (Pub pub) : {| ``.``: {| ``*``: Pub |} |} = emitJsExpr pub "{'.':{'*':$0}}"
 
 
     module rec Types =
@@ -349,16 +351,19 @@ module Gun =
 
     let rec data = nameof data
 
-    let inline putPublicHash (gun: IGunChainReference) value =
+    let inline putPublicHash<'TValue> (gun: IGunChainReference) (value: 'TValue) =
         promise {
-            let! encryptedValue = userEncode gun value
+            let! encryptedValue = userEncode<'TValue> gun value
 
             let user = gun.user ()
 
             printfn $"#1 {JS.JSON.stringify user.is}"
 
             match user.is with
-            | Some { pub = Some (Pub pub) } ->
+            | Some {
+                       pub = Some (Pub (String.ValidString pub))
+                   } ->
+
                 user
                     .get(GunNodeSlice (nameof data))
                     .set(GunValue.EncryptedSignedValue encryptedValue)
@@ -368,7 +373,7 @@ module Gun =
                             printfn $"#2 data={data} key={key} hash={hash}"
 
                             let node =
-                                gun
+                                user
                                     .get(GunNodeSlice $"#{nameof data}")
                                     .get (GunNodeSlice $"{pub}#{hash}")
 
@@ -378,7 +383,7 @@ module Gun =
                                 eprintfn $"put public hash error key={key} pub={pub} hash={hash}"
                          }
                          |> Promise.start))
-            | _ -> ()
+            | _ -> eprintfn $"invalid key. user.is={JS.JSON.stringify user.is}"
         }
 
     let inline subscribe (gun: IGunChainReference) fn =

@@ -1,7 +1,8 @@
 namespace FsUi.Components
 
-open Fable.Core.JsInterop
 open Fable.Core
+open FsCore
+open Fable.Core.JsInterop
 open FsCore.Model
 open Feliz
 open FsJs
@@ -104,31 +105,42 @@ module GunObserver =
 
                             match user.is with
                             | Some {
-                                       alias = Some (Gun.GunUserAlias.Alias (Gun.Alias username))
+                                       alias = Some (Gun.GunUserAlias.Alias (Gun.Alias (String.ValidString username)))
                                    } ->
                                 printfn $"GunObserver.render: .on(auth) effect. setUsername. username={username}"
 
                                 let keys = user.__.sea
 
                                 match keys with
-                                | Some keys ->
-                                    setUsername (Some (Username username))
-                                    setGunKeys keys
+                                | Some _keys -> ()
+                                //                                    setUsername (Some (Username username))
+//                                    setGunKeys keys
                                 | None -> failwith $"GunObserver.render: No keys found for user {username}"
 
                             //                                gunState.put ({| username = username |} |> toPlainJsObj)
                             //                                |> Promise.start
                             //                                setUsername (Some (UserInteraction.Username username))
                             | Some {
-                                       alias = Some (Gun.GunUserAlias.GunKeys { pub = Some pub })
+                                       pub = Some (Gun.Pub (String.ValidString pub))
                                    } ->
                                 match Dom.window () with
                                 | Some window -> window?gun <- gun
                                 | None -> ()
 
-                                gun
+                                let _a =
+                                    user
+                                        .get(Gun.GunNodeSlice $"#{nameof Gun.data}")
+                                        .once (fun a b -> printfn $"_a. a={a} b={b}")
+
+                                let _b =
+                                    user
+                                        .get(Gun.GunNodeSlice $"#{nameof Gun.data}")
+                                        .get(Gun.RadQuery (Gun.radQuery (Gun.Pub pub)))
+                                        .once (fun a b -> printfn $"_b. a={a} b={b}")
+
+                                user
                                     .get(Gun.GunNodeSlice $"#{nameof Gun.data}")
-                                    .get(Gun.RadQuery {| ``.`` = {| ``*`` = pub |} |})
+                                    .get(Gun.RadQuery (Gun.radQuery (Gun.Pub pub)))
                                     .map()
                                     .once (fun encryptedUsername k ->
                                         printfn $"@@@@@@@@@ encryptedUsername={encryptedUsername} k={k} pub={pub}"
@@ -136,7 +148,7 @@ module GunObserver =
                                         match encryptedUsername with
                                         | Gun.GunValue.NodeReference gunNodeSlice ->
                                             gun
-                                                .user(pub)
+                                                .user(Gun.Pub pub)
                                                 .get(Gun.GunNodeSlice (nameof Gun.data))
                                                 .get(gunNodeSlice)
                                                 .once (fun a b ->
@@ -154,7 +166,9 @@ module GunObserver =
                                 // @@@@ getImmutableUsername pub
 
                                 printfn
-                                    $"GunObserver.render: Auth occurred without username: {user.is |> Js.objectKeys}"
+                                    $"GunObserver.render: Auth occurred without username.
+                                    user.is={user.is |> JS.JSON.stringify}
+                                    "
                         else
                             printfn $"GunObserver.render: already disposed gun={gun}")
                 )),
