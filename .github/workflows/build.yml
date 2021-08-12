@@ -57,15 +57,28 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - id: meta
+      - id: hubpeer_meta
         uses: docker/metadata-action@v3
         with:
-          images: ghcr.io/${{ github.repository }}
+          images: ghcr.io/fsbeacon/hubpeer
 
       - uses: docker/build-push-action@v2
         with:
           context: .
           file: src/FsBeacon.HubPeer/Dockerfile
           push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          tags: ${{ steps.hubpeer_meta.outputs.tags }}
+          labels: ${{ steps.hubpeer_meta.outputs.labels }}
+
+      - id: gunpeer_meta
+        uses: docker/metadata-action@v3
+        with:
+          images: ghcr.io/fsbeacon/gunpeer
+
+      - uses: docker/build-push-action@v2
+        with:
+          context: .
+          file: src/FsBeacon.GunPeer/Dockerfile
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.gunpeer_meta.outputs.tags }}
+          labels: ${{ steps.gunpeer_meta.outputs.labels }}
