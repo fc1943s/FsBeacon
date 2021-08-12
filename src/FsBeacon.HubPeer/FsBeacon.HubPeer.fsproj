@@ -1,13 +1,13 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
+    <Target Name="PrePublishTarget" AfterTargets="Publish">
+        <Exec Command="dotnet paket restore" />
+    </Target>
+    <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
     <LangVersion>preview</LangVersion>
     <OutputType>Exe</OutputType>
     <TargetLatestRuntimePatch>true</TargetLatestRuntimePatch>
-      <Target Name="PrePublishTarget" AfterTargets="Publish">
-          <Exec Command="dotnet paket restore" />
-      </Target>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Main.fs" />
