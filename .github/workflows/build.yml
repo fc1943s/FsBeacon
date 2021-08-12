@@ -60,7 +60,7 @@ jobs:
       - id: hubpeer_meta
         uses: docker/metadata-action@v3
         with:
-          images: ghcr.io/fsbeacon
+          images: ghcr.io/${{ github.repository }}
           tags: |
             type=raw,value=hub-main
 
@@ -75,7 +75,7 @@ jobs:
       - id: gunpeer_meta
         uses: docker/metadata-action@v3
         with:
-          images: ghcr.io/fsbeacon
+          images: ghcr.io/${{ github.repository }}
           tags: |
             type=raw,value=gun-main
 
