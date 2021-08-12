@@ -60,7 +60,7 @@ jobs:
       - id: hubpeer_meta
         uses: docker/metadata-action@v3
         with:
-          images: ghcr.io/fsbeacon/hubpeer:main
+          images: ghcr.io/fsbeacon_hubpeer
 
       - uses: docker/build-push-action@v2
         with:
@@ -73,7 +73,7 @@ jobs:
       - id: gunpeer_meta
         uses: docker/metadata-action@v3
         with:
-          images: ghcr.io/fsbeacon/gunpeer:main
+          images: ghcr.io/fsbeacon_gunpeer
 
       - uses: docker/build-push-action@v2
         with:
