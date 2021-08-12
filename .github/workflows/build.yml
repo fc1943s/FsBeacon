@@ -60,25 +60,25 @@ jobs:
       - id: hubpeer_meta
         uses: docker/metadata-action@v3
         with:
-          images: ghcr.io/fsbeacon-hubpeer
+          images: ghcr.io/fsbeacon
 
       - uses: docker/build-push-action@v2
         with:
           context: .
           file: src/FsBeacon.HubPeer/Dockerfile
           push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.hubpeer_meta.outputs.tags }}
+          tags: hub-${{ steps.hubpeer_meta.outputs.tags }}
           labels: ${{ steps.hubpeer_meta.outputs.labels }}
 
       - id: gunpeer_meta
         uses: docker/metadata-action@v3
         with:
-          images: ghcr.io/fsbeacon-gunpeer
+          images: ghcr.io/fsbeacon
 
       - uses: docker/build-push-action@v2
         with:
           context: .
           file: src/FsBeacon.GunPeer/Dockerfile
           push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.gunpeer_meta.outputs.tags }}
+          tags: gun-${{ steps.gunpeer_meta.outputs.tags }}
           labels: ${{ steps.gunpeer_meta.outputs.labels }}
