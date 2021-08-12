@@ -21,7 +21,7 @@ Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FsBeacon.GunPeer", "src\FsB
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FsBeacon.Shared", "src\FsBeacon.Shared\FsBeacon.Shared.fsproj", "{18B0B008-6C03-4452-97B4-18F9EDED9B87}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FsBeacon.Tests", "src\FsBeacon.Tests\FsBeacon.Tests.fsproj", "{D09CA10D-8B9D-40D9-BAAA-882B22068C4C}"
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FsBeacon.Template", "src\FsBeacon.Template\FsBeacon.Template.fsproj", "{D09CA10D-8B9D-40D9-BAAA-882B22068C4C}"
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FsCore", "src\FsCore\FsCore.fsproj", "{A29E8C09-4035-4A82-AD99-97BDF12101F2}"
 EndProject

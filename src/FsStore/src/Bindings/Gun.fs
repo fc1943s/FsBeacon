@@ -29,7 +29,7 @@ module Gun =
             priv: Priv option
             epriv: Epriv option
         }
-        static member inline Default =
+        static member Default =
             {
                 pub = None
                 epub = None

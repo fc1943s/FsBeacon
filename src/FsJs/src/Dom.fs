@@ -7,6 +7,7 @@ open FsCore
 open System.Collections.Generic
 open Fable.Core.JsInterop
 open Fable.Core
+open FsCore.Model
 
 
 module Dom =
@@ -221,3 +222,14 @@ module Dom =
         a?download <- fileName
         a.click ()
         a.remove ()
+
+    let deviceId =
+        match window () with
+        | Some window ->
+            match window.localStorage.getItem "deviceId" with
+            | String.ValidString deviceId -> DeviceId (Guid deviceId)
+            | _ ->
+                let deviceId = DeviceId.NewId ()
+                window.localStorage.setItem ("deviceId", deviceId |> DeviceId.Value |> string)
+                deviceId
+        | None -> DeviceId.NewId ()

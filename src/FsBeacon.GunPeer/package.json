@@ -4,7 +4,6 @@
   "description": "",
   "main": "server.js",
   "author": "fc1943s",
-  "license": "MIT",
   "private": true,
   "scripts": {
     "start": "node server.js"

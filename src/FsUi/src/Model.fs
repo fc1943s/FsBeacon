@@ -12,5 +12,11 @@ module Model =
         {
             DarkMode: bool
             FontSize: int
+            SystemUiFont: bool
         }
-        static member inline Default = { DarkMode = false; FontSize = 15 }
+        static member inline Default =
+            {
+                DarkMode = false
+                FontSize = 15
+                SystemUiFont = true
+            }

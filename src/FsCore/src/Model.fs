@@ -1,10 +1,18 @@
 namespace FsCore
 
+open System
+
 
 module Model =
     type Username = Username of username: string
+    type Color = Color of hex: string
+    type StoreRoot = StoreRoot of name: string
+    type Collection = Collection of collection: string
+    type FileId = FileId of guid: Guid
+    type DeviceId = DeviceId of guid: Guid
+    type Ping = Ping of ticksText: string
 
-    and Username with
+    type Username with
         static member inline Value value =
             try
                 match value with
@@ -16,14 +24,8 @@ module Model =
 
         static member inline ValueOrDefault = Username.Value >> Option.defaultValue ""
 
-    and Color = Color of hex: string
-
-    type StoreRoot = StoreRoot of name: string
-
-    and StoreRoot with
+    type StoreRoot with
         static member inline Value (StoreRoot name) = name
-
-    type Collection = Collection of collection: string
 
     and Collection with
         static member inline Value (Collection collection) = collection
@@ -40,3 +42,16 @@ module Model =
             value
             |> Color.Value
             |> Option.defaultValue (Color.Default |> Color.Value |> Option.get)
+
+    type FileId with
+        static member inline NewId () = FileId (Guid.newTicksGuid ())
+        static member inline Value (FileId guid) = guid
+
+
+    type DeviceId with
+        static member inline NewId () = DeviceId (Guid.newTicksGuid ())
+        static member inline Value (DeviceId guid) = guid
+
+
+    type Ping with
+        static member inline Value (Ping ticks) = int64 ticks

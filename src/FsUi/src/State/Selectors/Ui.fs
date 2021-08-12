@@ -15,4 +15,5 @@ module rec Ui =
                 {
                     DarkMode = Store.value getter Atoms.Ui.darkMode
                     FontSize = Store.value getter Atoms.Ui.fontSize
+                    SystemUiFont = Store.value getter Atoms.Ui.systemUiFont
                 })

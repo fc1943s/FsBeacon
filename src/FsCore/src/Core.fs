@@ -3,6 +3,13 @@ namespace FsCore
 open System
 
 
+module Guid =
+        let newTicksGuid () =
+            let ticks = string DateTime.Now.Ticks
+            let guid = Guid.NewGuid () |> string
+
+            Guid $"{ticks.[0..7]}-{ticks.[8..11]}-{ticks.[12..15]}-{guid.[19..]}"
+
 module Function =
     let inline memoizeLazy fn =
         let result = lazy (fn ())
@@ -51,3 +58,4 @@ module Enum =
         |> Array.toList
 
     let inline name<'T> (value: 'T) = Enum.GetName (typeof<'T>, value)
+

@@ -17,3 +17,4 @@ module Atoms =
     let rec isTesting = Store.atom FsStore.root (nameof isTesting) Dom.deviceInfo.IsTesting
     let rec username = Store.atom FsStore.root (nameof username) (None: Username option)
     let rec gunKeys = Store.atom FsStore.root (nameof gunKeys) Gun.GunKeys.Default
+    let rec sessionRestored = Store.atom FsStore.root (nameof sessionRestored) false

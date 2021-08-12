@@ -1,0 +1,28 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <LangVersion>preview</LangVersion>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="src\Components\TestComponent.fs" />
+    <Compile Include="src\Components\Content.fs" />
+      <Compile Include="src\App.fs" />
+      <Compile Include="src\Main.fs" />
+      <TypeScriptCompile Include="src\index.ts" />
+      <TypeScriptCompile Include="src\react-app-env.d.ts" />
+      <Content Include="src\react-app-env.d.js" />
+      <Content Include="src\setupProxy.js" />
+      <Content Include="src\wdyr.js" />
+      <Content Include="tsconfig.json" />
+      <Content Include="paket.references" />
+      <Content Include="yarn.lock" />
+      <Content Include="package.json" />
+      <Content Include="cypress.json" />
+  </ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\FsStore\FsStore.fsproj" />
+        <ProjectReference Include="..\FsUi\FsUi.fsproj" />
+    </ItemGroup>
+  <Import Project="..\..\.paket\Paket.Restore.targets" />
+</Project>

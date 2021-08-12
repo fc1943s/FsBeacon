@@ -11,7 +11,7 @@ nuget Fable.SignalR.Saturn ~> 0.11
 nuget FSharp.Control.AsyncSeq ~> 3.0
 
 
-// FsBeacon.Tests
+// FsBeacon.Template
 nuget Feliz
 
 // Build

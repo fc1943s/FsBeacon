@@ -18,6 +18,7 @@
         <Compile Include="src\Hooks\Listener.fs" />
         <Compile Include="src\Hooks\React.fs" />
         <Compile Include="src\Hooks\Auth.fs" />
+        <Compile Include="src\Hooks\Hydrate.fs" />
         <Compile Include="src\Components\Accordion.fs" />
         <Compile Include="src\Components\Empty.fs" />
         <Compile Include="src\Components\Tooltip.fs" />
@@ -40,6 +41,8 @@
         <Compile Include="src\Components\DebugOverlay.fs" />
         <Compile Include="src\Components\ExternalLink.fs" />
         <Compile Include="src\Components\TransparentIconButton.fs" />
+        <Compile Include="src\Components\RootWrapper.fs" />
+        <Compile Include="src\Components\GunObserver.fs" />
         <Content Include="package.json" />
         <Content Include="paket.references" />
         <Content Include=".gitignore" />

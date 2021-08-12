@@ -30,7 +30,7 @@ jobs:
 
 #      - uses: cypress-io/github-action@v2
 #        with:
-#          working-directory: ./src/FsBeacon.Tests
+#          working-directory: ./src/FsBeacon.Template
 #          build: npx cypress info
 #          start: yarn serve
 #          command: yarn cypress-run
@@ -39,13 +39,13 @@ jobs:
         if: failure()
         with:
           name: cypress-screenshots
-          path: ./src/FsBeacon.Tests/cypress/screenshots
+          path: ./src/FsBeacon.Template/cypress/screenshots
 
       - uses: actions/upload-artifact@v2
         if: failure()
         with:
           name: cypress-videos
-          path: ./src/FsBeacon.Tests/cypress/videos
+          path: ./src/FsBeacon.Template/cypress/videos
 
 
       - uses: actions/checkout@v2
