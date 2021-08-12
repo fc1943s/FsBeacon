@@ -1,6 +1,7 @@
 namespace FsUi.Components
 
 open Fable.Core.JsInterop
+open FsCore
 open Fable.Core
 open FsCore.Model
 open Feliz
@@ -120,7 +121,9 @@ module GunObserver =
                             //                                |> Promise.start
                             //                                setUsername (Some (UserInteraction.Username username))
                             | Some {
-                                       alias = Some (Gun.GunUserAlias.GunKeys { pub = Some pub })
+                                       alias = Some (Gun.GunUserAlias.GunKeys {
+                                                                                  pub = Some (Gun.Pub (String.ValidString pub))
+                                                                              })
                                    } ->
                                 match Dom.window () with
                                 | Some window -> window?gun <- gun
@@ -128,7 +131,7 @@ module GunObserver =
 
                                 gun
                                     .get(Gun.GunNodeSlice $"#{nameof Gun.data}")
-                                    .get(Gun.RadQuery {| ``.`` = {| ``*`` = pub |} |})
+                                    .get(Gun.RadQuery {| ``.`` = {| ``*`` = Gun.Pub pub |} |})
                                     .map()
                                     .once (fun encryptedUsername k ->
                                         printfn $"@@@@@@@@@ encryptedUsername={encryptedUsername} k={k} pub={pub}"
@@ -136,7 +139,7 @@ module GunObserver =
                                         match encryptedUsername with
                                         | Gun.GunValue.NodeReference gunNodeSlice ->
                                             gun
-                                                .user(pub)
+                                                .user(Gun.Pub pub)
                                                 .get(Gun.GunNodeSlice (nameof Gun.data))
                                                 .get(gunNodeSlice)
                                                 .once (fun a b ->
@@ -154,7 +157,10 @@ module GunObserver =
                                 // @@@@ getImmutableUsername pub
 
                                 printfn
-                                    $"GunObserver.render: Auth occurred without username: {user.is |> Js.objectKeys}"
+                                    $"GunObserver.render: Auth occurred without username.
+                                    user.is={user.is |> Js.objectKeys}
+                                    user.is={user.is |> JS.JSON.stringify}
+                                    "
                         else
                             printfn $"GunObserver.render: already disposed gun={gun}")
                 )),
