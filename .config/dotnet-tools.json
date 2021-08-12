@@ -8,6 +8,12 @@
         "paket"
       ]
     },
+    "fable": {
+      "version": "3.2.10",
+      "commands": [
+        "fable"
+      ]
+    },
     "fake-cli": {
       "version": "5.20.4",
       "commands": [
