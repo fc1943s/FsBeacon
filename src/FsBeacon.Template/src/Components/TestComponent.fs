@@ -8,10 +8,10 @@ module TestComponent =
 
     [<ReactComponent>]
     let TestComponent () =
-
         Ui.box
             (fun _ -> ())
             [
+                str $"ready test href={Browser.Dom.window.location.href}"
                 Html.iframe [
                     prop.src "https://localhost:49212"
                     prop.width 400
@@ -22,5 +22,4 @@ module TestComponent =
                     prop.width 400
                     prop.height 400
                 ]
-                str "ready"
             ]
