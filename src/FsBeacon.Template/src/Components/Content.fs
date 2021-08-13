@@ -17,7 +17,10 @@ module Content =
                 Ui.flex
                     (fun x -> x.flex <- "1")
                     [
-                        TestComponent.TestComponent ()
+                        if Browser.Dom.window.location.port = "9762" then
+                            TestComponent.TestComponent ()
+                        else
+                            Component.Component ()
                     ]
             ],
             LoadingSpinner.LoadingSpinner ()

@@ -6,6 +6,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="src\Components\TestComponent.fs" />
+    <Compile Include="src\Components\Component.fs" />
     <Compile Include="src\Components\Content.fs" />
       <Compile Include="src\App.fs" />
       <Compile Include="src\Main.fs" />

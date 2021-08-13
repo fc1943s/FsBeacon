@@ -11,7 +11,7 @@ module TestComponent =
         Ui.box
             (fun _ -> ())
             [
-                str $"ready href={Browser.Dom.window.location.href}"
+                str $"ready test href={Browser.Dom.window.location.href}"
                 Html.iframe [
                     prop.src "https://localhost:49212"
                     prop.width 400
