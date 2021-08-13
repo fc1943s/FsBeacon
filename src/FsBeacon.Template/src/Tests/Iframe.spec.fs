@@ -8,7 +8,7 @@ module Iframe =
     describe
         "tests"
         (fun () ->
-            let homeUrl = "https://localhost:33922"
+            let homeUrl = "https://localhost:9762"
             before (fun () -> Cy.visit homeUrl)
 
             it
@@ -18,9 +18,6 @@ module Iframe =
                     |> Promise.iter (fun window -> window?indexedDB?deleteDatabase "radata")
 
                     Cy2.expectLocation $"{homeUrl}/"
-                    Cy.get("body").should "have.css" "background-color" "rgb(222, 222, 222)"
-
-                    Cy.focused().click None |> ignore
 
                     Cy.window ()
                     |> Promise.iter (fun window -> window?Debug <- false)
