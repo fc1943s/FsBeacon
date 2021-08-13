@@ -32,7 +32,7 @@ jobs:
 #        with:
 #          working-directory: ./src/FsBeacon.Template
 #          build: npx cypress info
-#          start: yarn serve
+#          start: yarn cypress-serve
 #          command: yarn cypress-run
 
       - uses: actions/upload-artifact@v2

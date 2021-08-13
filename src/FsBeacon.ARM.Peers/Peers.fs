@@ -66,9 +66,8 @@ module Peers =
                         image "ghcr.io/fc1943s/fsbeacon:gun-main"
 
                         env_vars [
-                            "GUN_FILE", $"/data/{fileShareId}/{containerId}-radata"
-                            "HTTPS_KEY", "/app/key.pem"
-                            "HTTPS_CERT", "/app/cert.pem"
+                            "FSBEACON_DOMAIN", $"{containerId}.eastus.azurecontainer.io"
+                            "ROOT_PATH", $"/data/{fileShareId}/{containerId}-radata"
                         ]
 
                         add_public_ports [

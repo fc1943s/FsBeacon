@@ -1,4 +1,4 @@
-var cluster = require('cluster');
+const cluster = require('cluster');
 if (cluster.isMaster) {
   return cluster.fork() && cluster.on('exit', function () {
     cluster.fork();
@@ -6,28 +6,37 @@ if (cluster.isMaster) {
   });
 }
 
-var fs = require('fs');
-var config = {
-  port: process.env.OPENSHIFT_NODEJS_PORT
-    || process.env.VCAP_APP_PORT
-    || process.env.PORT
-    || process.argv[2]
-    || 8765
-};
-var Gun = require('gun');
+console.log('argv', process.argv);
+if (process.argv[2] !== "--root-path") {
+  throw new Error('Invalid --root-path');
+}
 
-if (process.env.HTTPS_KEY) {
-  config.key = fs.readFileSync(process.env.HTTPS_KEY);
-  config.cert = fs.readFileSync(process.env.HTTPS_CERT);
+const rootPath = process.argv[3];
+if (!rootPath) {
+  throw new Error('Invalid --root-path');
+}
+
+const fs = require('fs');
+const config = {
+  port: process.env.PORT || "8765"
+};
+const Gun = require('gun');
+
+if (process.env.HTTPS) {
+  config.cert = fs.readFileSync('./ssl/' + process.env.FSBEACON_DOMAIN + '.pem');
+  config.key = fs.readFileSync('./ssl/' + process.env.FSBEACON_DOMAIN + '-key.pem');
   config.server = require('https').createServer(config, Gun.serve(__dirname));
 } else {
   config.server = require('http').createServer(Gun.serve(__dirname));
 }
 
-var gun = Gun({
+const gun = Gun({
   web: config.server.listen(config.port),
-  file: process.env.FSBEACON_GUN_DATA_PATH || process.env.GUN_FILE
+  file: rootPath
 });
-console.log('Relay peer started on port ' + config.port + ' with /gun. Https: ' + Boolean(process.env.HTTPS_KEY));
+console.log('Relay peer started on port ' + config.port + ' with /gun. ' +
+  ' FSBEACON_DOMAIN=' + process.env.FSBEACON_DOMAIN +
+  ' rootPath=' + rootPath +
+  ' https: ' + Boolean(process.env.HTTPS));
 
 module.exports = gun;

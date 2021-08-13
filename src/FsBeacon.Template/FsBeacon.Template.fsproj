@@ -19,6 +19,7 @@
       <Content Include="yarn.lock" />
       <Content Include="package.json" />
       <Content Include="cypress.json" />
+      <Compile Include="src\Tests\Iframe.spec.fs" />
   </ItemGroup>
     <ItemGroup>
         <ProjectReference Include="..\FsStore\FsStore.fsproj" />

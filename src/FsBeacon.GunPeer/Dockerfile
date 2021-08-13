@@ -10,4 +10,4 @@ FROM node:16.5-alpine
 WORKDIR /app
 COPY --from=build /app /app
 EXPOSE 8765
-ENTRYPOINT ["yarn", "start"]
+ENTRYPOINT ["yarn", "start-ci"]
