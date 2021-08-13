@@ -14,4 +14,4 @@ RUN dotnet dev-certs https -ep /usr/local/share/ca-certificates/aspnet/https.crt
 RUN update-ca-certificates
 COPY --from=build /app /app
 EXPOSE 9761
-ENTRYPOINT ["dotnet", "FsBeacon.HubPeer.dll"]
+ENTRYPOINT ["dotnet", "FsBeacon.HubPeer.dll", "--port", "9761"]

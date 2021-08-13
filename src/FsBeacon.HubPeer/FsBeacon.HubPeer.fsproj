@@ -10,6 +10,8 @@
     <TargetLatestRuntimePatch>true</TargetLatestRuntimePatch>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="Core.fs" />
+    <Compile Include="Hub.fs" />
     <Compile Include="Main.fs" />
     <Content Include="paket.references" />
     <Content Include=".gitignore" />

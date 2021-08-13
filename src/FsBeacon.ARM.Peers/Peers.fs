@@ -86,6 +86,7 @@ module Peers =
 
     module Hub =
         let serverPort = Port 9761
+        let (Port port) = serverPort
 
         let rec hubPeer (ContainerId containerId) (Storage.FileShareId fileShareId) =
             let rec ``share-hub-peer`` = nameof ``share-hub-peer``
@@ -97,7 +98,6 @@ module Peers =
                 public_dns
                     containerId
                     [
-                        let (Port port) = serverPort
                         TCP, uint16 port
                     ]
 
@@ -124,20 +124,18 @@ module Peers =
                     containerInstance {
                         name (nameof containerInstance)
                         image "ghcr.io/fc1943s/fsbeacon:hub-main"
-
-                        env_vars [
-                            "FSBEACON_HUB_DATA_PATH", $"/data/{fileShareId}/{containerId}-hubdata"
-                        ]
-
-                        add_public_ports [
-                            let (Port port) = serverPort
-                            uint16 port
-                        ]
-
+                        add_public_ports [ uint16 port ]
                         cpu_cores 1
                         memory 0.2<Gb>
                         add_volume_mount fileShareId $"/data/{fileShareId}"
                         add_volume_mount ``share-hub-peer`` "/app"
+
+                        command_line [
+                            "--port"
+                            (string port)
+                            "--root-path"
+                            $"/data/{fileShareId}/{containerId}-hubdata"
+                        ]
                     }
                 ]
             }

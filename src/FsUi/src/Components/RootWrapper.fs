@@ -26,7 +26,7 @@ module RootWrapper =
                 |]
             )
 
-//        printfn $"ThemeLoader newTheme={JS.JSON.stringify newTheme} theme={theme}"
+        //        printfn $"ThemeLoader newTheme={JS.JSON.stringify newTheme} theme={theme}"
 
         Ui.provider
             (fun x -> x.theme <- newTheme)

@@ -7,6 +7,7 @@ nuget FSharp.Core ~> 5.0
 
 
 // FsBeacon.HubPeer
+nuget Argu
 nuget Fable.SignalR.Saturn ~> 0.11
 nuget FSharp.Control.AsyncSeq ~> 3.0
 

@@ -3,7 +3,6 @@ namespace FsUi.Components
 open Fable.Core
 open Fable.React
 open Feliz
-open FsStore
 open FsUi.Bindings
 open FsJs
 open FsCore
