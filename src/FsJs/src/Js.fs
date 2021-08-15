@@ -36,7 +36,7 @@ module Js =
 
     let jestWorkerId: bool = emitJsExpr () "process.env.JEST_WORKER_ID"
 
-    let playAudioVolume (volume: float) (file: string) : unit =
+    let inline playAudioVolume (volume: float) (file: string) : unit =
         emitJsExpr
             (volume, file)
             "(() => {
@@ -62,7 +62,8 @@ module Js =
 
     let inline byteArrayToHexString byteArray =
         byteArray
-        |> Array.map (fun b -> ("0" + (b &&& 0xFFuy)?toString 16).Substring -2)
+        |> Array.map (fun b -> "0" + (b &&& 0xFFuy)?toString 16)
+        |> Array.map (String.substringFrom -2)
         |> String.concat ""
 
     let inline hexStringToByteArray (text: string) =
@@ -109,7 +110,7 @@ module JsMagic =
         {| getType: string -> JS.Promise<Blob>
            types: string [] |} []
 
-    let inline private clipboardRead clipboard = emitJsExpr clipboard "$0.read()"
+    let inline clipboardRead clipboard = emitJsExpr clipboard "$0.read()"
 
     type Clipboard with
         member inline this.read () : JS.Promise<ClipboardRead> = clipboardRead this

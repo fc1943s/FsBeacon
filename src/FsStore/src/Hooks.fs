@@ -32,7 +32,7 @@ module HooksMagic =
 
             (if atom.IsNone then None else Some value), (if atom.IsNone then (fun _ -> ()) else setValue)
 
-        let useTempAtom<'TValue7> (atom: InputAtom<'TValue7> option) (inputScope: InputScope<'TValue7> option) =
+        let inline useTempAtom<'TValue7> (atom: InputAtom<'TValue7> option) (inputScope: InputScope<'TValue7> option) =
             let currentAtomField, tempAtomField =
                 React.useMemo (
                     (fun () ->
@@ -57,7 +57,7 @@ module HooksMagic =
                         | _, null -> currentValue |> Option.defaultValue (unbox null)
                         | Some (InputScope.Temp (_, jsonDecode)), tempValue ->
                             try
-                                Dom.log
+                                Dom.Logger.Default.Debug
                                     (fun () ->
                                         $"useTempAtom
                                     currentValue={currentValue}
@@ -126,7 +126,7 @@ module HooksMagic =
             let b = useValue b
             a, b
 
-        let useCallbackRef (fn: GetFn -> SetFn -> 'a -> JS.Promise<'c>) : ('a -> JS.Promise<'c>) =
+        let inline useCallbackRef (fn: GetFn -> SetFn -> 'a -> JS.Promise<'c>) : ('a -> JS.Promise<'c>) =
             let fnCallback = React.useCallbackRef (fun (getter, setter, arg) -> fn getter setter arg)
 
             let atom =

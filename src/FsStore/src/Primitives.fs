@@ -21,7 +21,11 @@ module Internal =
     | None -> ()
 
     let registerAtom (AtomPath atomPath) (atom: Atom<_>) =
-        Dom.log (fun () -> $"registerAtom {atomPath}")
+        Dom
+            .Logger
+            .getLogger()
+            .Debug (fun () -> $"registerAtom {atomPath}")
+
         Profiling.addCount $"registerAtom {atomPath}"
         atomPathMap.[atomPath] <- atom.toString ()
         atomIdMap.[atom.toString ()] <- atomPath
@@ -181,7 +185,7 @@ module PrimitivesMagic =
                     Primitives.selector
                         {
                             StoreRoot = storeRoot
-                            Collection = Some collection
+                            Collection = collection
                             Keys = []
                             Name = name
                         }
@@ -192,16 +196,15 @@ module PrimitivesMagic =
 
         let inline readSelectorFamily<'TKey, 'TValue>
             storeRoot
-            collection
             name
             (getFn: 'TKey -> GetFn -> 'TValue)
             : ('TKey -> Atom<'TValue>) =
             selectorFamily
                 storeRoot
-                collection
+                None
                 name
                 getFn
-                (fun _ _ _ -> failwith $"readSelectorFamily {storeRoot}/{collection}/{name} is read only.")
+                (fun _ _ _ -> failwith $"readSelectorFamily {storeRoot}/{name} is read only.")
 
         let inline value<'TValue> (getter: GetFn) (atom: Atom<'TValue>) : 'TValue = (getter (unbox atom)) :?> 'TValue
 

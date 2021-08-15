@@ -54,9 +54,12 @@ module Cypress =
         let inline wrap<'T> (el: Chainable2<'T>) : Chainable2<'T> = emitJsExpr el "cy.wrap($0)"
         let inline focused () : Chainable2<unit> = emitJsExpr () "cy.focused()"
         let inline visit (url: string) : unit = emitJsExpr url "cy.visit($0)"
+        let inline should (fn: unit -> unit) : unit = emitJsExpr fn "cy.should($0)"
         let inline pause () : unit = emitJsExpr () "cy.pause()"
+        let inline expect (obj: obj) : obj = emitJsExpr obj "expect($0)"
         let inline wait (time: int) : unit = emitJsExpr time "cy.wait($0)"
         let inline window () : JS.Promise<Window> = emitJsExpr () "cy.window()"
+        let sinon: obj = emitJsExpr () "Cypress.sinon"
 
         let inline contains (text: string) (options: {| timeout: int |} option) : Chainable2<'T> =
             emitJsExpr (text, options) "cy.contains($0, $1)"

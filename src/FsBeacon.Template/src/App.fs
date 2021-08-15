@@ -18,6 +18,4 @@ module App =
                 //                GunObserver.GunObserver ()
 
                 Content.Content ()
-
-                DebugOverlay.DebugOverlay ()
             ]

@@ -10,17 +10,23 @@ open FsUi.Bindings
 open FsUi.Hooks
 
 
-module DebugOverlay =
+module DebugPanel =
+
+    [<RequireQualifiedAccess>]
+    type DebugPanelDisplay =
+        | None
+        | Overlay
+        | Inline
 
     [<ReactComponent>]
-    let DebugOverlay () =
+    let DebugPanel display =
         let text, setText = React.useState ""
         let oldJson, setOldJson = React.useState ""
         let showDebug = Store.useValue Atoms.showDebug
 
-        let isTesting = Store.useValue Atoms.isTesting
         let deviceInfo = Store.useValue Selectors.deviceInfo
 
+        Dom.Logger.Default.Info (fun () -> $"DebugPanel.render. showDebug={showDebug} text={text}")
 
         Scheduling.useScheduling
             Scheduling.Interval
@@ -31,7 +37,7 @@ module DebugOverlay =
                     | Some window -> if not window?Debug then window?showDebug <- showDebug
                     | None -> ()
 
-                    if isTesting || not showDebug then
+                    if not showDebug then
                         ()
                     else
                         let json =
@@ -78,15 +84,19 @@ module DebugOverlay =
 
             Ui.box
                 (fun x ->
-                    x.width <- "min-content"
-                    x.height <- if showDebug then "60%" else "initial"
-                    x.position <- "fixed"
-                    x.right <- "24px"
-                    x.bottom <- "0"
+                    match display with
+                    | DebugPanelDisplay.Overlay ->
+                        x.width <- "min-content"
+                        x.height <- if showDebug then "60%" else "initial"
+                        x.position <- "fixed"
+                        x.right <- "24px"
+                        x.bottom <- "0"
+                        x.zIndex <- 4
+                        x.overflow <- if showDebug then "scroll" else "initial"
+                    | _ -> ()
+
                     x.fontSize <- "9px"
-                    x.backgroundColor <- "#44444455"
-                    x.zIndex <- 4
-                    x.overflow <- if showDebug then "scroll" else "initial")
+                    x.backgroundColor <- "#44444455")
                 [
                     if showDebug then
                         Html.pre [

@@ -3,6 +3,7 @@ namespace FsStore.Bindings
 open System
 open Fable.Core.JsInterop
 open Fable.Core
+open FsCore
 open FsJs
 
 
@@ -29,11 +30,11 @@ module Batcher =
     type BatchType<'TKey, 'TValue> =
         | KeysFromServer of
             keys: 'TKey [] *
-            timestamp: int64 *
-            trigger: ((int64 * 'TKey []) [] -> JS.Promise<IDisposable>)
-        | Data of data: 'TValue * timestamp: int64 * trigger: (int64 * 'TValue -> JS.Promise<IDisposable>)
-        | Subscribe of fn: (unit -> JS.Promise<IDisposable>)
-        | Set of fn: (unit -> JS.Promise<IDisposable>)
+            ticks: TicksGuid *
+            trigger: ((TicksGuid * 'TKey []) [] -> JS.Promise<IDisposable>)
+        | Data of data: 'TValue * ticks: TicksGuid * trigger: (TicksGuid * 'TValue -> JS.Promise<IDisposable>)
+        | Subscribe of ticks: TicksGuid * trigger: (TicksGuid -> JS.Promise<IDisposable>)
+        | Set of ticks: TicksGuid * trigger: (TicksGuid -> JS.Promise<IDisposable>)
 
     let inline macroQueue fn =
         JS.setTimeout (fn >> Promise.start) 0 |> ignore
@@ -49,23 +50,22 @@ module Batcher =
                         itemsArray
                         |> Array.map
                             (function
-                            | BatchType.Set fn -> Some fn, None, None, None
-                            | BatchType.Subscribe fn -> None, Some fn, None, None
-                            | BatchType.Data (data, timestamp, trigger) ->
-                                None, None, Some (data, timestamp, trigger), None
-                            | BatchType.KeysFromServer (item, timestamp, trigger) ->
-                                None, None, None, Some (item, timestamp, trigger))
+                            | BatchType.Set (ticks, trigger) -> Some (ticks, trigger), None, None, None
+                            | BatchType.Subscribe (ticks, trigger) -> None, Some (ticks, trigger), None, None
+                            | BatchType.Data (data, ticks, trigger) -> None, None, Some (data, ticks, trigger), None
+                            | BatchType.KeysFromServer (item, ticks, trigger) ->
+                                None, None, None, Some (item, ticks, trigger))
 
                     let! _disposables =
                         items
                         |> Array.choose (fun (setFn, _, _, _) -> setFn)
-                        |> Array.map (fun setFn -> setFn ())
+                        |> Array.map (fun (ticks, setFn) -> setFn ticks)
                         |> Promise.all
 
                     let! _disposables =
                         items
                         |> Array.choose (fun (_, subscribeFn, _, _) -> subscribeFn)
-                        |> Array.map (fun subscribeFn -> subscribeFn ())
+                        |> Array.map (fun (ticks, subscribeFn) -> subscribeFn ticks)
                         |> Promise.all
 
                     let! _disposables =
@@ -83,7 +83,7 @@ module Batcher =
 
                             let providerData =
                                 providerData
-                                |> Array.map (fun (data, timestamp, _) -> fun () -> trigger (timestamp, data))
+                                |> Array.map (fun (data, ticks, _) -> fun () -> trigger (ticks, data))
 
                             providerData |> Array.map (fun fn -> fn ())
                         |> Promise.all
@@ -103,7 +103,7 @@ module Batcher =
 
                             let items =
                                 keysFromServer
-                                |> Array.map (fun (item, timestamp, _) -> timestamp, item)
+                                |> Array.map (fun (item, ticks, _) -> ticks, item)
 
                             [
                                 trigger items
@@ -115,11 +115,11 @@ module Batcher =
                 |> Promise.start
 
         fun item ->
-//            match item with/--
+            //            match item with/--
             //            | BatchType.Set _
 //            | BatchType.Subscribe _ -> /--
-                //                macroQueue2 (fun () ->
+            //                macroQueue2 (fun () ->
 //                internalBatch [| item |] /--
             //                )
 //            | _ ->/--
-                batcher internalBatch {| interval = interval |} item
+            batcher internalBatch {| interval = interval |} item

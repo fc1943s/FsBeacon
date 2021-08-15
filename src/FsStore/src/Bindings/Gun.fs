@@ -99,6 +99,7 @@ module Gun =
     [<Erase>]
     type RadQuery = RadQuery of query: {| ``.``: {| ``*``: Pub |} |}
 
+
     type GunNodeSlice with
         static member inline Value (GunNodeSlice value) = value
 
@@ -287,7 +288,9 @@ module Gun =
                     match decrypted with
                     | Some (DecryptedValue decrypted) -> decrypted |> Json.decode<'TValue option>
                     | None ->
-                        Dom.log (fun () -> $"userDecode decrypt empty. decrypted={decrypted} data={data}")
+                        Dom.Logger.Default.Debug
+                            (fun () -> $"userDecode decrypt empty. decrypted={decrypted} data={data}")
+
                         JS.undefined
                 with
                 | ex ->
@@ -389,7 +392,7 @@ module Gun =
     let inline subscribe (gun: IGunChainReference) fn =
         gun.on
             (fun data (GunNodeSlice key) ->
-                Dom.log
+                Dom.Logger.Default.Debug
                     (fun () ->
                         if key = "devicePing" then
                             null
@@ -405,20 +408,24 @@ module Gun =
         |> Promise.lift
 
 
-    let inline batchData<'T> (fn: int64 * 'T -> JS.Promise<IDisposable>) (data: 'T) =
-        Batcher.batch (Batcher.BatchType.Data (data, DateTime.Now.Ticks, fn))
+    let inline batchData<'T> (fn: TicksGuid * 'T -> JS.Promise<IDisposable>) (ticks: TicksGuid, data: 'T) =
+        Batcher.batch (Batcher.BatchType.Data (data, ticks, fn))
 
-    let inline batchKeys map fn data =
+    let inline batchKeys map fn (ticks, data) =
         let fn = map >> fn
-        Batcher.batch (Batcher.BatchType.KeysFromServer (data, DateTime.Now.Ticks, fn))
+        Batcher.batch (Batcher.BatchType.KeysFromServer (data, ticks, fn))
 
-    let inline batchSubscribe gunAtomNode fn =
-        let fn () = subscribe gunAtomNode (batchData fn)
-        Batcher.batch (Batcher.BatchType.Subscribe fn)
+    let inline batchSubscribe gunAtomNode ticks trigger =
+        let fn ticks =
+            subscribe gunAtomNode (fun value -> batchData trigger (ticks, value))
 
-    let inline batchSet gunAtomNode fn =
-        let fn () = subscribe gunAtomNode (batchData fn)
-        Batcher.batch (Batcher.BatchType.Subscribe fn)
+        Batcher.batch (Batcher.BatchType.Subscribe (ticks, fn))
+
+    let inline batchSet gunAtomNode (ticks, trigger) =
+        let fn ticks =
+            subscribe gunAtomNode (fun value -> batchData trigger (ticks, value))
+
+        Batcher.batch (Batcher.BatchType.Subscribe (ticks, fn))
 
     let inline hubSubscribe<'A, 'R> (hub: HubConnection<'A, 'A, _, 'R, 'R>) action fn onError =
         promise {
@@ -430,14 +437,13 @@ module Gun =
                         next = fun (msg: 'R) -> fn msg
                         complete =
                             fun () ->
-                                Dom.log
+                                Dom.Logger.Default.Debug
                                     (fun () -> $"[hubSubscribe.complete() HUB stream subscription] action={action} ")
                         error =
                             fun err ->
-                                Dom.consoleError (
-                                    $"[hubSubscribe.error() HUB stream subscription] action={action} ",
-                                    err
-                                )
+                                Dom.Logger.Default.Error
+                                    (fun () ->
+                                        $"[hubSubscribe.error() HUB stream subscription] action={action} err={err}")
 
                                 onError err
                     }
@@ -445,8 +451,8 @@ module Gun =
             return subscription
         }
 
-    let inline batchHubSubscribe (hub: HubConnection<'A, 'A, _, 'R, 'R>) action fn onError =
-        let fn () =
-            hubSubscribe hub action (batchData fn) onError
+    let inline batchHubSubscribe (hub: HubConnection<'A, 'A, _, 'R, 'R>) action ticks trigger onError =
+        let fn ticks =
+            hubSubscribe hub action (fun value -> batchData trigger (ticks, value)) onError
 
-        Batcher.batch (Batcher.BatchType.Subscribe fn)
+        Batcher.batch (Batcher.BatchType.Subscribe (ticks, fn))
