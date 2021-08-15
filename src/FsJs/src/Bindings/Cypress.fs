@@ -56,7 +56,6 @@ module Cypress =
         let inline visit (url: string) : unit = emitJsExpr url "cy.visit($0)"
         let inline should (fn: unit -> unit) : unit = emitJsExpr fn "cy.should($0)"
         let inline pause () : unit = emitJsExpr () "cy.pause()"
-        let inline expect (obj: obj) : obj = emitJsExpr obj "expect($0)"
         let inline wait (time: int) : unit = emitJsExpr time "cy.wait($0)"
         let inline window () : JS.Promise<Window> = emitJsExpr () "cy.window()"
         let sinon: obj = emitJsExpr () "Cypress.sinon"
