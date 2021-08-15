@@ -1,13 +1,13 @@
 namespace FsBeacon.Template.Components
 
 
-open Browser.Types
-open Fable.Core.JS
+open System
 open Fable.React
 open Feliz
 open FsCore.Model
 open FsJs
 open FsStore
+open FsStore.State
 open FsStore.Bindings
 open FsStore.Hooks
 open FsUi.Bindings
@@ -18,24 +18,79 @@ open FsUi.Components
 module State =
     module FsBeacon =
         let root = StoreRoot (nameof FsBeacon)
-    let rec asyncDeviceIdAtoms =
+
+    let rec asyncFileIdAtoms =
         Store.selectAtomSyncKeys
-            Fluke.root
-            (nameof asyncDeviceIdAtoms)
-            Atoms.Device.devicePing
-            Dom.deviceInfo.DeviceId
-            (Guid >> DeviceId)
+            FsBeacon.root
+            (nameof asyncFileIdAtoms)
+            Atoms.File.chunkCount
+            (FileId Guid.Empty)
+            (Guid >> FileId)
 
 
 module Component =
     let dataChar = "#"
     let dataBlob = Fable.SimpleHttp.Blob.fromText (String.init (Hydrate.fileChunkSize * 1000) (fun _ -> dataChar))
+    let hexStringPromise = Js.blobToHexString dataBlob
 
 
+    [<ReactComponent>]
+    let File i fileIdAtom =
+        let fileId = Store.useValue fileIdAtom
+        let progress = Store.useValue (Selectors.File.progress fileId)
+
+        Ui.stack
+            (fun _ -> ())
+            [
+                Ui.box
+                    (fun _ -> ())
+                    [
+                        str $"{Browser.Dom.window.location.port}:file[{i}]={progress}%%"
+                    ]
+
+                Button.Button
+                    {|
+                        Icon = Some (Icons.bi.BiSave |> Icons.render, Button.IconPosition.Left)
+                        Hint = None
+                        Props = fun _ -> ()
+                        Children =
+                            [
+                                str $"{Browser.Dom.window.location.port}:file[{i}]:save"
+                            ]
+                    |}
+
+                Button.Button
+                    {|
+                        Icon = Some (Icons.bi.BiTrash |> Icons.render, Button.IconPosition.Left)
+                        Hint = None
+                        Props = fun _ -> ()
+                        Children =
+                            [
+                                str $"{Browser.Dom.window.location.port}:file[{i}]:delete"
+                            ]
+                    |}
+            ]
 
     [<ReactComponent>]
     let Component () =
         Dom.Logger.Default.Debug (fun () -> "Component.render")
+
+        let callbacks = Store.useCallbacks ()
+
+        React.useEffect (
+            (fun () ->
+                promise {
+                    let! _getter, setter = callbacks ()
+                    let! hexString = hexStringPromise
+                    let fileId = Hydrate.hydrateFile setter (Model.AtomScope.Current, hexString)
+
+                    Dom.Logger.Default.Debug (fun () -> $"Component.render useEffect() fileId={fileId}")
+                }
+                |> Promise.start),
+            [|
+                box callbacks
+            |]
+        )
 
         Jotai.jotaiUtils.useHydrateAtoms [|
             //            unbox Atoms.username, unbox (Some (Username "Test"))
@@ -58,6 +113,7 @@ module Component =
         let sessionRestored = Store.useValue Atoms.sessionRestored
         let showDebug = Store.useValue Atoms.showDebug
         let username = Store.useValue Atoms.username
+        let fileIdAtoms = Store.useValue State.asyncFileIdAtoms
 
         Ui.box
             (fun x ->
@@ -89,6 +145,8 @@ module Component =
                                                 Username = username
                                             |}}"
                             ]
+
+                        yield! fileIdAtoms |> Array.mapi File
 
                         yield!
                             [

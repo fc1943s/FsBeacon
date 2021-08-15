@@ -66,6 +66,12 @@ module Js =
         |> Array.map (String.substringFrom -2)
         |> String.concat ""
 
+    let inline blobToHexString blob =
+        promise {
+            let! bytes = blobToUint8Array blob
+            return byteArrayToHexString (bytes.Values () |> Seq.toArray)
+        }
+
     let inline hexStringToByteArray (text: string) =
         let rec loop acc =
             function
