@@ -5,7 +5,7 @@
     <LangVersion>preview</LangVersion>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="src\Components\TestComponent.fs" />
+    <Compile Include="src\Components\HostComponent.fs" />
     <Compile Include="src\Components\Component.fs" />
     <Compile Include="src\Components\Content.fs" />
       <Compile Include="src\App.fs" />

@@ -18,7 +18,7 @@ module Content =
                     (fun x -> x.flex <- "1")
                     [
                         if Browser.Dom.window.location.port = "9762" then
-                            TestComponent.TestComponent ()
+                            HostComponent.HostComponent ()
                         else
                             Component.Component ()
                     ]

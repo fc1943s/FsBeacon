@@ -15,11 +15,12 @@
         <Compile Include="src\Selectors.fs" />
         <Compile Include="src\Crypto.fs" />
         <Compile Include="src\Store.fs" />
-        <Compile Include="src\Hooks.fs" />
         <Compile Include="src\State\State.fs" />
         <Compile Include="src\State\Atoms\File.fs" />
         <Compile Include="src\State\Atoms\Device.fs" />
         <Compile Include="src\State\Selectors\File.fs" />
+        <Compile Include="src\Hooks.fs" />
+        <Compile Include="src\Hydrate.fs" />
         <Content Include="package.json" />
         <Content Include="paket.references" />
         <Content Include=".gitignore" />

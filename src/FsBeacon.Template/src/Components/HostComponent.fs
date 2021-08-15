@@ -6,10 +6,10 @@ open Feliz
 open FsUi.Bindings
 open FsUi.Components
 
-module TestComponent =
+module HostComponent =
 
     [<ReactComponent>]
-    let TestComponent () =
+    let HostComponent () =
         Ui.flex
             (fun x -> x.flex <- "1")
             [

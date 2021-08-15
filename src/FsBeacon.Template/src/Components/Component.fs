@@ -1,16 +1,38 @@
 namespace FsBeacon.Template.Components
 
 
+open Browser.Types
+open Fable.Core.JS
 open Fable.React
 open Feliz
+open FsCore.Model
 open FsJs
 open FsStore
 open FsStore.Bindings
+open FsStore.Hooks
 open FsUi.Bindings
 open FsUi.State
 open FsUi.Components
 
+
+module State =
+    module FsBeacon =
+        let root = StoreRoot (nameof FsBeacon)
+    let rec asyncDeviceIdAtoms =
+        Store.selectAtomSyncKeys
+            Fluke.root
+            (nameof asyncDeviceIdAtoms)
+            Atoms.Device.devicePing
+            Dom.deviceInfo.DeviceId
+            (Guid >> DeviceId)
+
+
 module Component =
+    let dataChar = "#"
+    let dataBlob = Fable.SimpleHttp.Blob.fromText (String.init (Hydrate.fileChunkSize * 1000) (fun _ -> dataChar))
+
+
+
     [<ReactComponent>]
     let Component () =
         Dom.Logger.Default.Debug (fun () -> "Component.render")
@@ -68,17 +90,6 @@ module Component =
                                             |}}"
                             ]
 
-                        Button.Button
-                            {|
-                                Icon = Some (Icons.bi.BiPlus |> Icons.render, Button.IconPosition.Left)
-                                Hint = None
-                                Props = fun _ -> ()
-                                Children =
-                                    [
-                                        str $"{Browser.Dom.window.location.port}:add_file"
-                                    ]
-                            |}
-
                         yield!
                             [
                                 0 .. 2
@@ -86,15 +97,14 @@ module Component =
                             |> List.map
                                 (fun i ->
                                     Ui.stack
-                                        (fun x ->
-                                            x.direction <- "row"
-                                            x.alignItems <- "center")
+                                        (fun _ -> ())
                                         [
                                             Ui.box
                                                 (fun _ -> ())
                                                 [
                                                     str $"{Browser.Dom.window.location.port}:file[{i}]=0%%"
                                                 ]
+
                                             Button.Button
                                                 {|
                                                     Icon =
@@ -106,6 +116,7 @@ module Component =
                                                             str $"{Browser.Dom.window.location.port}:file[{i}]:save"
                                                         ]
                                                 |}
+
                                             Button.Button
                                                 {|
                                                     Icon =
@@ -115,7 +126,10 @@ module Component =
                                                         )
                                                     Hint = None
                                                     Props = fun _ -> ()
-                                                    Children = []
+                                                    Children =
+                                                        [
+                                                            str $"{Browser.Dom.window.location.port}:file[{i}]:delete"
+                                                        ]
                                                 |}
                                         ])
                     ]
