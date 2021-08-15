@@ -136,9 +136,15 @@ module Cypress =
                 .should "be.visible"
             |> ignore
 
-        let waitFor text options =
+        let waitForOptions text options =
             (Cy.contains text options).should "be.visible"
             |> ignore
+
+        let waitForTimeout text timeout =
+            waitForOptions text (Some {| timeout = timeout |})
+
+        let homeUrl = "https://localhost:33922"
+        let waitFor text = waitForTimeout text cypressTimeout
 
         let expectLocation expected =
             Cy
