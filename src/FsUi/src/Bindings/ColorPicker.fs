@@ -4,9 +4,9 @@ open Fable.React
 open Fable.Core.JsInterop
 
 module ColorPicker =
-    let private sketchPicker: obj -> obj = import "SketchPicker" "react-color"
+    let sketchPicker: obj -> obj = import "SketchPicker" "react-color"
 
-    let render
+    let inline render
         (props: {| color: string
                    onChange: {| hex: string |} -> unit |})
         =

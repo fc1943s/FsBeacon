@@ -2,9 +2,13 @@ namespace FsJs
 
 open Fable.DateFunctions
 open System
+open Fable.Core.JsInterop
 
+module Char =
+    let inline getNumericValue (char: char) =
+        (((string char).ToLower ())?charCodeAt 0) - 97 + 1
 
 module DateTime =
-    let format format (dateTime: DateTime) = dateTime.Format format
+    let inline format format (dateTime: DateTime) = dateTime.Format format
 
-    let addDays (days: int) (dateTime: DateTime) = dateTime.AddDays days
+    let inline addDays (days: int) (dateTime: DateTime) = dateTime.AddDays days

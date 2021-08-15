@@ -10,7 +10,7 @@ open FsUi.Components
 module Content =
     [<ReactComponent>]
     let LoggedContent () =
-        Dom.log (fun () -> "LoggedContent.render.")
+        Dom.Logger.Default.Debug (fun () -> "LoggedContent.render.")
 
         React.suspense (
             [

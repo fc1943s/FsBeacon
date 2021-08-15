@@ -38,7 +38,7 @@
         <Compile Include="src\Components\LoadingSpinner.fs" />
         <Compile Include="src\Components\Radio.fs" />
         <Compile Include="src\Components\CheckboxInput.fs" />
-        <Compile Include="src\Components\DebugOverlay.fs" />
+        <Compile Include="src\Components\DebugPanel.fs" />
         <Compile Include="src\Components\ExternalLink.fs" />
         <Compile Include="src\Components\TransparentIconButton.fs" />
         <Compile Include="src\Components\RootWrapper.fs" />

@@ -25,20 +25,23 @@ module Selectors =
             (nameof logger)
             (fun getter ->
                 let logLevel = Store.value getter Atoms.logLevel
-                Logger.Create logLevel)
+                Dom.Logger.Create logLevel)
 
     let rec atomAccessors =
         let mutable lastValue = 0
         let valueAtom = jotai.atom lastValue
         let accessorsAtom = jotai.atom (None: (GetFn * SetFn) option)
 
-        let getBaseInfo () =
+        let getDebugInfo () =
             $"
 | atomAccessors baseInfo:
 lastValue={lastValue}
 "
 
-        Dom.log (fun () -> $"atomAccessors.constructor {getBaseInfo ()}")
+        Dom
+            .Logger
+            .getLogger()
+            .Debug (fun () -> $"atomAccessors.constructor {getDebugInfo ()}")
 
         let rec valueWrapper =
             Store.selector
@@ -46,21 +49,39 @@ lastValue={lastValue}
                 (nameof valueWrapper)
                 (fun getter ->
                     let result = Store.value getter valueAtom
-                    Dom.log (fun () -> $"atomAccessors.valueWrapper.get() result={result} {getBaseInfo ()}")
+
+                    Dom
+                        .Logger
+                        .getLogger()
+                        .Debug (fun () -> $"atomAccessors.valueWrapper.get() result={result} {getDebugInfo ()}")
+
                     result)
                 (fun getter setter newValue ->
-                    Dom.log (fun () -> $"atomAccessors.valueWrapper.set() newValue={newValue} {getBaseInfo ()}")
+                    Dom
+                        .Logger
+                        .getLogger()
+                        .Debug (fun () -> $"atomAccessors.valueWrapper.set() newValue={newValue} {getDebugInfo ()}")
+
                     Store.set setter accessorsAtom (Some (getter, setter))
                     Store.set setter valueAtom newValue)
 
         valueWrapper.onMount <-
             fun setAtom ->
-                Dom.log (fun () -> $"atomAccessors.valueWrapper.onMount() lastValue={lastValue} {getBaseInfo ()}")
+                Dom
+                    .Logger
+                    .getLogger()
+                    .Debug (fun () -> $"atomAccessors.valueWrapper.onMount() lastValue={lastValue} {getDebugInfo ()}")
+
                 lastValue <- lastValue + 1
                 setAtom lastValue
 
                 fun () ->
-                    Dom.log (fun () -> $"atomAccessors.valueWrapper.onUnmount() lastValue={lastValue} {getBaseInfo ()}")
+                    Dom
+                        .Logger
+                        .getLogger()
+                        .Debug (fun () ->
+                            $"atomAccessors.valueWrapper.onUnmount() lastValue={lastValue} {getDebugInfo ()}")
+
                     ()
 
         Store.readSelector
@@ -70,9 +91,11 @@ lastValue={lastValue}
                 let value = Store.value getter valueWrapper
                 let accessors = Store.value getter accessorsAtom
 
-                Dom.log
-                    (fun () ->
-                        $"atomAccessors.selfWrapper.get() value={value} accessors={accessors.IsSome} {getBaseInfo ()}")
+                Dom
+                    .Logger
+                    .getLogger()
+                    .Debug (fun () ->
+                        $"atomAccessors.selfWrapper.get() value={value} accessors={accessors.IsSome} {getDebugInfo ()}")
 
                 accessors)
 
@@ -172,7 +195,6 @@ lastValue={lastValue}
         let rec gunAtomNode =
             Store.readSelectorFamily
                 FsStore.root
-                collection
                 (nameof gunAtomNode)
                 (fun (username, AtomPath atomPath) getter ->
                     let gun = Store.value getter gun
@@ -206,7 +228,7 @@ lastValue={lastValue}
                                alias = Some (GunUserAlias.Alias (Alias alias))
                            } when alias = (username |> Username.ValueOrDefault) -> getNode ()
                     | _ ->
-                        Dom.log
+                        Dom.Logger.Default.Debug
                             (fun () ->
                                 $"gunAtomNode. Invalid username.
                                           username={username}
@@ -247,44 +269,88 @@ lastValue={lastValue}
                                             {
                                                 nextRetryDelayInMilliseconds =
                                                     fun _context ->
-                                                        Dom.log (fun () -> "SignalR.connect(). withAutomaticReconnect")
+                                                        Dom
+                                                            .Logger
+                                                            .getLogger()
+                                                            .Debug (fun () ->
+                                                                "SignalR.connect(). withAutomaticReconnect")
+
                                                         Some timeout
                                             }
                                         )
                                         .onReconnecting(fun ex ->
-                                            Dom.log (fun () -> $"SignalR.connect(). onReconnecting ex={ex}"))
+                                            Dom
+                                                .Logger
+                                                .getLogger()
+                                                .Debug (fun () -> $"SignalR.connect(). onReconnecting ex={ex}"))
                                         .onReconnected(fun ex ->
-                                            Dom.log (fun () -> $"SignalR.connect(). onReconnected ex={ex}"))
-                                        .onClose(fun ex -> Dom.log (fun () -> $"SignalR.connect(). onClose ex={ex}"))
+                                            Dom
+                                                .Logger
+                                                .getLogger()
+                                                .Debug (fun () -> $"SignalR.connect(). onReconnected ex={ex}"))
+                                        .onClose(fun ex ->
+                                            Dom
+                                                .Logger
+                                                .getLogger()
+                                                .Debug (fun () -> $"SignalR.connect(). onClose ex={ex}"))
                                         .configureLogging(LogLevel.Debug)
                                         .onMessage (fun msg ->
                                             match msg with
                                             | Sync.Response.ConnectResult ->
-                                                Dom.log (fun () -> "Sync.Response.ConnectResult")
+                                                Dom
+                                                    .Logger
+                                                    .getLogger()
+                                                    .Debug (fun () -> "Sync.Response.ConnectResult")
                                             | Sync.Response.SetResult result ->
-                                                Dom.log (fun () -> $"Sync.Response.SetResult result={result}")
+                                                Dom
+                                                    .Logger
+                                                    .getLogger()
+                                                    .Debug (fun () -> $"Sync.Response.SetResult result={result}")
                                             | Sync.Response.GetResult value ->
-                                                Dom.log (fun () -> $"Sync.Response.GetResult value={value}")
+                                                Dom
+                                                    .Logger
+                                                    .getLogger()
+                                                    .Debug (fun () -> $"Sync.Response.GetResult value={value}")
                                             | Sync.Response.GetStream (key, value) ->
-                                                Dom.log (fun () -> $"Sync.Response.GetStream key={key} value={value}")
+                                                Dom
+                                                    .Logger
+                                                    .getLogger()
+                                                    .Debug (fun () ->
+                                                        $"Sync.Response.GetStream key={key} value={value}")
                                             | Sync.Response.FilterResult keys ->
-                                                Dom.log (fun () -> $"Sync.Response.FilterResult keys={keys}")
+                                                Dom
+                                                    .Logger
+                                                    .getLogger()
+                                                    .Debug (fun () -> $"Sync.Response.FilterResult keys={keys}")
                                             | Sync.Response.FilterStream (key, keys) ->
-                                                Dom.log (fun () -> $"Sync.Response.FilterStream key={key} keys={keys}")
+                                                Dom
+                                                    .Logger
+                                                    .getLogger()
+                                                    .Debug (fun () ->
+                                                        $"Sync.Response.FilterStream key={key} keys={keys}")
 
                                             match msg with
                                             | Sync.Response.FilterStream (key, keys) ->
                                                 match hubSubscriptionMap.TryGetValue key with
                                                 | true, fn ->
-                                                    Dom.log (fun () -> $"Selectors.hub onMsg msg={msg}. triggering ")
+                                                    Dom
+                                                        .Logger
+                                                        .getLogger()
+                                                        .Debug (fun () -> $"Selectors.hub onMsg msg={msg}. triggering ")
+
                                                     fn keys
                                                 | _ ->
-                                                    Dom.log
-                                                        (fun () ->
+                                                    Dom
+                                                        .Logger
+                                                        .getLogger()
+                                                        .Debug (fun () ->
                                                             $"Selectors.hub onMsg msg={msg}. skipping. not in map ")
                                             | _ ->
-                                                Dom.log
-                                                    (fun () -> $"Selectors.hub onMsg msg={msg}. skipping. not handled ")))
+                                                Dom
+                                                    .Logger
+                                                    .getLogger()
+                                                    .Debug (fun () ->
+                                                        $"Selectors.hub onMsg msg={msg}. skipping. not handled ")))
 
                         printfn $"hub connection selector. username={username} hubUrl={hubUrl}. starting connection..."
                         connection.startNow ()

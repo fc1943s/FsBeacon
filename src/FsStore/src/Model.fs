@@ -3,7 +3,6 @@ namespace FsStore
 open Fable.Core
 open FsCore
 open FsCore.Model
-open FsJs
 open FsStore.Bindings
 
 module FsStore =
@@ -14,27 +13,6 @@ module Model =
     type AtomScope = Jotai.AtomScope
     type GetFn = Jotai.GetFn
     type SetFn = Jotai.SetFn
-
-    type LogLevel =
-        | Trace = 0
-        | Debug = 1
-        | Info = 2
-        | Warning = 3
-        | Error = 4
-        | Critical = 5
-
-    let DEFAULT_LOG_LEVEL = if Dom.isDebug () then LogLevel.Debug else LogLevel.Info
-
-    type LogFn = (unit -> string) -> unit
-
-    type Logger =
-        {
-            Trace: LogFn
-            Debug: LogFn
-            Info: LogFn
-            Warning: LogFn
-            Error: LogFn
-        }
 
     [<RequireQualifiedAccess>]
     type InputScope<'TValue> =
@@ -104,24 +82,6 @@ module Model =
             Name: string
         }
 
-    type Logger with
-        static member inline Create currentLogLevel =
-            let log logLevel (fn: unit -> string) =
-                if currentLogLevel <= logLevel then
-                    let result = fn ()
-
-                    if result |> Option.ofObjUnbox |> Option.isSome then
-                        Dom.log (fun () -> $"[{logLevel}] {result}")
-
-            {
-                Trace = log LogLevel.Trace
-                Debug = log LogLevel.Debug
-                Info = log LogLevel.Info
-                Warning = log LogLevel.Warning
-                Error = log LogLevel.Error
-            }
-
-        static member inline Default = Logger.Create DEFAULT_LOG_LEVEL
 
     type InputScope<'TValue> with
         static member inline AtomScope<'TValue> (inputScope: InputScope<'TValue> option) =

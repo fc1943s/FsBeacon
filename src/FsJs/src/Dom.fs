@@ -34,6 +34,7 @@ module Dom =
             IsExtension: bool
             GitHubPages: bool
             IsTesting: bool
+            DeviceId: DeviceId
         }
         static member inline Default =
             {
@@ -43,7 +44,9 @@ module Dom =
                 IsExtension = false
                 GitHubPages = false
                 IsTesting = false
+                DeviceId = DeviceId Guid.Empty
             }
+
 
     let deviceInfo =
         match window () with
@@ -71,31 +74,37 @@ module Dom =
                 |> Option.map (fun userAgentData -> userAgentData.mobile)
                 |> Option.defaultValue false
 
-            let deviceInfo =
-                {
-                    Brands = brands
-                    IsMobile =
-                        if userAgentDataMobile then
-                            true
-                        elif brands.Length > 0 then
-                            false
-                        else
-                            let userAgent = if window?navigator = None then "" else window?navigator?userAgent
 
-                            JSe
-                                .RegExp(
-                                    "Android|BlackBerry|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop",
-                                    JSe.RegExpFlag().i
-                                )
-                                .Test userAgent
-                    IsElectron = jsTypeof window?electronApi = "object"
-                    IsExtension = window.location.protocol = "chrome-extension:"
-                    GitHubPages = window.location.host.EndsWith "github.io"
-                    IsTesting = Js.jestWorkerId || window?Cypress <> null
-                }
+            let deviceId =
+                match window.localStorage.getItem "deviceId" with
+                | String.ValidString deviceId -> DeviceId (Guid deviceId)
+                | _ ->
+                    let deviceId = DeviceId.NewId ()
+                    window.localStorage.setItem ("deviceId", deviceId |> DeviceId.Value |> string)
+                    deviceId
 
-            printfn $"deviceInfo={JS.JSON.stringify deviceInfo}"
-            deviceInfo
+            {
+                Brands = brands
+                IsMobile =
+                    if userAgentDataMobile then
+                        true
+                    elif brands.Length > 0 then
+                        false
+                    else
+                        let userAgent = if window?navigator = None then "" else window?navigator?userAgent
+
+                        JSe
+                            .RegExp(
+                                "Android|BlackBerry|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop",
+                                JSe.RegExpFlag().i
+                            )
+                            .Test userAgent
+                IsElectron = jsTypeof window?electronApi = "object"
+                IsExtension = window.location.protocol = "chrome-extension:"
+                GitHubPages = window.location.host.EndsWith "github.io"
+                IsTesting = Js.jestWorkerId || window?Cypress <> null
+                DeviceId = deviceId
+            }
 
     let isDebugStatic =
         not deviceInfo.GitHubPages
@@ -118,14 +127,84 @@ module Dom =
 
         debug <> false && (debug || isDebugStatic)
 
-    let inline logWithFn logFn fn =
-        if isDebug () then
-            let result = fn ()
 
-            if result |> Option.ofObjUnbox |> Option.isSome then
-                logFn $"""[{DateTime.Now |> DateTime.format "HH:mm:ss"}] {result}"""
+
+    module ConsoleFlag =
+        let reset = "\x1b[0m"
+        let bright = "\x1b[1m"
+        let dim = "\x1b[2m"
+        let underscore = "\x1b[4m"
+        let blink = "\x1b[5m"
+        let reverse = "\x1b[7m"
+        let hidden = "\x1b[8m"
+
+        let fgBlack = "\x1b[30m"
+        let fgRed = "\x1b[31m"
+        let fgGreen = "\x1b[32m"
+        let fgYellow = "\x1b[33m"
+        let fgBlue = "\x1b[34m"
+        let fgMagenta = "\x1b[35m"
+        let fgCyan = "\x1b[36m"
+        let fgWhite = "\x1b[37m"
+
+        let fg =
+            [
+                fgBlack
+                fgRed
+                fgGreen
+                fgYellow
+                fgBlue
+                fgMagenta
+                fgCyan
+                fgWhite
+            ]
+
+        let bgBlack = "\x1b[40m"
+        let bgRed = "\x1b[41m"
+        let bgGreen = "\x1b[42m"
+        let bgYellow = "\x1b[43m"
+        let bgBlue = "\x1b[44m"
+        let bgMagenta = "\x1b[45m"
+        let bgCyan = "\x1b[46m"
+        let bgWhite = "\x1b[47m"
+
+
+    let tag =
+        deviceInfo.DeviceId
+        |> DeviceId.Value
+        |> string
+        |> String.substringFrom -4
+
+    let inline logWithFn logFn fn =
+        let result = fn ()
+
+        if result |> Option.ofObjUnbox |> Option.isSome then
+
+            let output =
+                [|
+                    let tagValue =
+                        tag
+                        |> Seq.map Char.getNumericValue
+                        |> Seq.map Math.Abs
+                        |> Seq.map float
+                        |> Seq.sum
+
+                    let tagIndex = ((tagValue / 60.) * 5.) - 5. |> int
+
+                    //                    printfn $"tagValue={tagValue} tagIndex={tagIndex}"
+
+                    ConsoleFlag.fg.[Math.Min (ConsoleFlag.fg.Length - 1, Math.Max (0, tagIndex))]
+                    $"""[{tag} {DateTime.Now |> DateTime.format "HH:mm:ss"}]"""
+                    ConsoleFlag.reset
+                    yield! result
+                |]
+                |> String.concat " "
+
+            logFn output
 
     let inline log fn = logWithFn (fun x -> printfn $"{x}") fn
+
+    let inline log2 (fn: unit -> _ []) = logWithFn (fun x -> printfn $"{x}") fn
     let inline logError fn = logWithFn (fun x -> eprintfn $"{x}") fn
 
     let inline logFiltered newValue fn =
@@ -135,11 +214,87 @@ module Dom =
                     null
                 else
                     let result: string = fn ()
-                    if result.Contains "devicePing" then null else result)
 
-    let inline consoleLog x = Browser.Dom.console.log x
+                    if result.Contains "devicePing" then
+                        null
+                    else
+                        [|
+                            result
+                        |])
+
+    let inline consoleLog (x: string []) = emitJsExpr x "console.log(...$0)"
     let inline consoleError x = Browser.Dom.console.error x
 
+    type LogLevel =
+        | Trace = 0
+        | Debug = 1
+        | Info = 2
+        | Warning = 3
+        | Error = 4
+        | Critical = 5
+
+    let DEFAULT_LOG_LEVEL = if isDebug () then LogLevel.Debug else LogLevel.Info
+
+    type LogFn = (unit -> string) -> unit
+
+    type Logger =
+        {
+            Trace: LogFn
+            Debug: LogFn
+            Info: LogFn
+            Warning: LogFn
+            Error: LogFn
+        }
+
+    let logIf currentLogLevel logLevel (fn: unit -> string) =
+        if currentLogLevel <= logLevel then
+            let result = fn ()
+
+            if result |> Option.ofObjUnbox |> Option.isSome then
+                log2
+                    (fun () ->
+                        [|
+                            match logLevel with
+                            | LogLevel.Trace -> ConsoleFlag.fgBlack
+                            | LogLevel.Debug -> ConsoleFlag.fgGreen
+                            | LogLevel.Info -> ConsoleFlag.fgWhite
+                            | LogLevel.Warning -> ConsoleFlag.fgYellow
+                            | LogLevel.Error -> ConsoleFlag.fgRed
+                            | LogLevel.Critical -> ConsoleFlag.fgMagenta
+                            | _ -> ConsoleFlag.fgWhite
+                            $"[{Enum.name logLevel}]"
+                            ConsoleFlag.fgWhite
+                            result
+                        |])
+
+    type Logger with
+
+
+
+
+
+        static member inline Create currentLogLevel =
+            let log = logIf currentLogLevel
+
+            {
+                Trace = log LogLevel.Trace
+                Debug = log LogLevel.Debug
+                Info = log LogLevel.Info
+                Warning = log LogLevel.Warning
+                Error = log LogLevel.Error
+            }
+
+        static member inline Default = Logger.Create DEFAULT_LOG_LEVEL
+
+
+    Logger.Default.Info (fun () -> $"deviceInfo={JS.JSON.stringify deviceInfo}")
+
+
+    module Logger =
+        let mutable lastLogger = None
+
+        let inline getLogger () =
+            lastLogger |> Option.defaultValue Logger.Default
 
     let inline exited () =
         if not deviceInfo.IsTesting then
@@ -192,7 +347,8 @@ module Dom =
                     if deviceInfo.IsTesting then
                         do! Js.sleep 0
                     else
-                        consoleLog ("waitForSome: none. waiting...", fn.ToString ())
+                        Logger.Default.Info (fun () -> $"waitForSome: none. waiting... {fn.ToString ()}")
+
                         do! Js.sleep 100
 
                     return! waitForSome fn
@@ -222,14 +378,3 @@ module Dom =
         a?download <- fileName
         a.click ()
         a.remove ()
-
-    let deviceId =
-        match window () with
-        | Some window ->
-            match window.localStorage.getItem "deviceId" with
-            | String.ValidString deviceId -> DeviceId (Guid deviceId)
-            | _ ->
-                let deviceId = DeviceId.NewId ()
-                window.localStorage.setItem ("deviceId", deviceId |> DeviceId.Value |> string)
-                deviceId
-        | None -> DeviceId.NewId ()
