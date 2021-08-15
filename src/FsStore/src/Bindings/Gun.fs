@@ -310,12 +310,12 @@ module Gun =
                         |> Json.encode<'TValue>
                         |> Json.encode<string>
 
-                    //                    printfn $"userEncode value={value} json={json}"
-//
                     let! encrypted = sea.encrypt (DecryptedValue json) keys
 
                     let! signed = sea.sign encrypted keys
-                    //                    Dom.log (fun () -> $"userEncode. json={json} encrypted={encrypted} signed={signed}")
+
+                    printfn $"userEncode. value={value} json={json} encrypted={encrypted} signed={signed}"
+
                     return signed
                 | None -> return failwith $"No keys found for user {user.is}"
             with
