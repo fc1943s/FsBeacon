@@ -14,7 +14,6 @@ module Atoms =
     let rec hubUrl = Store.atomWithStorage FsStore.root (nameof hubUrl) (None: string option)
     let rec gunTrigger = Store.atom FsStore.root (nameof gunTrigger) 0
     let rec hubTrigger = Store.atom FsStore.root (nameof hubTrigger) 0
-    let rec isTesting = Store.atom FsStore.root (nameof isTesting) Dom.deviceInfo.IsTesting
     let rec username = Store.atom FsStore.root (nameof username) (None: Username option)
     let rec gunKeys = Store.atom FsStore.root (nameof gunKeys) Gun.GunKeys.Default
     let rec sessionRestored = Store.atom FsStore.root (nameof sessionRestored) false

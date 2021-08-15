@@ -97,6 +97,8 @@ timeout={timeout} "
                                            subscribe ()
                                            fun () -> unsubscribe ()
 
+        readSelectorWrapper?init <- defaultValue
+
         readSelectorWrapper
 
     let inline readSelectorFamilyInterval storeRoot name interval defaultValue getFn =
@@ -121,14 +123,6 @@ timeout={timeout} "
         let mutable lastGunAtomNode = None
         let mutable lastHub = None
 
-        member _.getDebugInfo () =
-            $"
-| createSyncEngine baseInfo:
-lastAtomPath={lastAtomPath}
-lastUsername={lastUsername}
-lastGunOptions={lastGunOptions}
-lastGunAtomNode={lastGunAtomNode} "
-
         member this.GetAtomPath () = lastAtomPath
         member this.GetAccessors () = lastAccessors
         member this.GetUsername () = lastUsername
@@ -141,13 +135,6 @@ lastGunAtomNode={lastGunAtomNode} "
                 lastAtomPath <- Internal.queryAtomPath (AtomReference.Atom atom)
 
             Profiling.addCount $"createSyncEngine.setProviders {lastAtomPath}"
-
-            match lastAtomPath with
-            | Some (AtomPath atomPath) ->
-                getLogger()
-                    .Debug (fun () ->
-                        $"createSyncEngine.setProviders atom={atom} atomPath={atomPath} {this.getDebugInfo ()}")
-            | _ -> ()
 
             if lastAccessors.IsNone then
                 lastAccessors <- Store.value getter Selectors.atomAccessors
@@ -163,6 +150,14 @@ lastGunAtomNode={lastGunAtomNode} "
             match lastAtomPath, lastGunAtomNode with
             | Some _, Some _ -> lastHub <- Store.value getter Selectors.Hub.hub
             | _ -> ()
+
+            match lastAtomPath with
+            | Some (AtomPath atomPath) ->
+                getLogger()
+                    .Debug (fun () ->
+                        $"SyncEngine.SetProviders() atom={atom} atomPath={atomPath} this={Json.encodeWithNull this}")
+            | _ -> ()
+
 
 
 
@@ -273,8 +268,8 @@ lastGunAtomNode={lastGunAtomNode} "
     type AtomSyncState<'T> = { Value: 'T }
 
 
-    type SyncState<'T> () =
-        let mutable lastAdapterValueMapByType: Map<AdapterType, (TicksGuid * 'T) option> option = None
+    type SyncState<'TValue> () =
+        let mutable lastAdapterValueMapByType: Map<AdapterType, (TicksGuid * 'TValue) option> option = None
         let mutable lastGunSubscription = None
         let mutable lastHubSubscription = None
         let mutable syncPaused = false
@@ -555,7 +550,8 @@ ticks={ticks}
 
             | None, _ ->
                 getLogger()
-                    .Debug (fun () -> $"[syncSubscribe] skipping subscribe, no gun atom node. {getDebugInfo ()} ")
+                    .Debug (fun () ->
+                        $"[syncSubscribe] skipping subscribe, no gun atom node. (maybe no username) {getDebugInfo ()} ")
         }
 
 
@@ -730,20 +726,13 @@ newValue={newValue}
 
         let getDebugInfo () =
             $"""
-| atomWithSync baseInfo:
-lastHubSubscription={syncState.HubSubscription}
-syncState.AdapterValueMapByType={syncState.AdapterValueMapByType}
-syncState.GunSubscription={syncState.GunSubscription}
-syncEngine.GetAccessors.IsSome={syncEngine.GetAccessors().IsSome}
+| atomWithSync debugInfo:
+syncState={Json.encodeWithNull syncState}
+syncEngine={Json.encodeWithNull syncEngine}
+atomKey={Json.encodeWithNull atomKey}
 lastUserAtomId={lastUserAtomId}
-syncState.SyncPaused={syncState.SyncPaused}
-
 defaultValue={defaultValue}
-atomKey={atomKey}
-atomPath={atomPath}
-syncEngine.gunOptions={syncEngine.GetGunOptions ()}
-{syncEngine.getDebugInfo ()}
-"""
+atomPath={atomPath} """
 
         let adapterValueMapAtom =
             jotaiUtils.atomFamily
@@ -778,10 +767,6 @@ syncEngine.gunOptions={syncEngine.GetGunOptions ()}
 //                    |> Seq.head
 //                    |> snd)
 
-        getLogger()
-            .Debug (fun () ->
-                $"atomFamily constructor
-                {getDebugInfo ()}")
 
         let syncTrigger (ticks, newValue) =
             match syncEngine.GetAccessors () with
@@ -1011,10 +996,16 @@ newValue={newValue} jsTypeof-newValue={jsTypeof newValue}
 
                             newAdapterValueMap))
 
+        getLogger()
+            .Debug (fun () ->
+                $"[Trace] Store.atomWithSync constructor
+adapterValueMapAtom[username]={(adapterValueMapAtom (syncEngine.GetUsername ()))}
+lastSyncValueByTypeAtom[username]={(lastSyncValueByTypeAtom (syncEngine.GetUsername ()))}
+wrapper={wrapper}
+{getDebugInfo ()}")
+
         if atomKey.Keys
-           <> [
-               string Guid.Empty
-           ] then
+           <> (string Guid.Empty |> List.singleton) then
             wrapper?onMount <- fun (_setAtom: 'TValue option -> unit) ->
                                    debouncedSubscribe ()
 
@@ -1024,6 +1015,10 @@ newValue={newValue} jsTypeof-newValue={jsTypeof newValue}
                                            (syncEngine.GetGunAtomNode ())
                                            syncState.GunSubscription
                                            (fun () -> syncState.GunSubscription <- None)
+
+        wrapper?init <- defaultValue
+
+        Internal.registerAtom Internal.AtomType.AtomWithStorage atomPath wrapper
 
         wrapper
 
@@ -1057,12 +1052,12 @@ newValue={newValue} jsTypeof-newValue={jsTypeof newValue}
 
         let getDebugInfo () =
             $"""
-| atomWithSync baseInfo:
-{syncEngine.getDebugInfo ()}
-"""
-
-        getLogger()
-            .Debug (fun () -> $"@@ selectAtomSyncKeys constructor {getDebugInfo ()}           ")
+| selectAtomSyncKeys debugInfo:
+syncEngine={Json.encodeWithNull syncEngine}
+atomKey={Json.encodeWithNull atomKey}
+referenceAtom={referenceAtom}
+atomPath={atomPath}
+internalAtom[username]={internalAtom (syncEngine.GetUsername ())} """
 
         let mutable lastValue: Set<'TKey> option = None
 
@@ -1406,6 +1401,17 @@ newValue={newValue} jsTypeof-newValue={jsTypeof newValue}
                                debouncedSubscribe setAtom
                                fun _ -> unsubscribe ()
 
+
+        getLogger()
+            .Debug (fun () ->
+                $"[Trace] Store.selectAtomSyncKeys constructor
+wrapper={wrapper}
+lastValue={lastValue}
+lastSubscription={lastSubscription}
+{getDebugInfo ()}")
+
+        wrapper?init <- [||]
+
         splitAtom wrapper
 
 
@@ -1429,8 +1435,6 @@ newValue={newValue} jsTypeof-newValue={jsTypeof newValue}
             Object.compare
 
     let inline atomWithStorageSync<'TKey, 'TValue> storeRoot name defaultValue =
-        let storageAtom = Store.atomWithStorage storeRoot name defaultValue
-
         let atomKey =
             {
                 StoreRoot = storeRoot
@@ -1438,6 +1442,8 @@ newValue={newValue} jsTypeof-newValue={jsTypeof newValue}
                 Keys = []
                 Name = name
             }
+
+        let storageAtom = Store.atomWithStorage storeRoot name defaultValue
 
         let syncAtom = atomWithSync<'TKey, 'TValue> atomKey defaultValue
 
@@ -1481,6 +1487,10 @@ newValue={newValue} jsTypeof-newValue={jsTypeof newValue}
         wrapper?onMount <- fun (setAtom: 'TValue option -> unit) ->
                                lastSetAtom <- Some setAtom
                                fun () -> lastSetAtom <- None
+
+        wrapper?init <- defaultValue
+
+        Internal.registerAtom Internal.AtomType.AtomWithStorageSync (atomKey |> AtomKey.AtomPath) wrapper
 
         wrapper
 

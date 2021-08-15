@@ -20,42 +20,58 @@ module Internal =
         window?atomIdMap <- atomIdMap
     | None -> ()
 
-    let registerAtom (AtomPath atomPath) (atom: Atom<_>) =
+    [<RequireQualifiedAccess>]
+    type AtomType =
+        | Atom
+        | AtomWithStorage
+        | AtomWithStorageSync
+
+    let rec registerAtom (atomType: AtomType) (AtomPath atomPath) (atom: Atom<_>) =
+        Profiling.addCount $"{nameof registerAtom}() {atomPath} {atom} {atomType}"
+
         Dom
             .Logger
             .getLogger()
-            .Debug (fun () -> $"registerAtom {atomPath}")
+            .Debug (fun () -> $"registerAtom atomPath={atomPath} atom={atom} atomType={atomType}")
 
-        Profiling.addCount $"registerAtom {atomPath}"
         atomPathMap.[atomPath] <- atom.toString ()
         atomIdMap.[atom.toString ()] <- atomPath
-        atom, Some (AtomPath atomPath)
 
     let queryAtomPath atomReference =
-        match atomReference with
-        | AtomReference.Atom atom ->
-            match atomIdMap.TryGetValue (atom.toString ()) with
-            | true, value -> Some (AtomPath value)
-            | _ -> None
-        | AtomReference.Path path ->
-            match atomPathMap.TryGetValue path with
-            | true, value -> Some (AtomPath value)
-            | _ -> None
+        let result =
+            match atomReference with
+            | AtomReference.Atom atom ->
+                match atomIdMap.TryGetValue (atom.toString ()) with
+                | true, value -> Some (AtomPath value)
+                | _ -> None
+            | AtomReference.Path path ->
+                match atomPathMap.TryGetValue path with
+                | true, value -> Some (AtomPath value)
+                | _ -> None
+
+        Dom
+            .Logger
+            .getLogger()
+            .Debug (fun () -> $"queryAtomPath atomReference={atomReference} result={result}")
+
+        result
 
 
 module Primitives =
     let inline atom<'TValue> atomKey (defaultValue: 'TValue) =
         let atomPath = atomKey |> AtomKey.AtomPath
 
-        jotai.atom (
-            (fun () ->
-                Profiling.addCount $"atom atomPath={atomPath}"
+        let atom =
+            jotai.atom (
+                (fun () ->
+                    Profiling.addCount $"atom.defaultValue() {atomPath} { (*Json.encodeWithNull*) defaultValue}"
 
-                defaultValue)
-                ()
-        )
-        |> Internal.registerAtom atomPath
-        |> fst
+                    defaultValue)
+                    ()
+            )
+
+        Internal.registerAtom Internal.AtomType.Atom atomPath atom
+        atom
 
     let inline selector<'TValue> atomKey (getFn: GetFn -> 'TValue) (setFn: GetFn -> SetFn -> 'TValue -> unit) =
         let atomPath = atomKey |> AtomKey.AtomPath
@@ -75,8 +91,6 @@ module Primitives =
                     //                         | _ -> value
                     setFn getter setter newValue)
         )
-        |> Internal.registerAtom atomPath
-        |> fst
 
     let inline selectAtom atomKey atom selector =
         //        readSelector (
@@ -95,8 +109,6 @@ module Primitives =
                 Profiling.addCount $"selectAtom atomPath={atomPath}"
                 selector value)
             JS.undefined
-        |> Internal.registerAtom atomPath
-        |> fst
 
     let inline asyncSelector<'TValue>
         atomKey
@@ -118,8 +130,6 @@ module Primitives =
                         do! setFn getter setter newValue
                     })
         )
-        |> Internal.registerAtom atomPath
-        |> fst
 
 
 [<AutoOpen>]
@@ -240,29 +250,35 @@ module PrimitivesMagic =
                 Object.compare
 
         let inline atomWithStorage storeRoot name defaultValue =
-            let internalAtom =
-                jotaiUtils.atomWithStorage
-                    ({
-                         StoreRoot = storeRoot
-                         Collection = None
-                         Keys = []
-                         Name = name
-                     }
-                     |> AtomKey.AtomPath
-                     |> AtomPath.Value)
-                    defaultValue
+            let atomPath =
+                {
+                    StoreRoot = storeRoot
+                    Collection = None
+                    Keys = []
+                    Name = name
+                }
+                |> AtomKey.AtomPath
 
-            selector
-                storeRoot
-                name
-                (fun getter -> value getter internalAtom)
-                (fun _ setter argFn ->
-                    let arg =
-                        match jsTypeof argFn with
-                        | "function" -> (argFn |> box |> unbox) () |> unbox
-                        | _ -> argFn
+            let internalAtom = jotaiUtils.atomWithStorage (atomPath |> AtomPath.Value) defaultValue
 
-                    set setter internalAtom arg)
+            let selectorWrapper =
+                selector
+                    storeRoot
+                    name
+                    (fun getter -> value getter internalAtom)
+                    (fun _ setter argFn ->
+                        let arg =
+                            match jsTypeof argFn with
+                            | "function" -> (argFn |> box |> unbox) () |> unbox
+                            | _ -> argFn
+
+                        set setter internalAtom arg)
+
+            selectorWrapper?init <- defaultValue
+
+            Internal.registerAtom Internal.AtomType.AtomWithStorage atomPath selectorWrapper
+
+            selectorWrapper
 
 
         let inline asyncSelector<'TValue>

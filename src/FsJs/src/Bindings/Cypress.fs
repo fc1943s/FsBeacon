@@ -13,13 +13,17 @@ module Cypress =
 
     let inline before (fn: unit -> unit) = emitJsExpr fn "before($0)"
 
+    type ExpectToBe<'T> =
+        abstract equal : obj -> unit
+
     type ExpectTo<'T> =
-        abstract contain : 'T -> unit
+        abstract contain : obj -> unit
+        abstract be : ExpectToBe<'T>
 
     type Expect<'T> =
         abstract ``to`` : ExpectTo<'T>
 
-    let inline expect<'T> (name: 'T) : Expect<'T> = emitJsExpr name "expect($0)"
+    let inline expect<'T> (sel: obj) : Expect<'T> = emitJsExpr sel "expect($0)"
 
     let inline it (name: string) (fn: unit -> unit) = emitJsExpr (name, fn) "it($0, $1)"
 
@@ -58,10 +62,19 @@ module Cypress =
         let inline pause () : unit = emitJsExpr () "cy.pause()"
         let inline wait (time: int) : unit = emitJsExpr time "cy.wait($0)"
         let inline window () : JS.Promise<Window> = emitJsExpr () "cy.window()"
+        let inline getIframeBody1 () : Chainable2<'T> = emitJsExpr () "cy.getIframeBody1()"
+        let inline getIframeBody2 () : Chainable2<'T> = emitJsExpr () "cy.getIframeBody2()"
         let sinon: obj = emitJsExpr () "Cypress.sinon"
 
         let inline contains (text: string) (options: {| timeout: int |} option) : Chainable2<'T> =
             emitJsExpr (text, options) "cy.contains($0, $1)"
+
+        let inline elContains
+            (el: Chainable2<'T>)
+            (text: string)
+            (options: {| timeout: int |} option)
+            : Chainable2<'T> =
+            emitJsExpr (el, text, options) "$0.contains($1, $2)"
 
         let inline get (selector: string) : Chainable2<string> = emitJsExpr selector "cy.get($0)"
 
@@ -119,16 +132,21 @@ module Cypress =
                 .click (Some {| force = false |})
             |> ignore
 
-        let clickText text =
-            (Cy.contains text None)
-                .click (Some {| force = false |})
-            |> ignore
+        let clickEl (el: Cy.Chainable2<_>) =
+            el.click (Some {| force = false |}) |> ignore
+
+        let textContains text =
+            Cy.contains text (Some {| timeout = cypressTimeout |})
+
+        let clickText text = clickEl (textContains text)
+
+        let textEl el text =
+            (Cy.elContains el text (Some {| timeout = cypressTimeout |}))
+
+        let clickTextEl el text = clickEl (textEl el text)
 
         let clickSelectorChildFromText text selector =
-            (Cy.contains text None)
-                .find(selector)
-                .click (Some {| force = false |})
-            |> ignore
+            clickEl ((textContains text).find selector)
 
         let clickSelector selector =
             (Cy.get selector).first().click None |> ignore
@@ -147,6 +165,9 @@ module Cypress =
 
         let homeUrl = "https://localhost:33922"
         let waitFor text = waitForTimeout text cypressTimeout
+
+        let waitForEl el text =
+            (textEl el text).should "be.visible" |> ignore
 
         let expectLocation expected =
             Cy

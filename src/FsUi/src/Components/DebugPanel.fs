@@ -1,6 +1,5 @@
 namespace FsUi.Components
 
-open Fable.Core
 open Fable.Core.JsInterop
 open Fable.React
 open Feliz
@@ -18,6 +17,11 @@ module DebugPanel =
         | Overlay
         | Inline
 
+    let inline mapDict dict =
+        dict
+        |> Seq.indexed
+        |> Seq.map (fun (i, KeyValue (k, v)) -> $"<{i}> {k}", v |> string |> box)
+
     [<ReactComponent>]
     let DebugPanel display =
         let text, setText = React.useState ""
@@ -26,38 +30,34 @@ module DebugPanel =
 
         let deviceInfo = Store.useValue Selectors.deviceInfo
 
-        Dom.Logger.Default.Info (fun () -> $"DebugPanel.render. showDebug={showDebug} text={text}")
+        Dom.Logger.Default.Info (fun () -> $"DebugPanel.render. showDebug={showDebug}")
 
         Scheduling.useScheduling
             Scheduling.Interval
             1000
             (fun _ _ ->
                 promise {
-                    match Dom.window () with
-                    | Some window -> if not window?Debug then window?showDebug <- showDebug
-                    | None -> ()
-
                     if not showDebug then
                         ()
                     else
                         let json =
-                            {|
-                                DeviceInfo = deviceInfo
-                                SortedCallCount =
-                                    Profiling.profilingState.CallCount
-                                    |> Seq.map (fun (KeyValue (k, v)) -> k, v |> string |> box)
-                                    |> Seq.sortBy fst
-                                    |> createObj
-                                CallCount =
-                                    Profiling.profilingState.CallCount
-                                    |> Seq.map (fun (KeyValue (k, v)) -> k, v |> string |> box)
-                                    |> createObj
-                                Timestamps =
-                                    Profiling.profilingState.Timestamps
-                                    |> Seq.map (fun (k, v) -> $"{k} = {v}")
-                                    |> Seq.toArray
-                            |}
-                            |> fun obj -> JS.JSON.stringify (obj, unbox null, 4)
+                            Json.encodeWithNullFormatted
+                                {|
+                                    DeviceInfo = deviceInfo
+                                    SortedCallCount =
+                                        Profiling.profilingState.CallCount
+                                        |> mapDict
+                                        |> Seq.sortBy fst
+                                        |> createObj
+                                    CallCount =
+                                        Profiling.profilingState.CallCount
+                                        |> mapDict
+                                        |> createObj
+                                    Timestamps =
+                                        Profiling.profilingState.Timestamps
+                                        |> Seq.map (fun (k, v) -> $"{k} = {v}")
+                                        |> Seq.toArray
+                                |}
 
                         if json = oldJson then
                             ()
@@ -99,9 +99,13 @@ module DebugPanel =
                     x.backgroundColor <- "#44444455")
                 [
                     if showDebug then
-                        Html.pre [
-                            prop.id "diag"
-                            prop.children [ str text ]
-                        ]
+                        Ui.box
+                            (fun x ->
+                                x.id <- "diag"
+                                x.whiteSpace <- "pre"
+                                x.fontFamily <- "Fira Code Light, system-ui, sans-serif")
+                            [
+                                str text
+                            ]
                 ]
         ]
