@@ -18,13 +18,20 @@ module Dom =
             printfn "No window found"
             None
 
-    let private domRefs = Dictionary<string, obj> ()
+    module Global =
 
-    match window () with
-    | Some window -> window?domRefs <- domRefs
-    | None -> ()
+        let private ``global`` = Dictionary<string, obj> ()
 
-    let set key value = domRefs.[key] <- value
+        match window () with
+        | Some window -> window?_global <- ``global``
+        | None -> ()
+
+        let get<'T> (key: string) (defaultValue: 'T) =
+            match ``global``.TryGetValue key with
+            | true, value -> value |> unbox<'T>
+            | _ -> defaultValue
+
+        let set key value = ``global``.[key] <- value
 
     type DeviceInfo =
         {
@@ -112,19 +119,12 @@ module Dom =
         && not deviceInfo.IsElectron
         && not deviceInfo.IsMobile
 
-    match window () with
-    | Some window ->
-        window?Debug <- false
-
-        if window?Cypress <> null then window?Debug <- true
-    | None -> ()
+    Global.set "Debug" false
+    if window?Cypress <> null then Global.set "Debug" true
+    Global.set "Debug" true
 
     let inline isDebug () =
-        let debug =
-            match window () with
-            | Some window -> window?Debug
-            | None -> false
-
+        let debug = Global.get "Debug" false
         debug <> false && (debug || isDebugStatic)
 
 
@@ -169,7 +169,7 @@ module Dom =
         let bgWhite = "\x1b[47m"
 
 
-    let tag =
+    let deviceTag =
         deviceInfo.DeviceId
         |> DeviceId.Value
         |> string
@@ -183,7 +183,7 @@ module Dom =
             let output =
                 [|
                     let tagValue =
-                        tag
+                        deviceTag
                         |> Seq.map Char.getNumericValue
                         |> Seq.map Math.Abs
                         |> Seq.map float
@@ -194,7 +194,7 @@ module Dom =
                     //                    printfn $"tagValue={tagValue} tagIndex={tagIndex}"
 
                     ConsoleFlag.fg.[Math.Min (ConsoleFlag.fg.Length - 1, Math.Max (0, tagIndex))]
-                    $"""[{tag} {DateTime.Now |> DateTime.format "HH:mm:ss"}]"""
+                    $"""[{deviceTag} {DateTime.Now |> DateTime.format "HH:mm:ss"}]"""
                     ConsoleFlag.reset
                     yield! result
                 |]
@@ -268,6 +268,12 @@ module Dom =
                         |])
 
     type Logger with
+
+
+
+
+
+
 
 
 
@@ -354,7 +360,7 @@ module Dom =
                     return! waitForSome fn
         }
 
-    let download content fileName contentType =
+    let inline download content fileName contentType =
         let a = Browser.Dom.document.createElement "a"
 
         let file =

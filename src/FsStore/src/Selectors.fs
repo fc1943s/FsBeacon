@@ -124,11 +124,11 @@ lastValue={lastValue}
                 FsStore.root
                 (nameof gun)
                 (fun getter ->
-                    let isTesting = Store.value getter Atoms.isTesting
+                    let deviceInfo = Store.value getter deviceInfo
                     let gunPeers = Store.value getter gunPeers
 
                     let gun =
-                        if isTesting then
+                        if deviceInfo.IsTesting then
                             Bindings.Gun.gun
                                 {
                                     GunProps.peers = None

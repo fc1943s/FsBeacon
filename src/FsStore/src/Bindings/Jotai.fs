@@ -41,10 +41,12 @@ module Jotai =
         abstract selectAtom : Atom<'TValue> -> ('TValue -> 'U) -> CompareFn<'TValue> -> Atom<'U>
         abstract splitAtom : Atom<'TValue []> -> Atom<Atom<'TValue> []>
         abstract useAtomValue : Atom<'TValue> -> 'TValue
-        abstract useHydrateAtoms : (Atom<'TValue> * 'TValue) [] -> AtomScope -> unit
+//        abstract useHydrateAtoms : (Atom<'TValue> * 'TValue) [] -> AtomScope -> unit
+        abstract useHydrateAtoms : (Atom<obj> * obj) [] -> unit
         abstract useUpdateAtom : Atom<'TValue> -> ('TValue -> unit)
         abstract useAtomCallback : (GetFn * SetFn * 'TArg -> JS.Promise<'TValue>) -> ('TArg -> JS.Promise<'TValue>)
         abstract waitForAll : Atom<'T> [] -> Atom<'T []>
+
 
     let jotaiUtils: IJotaiUtils = importAll "jotai/utils"
 

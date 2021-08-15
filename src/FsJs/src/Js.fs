@@ -124,6 +124,15 @@ module Json =
     let inline encodeFormatted<'T> obj =
         Thoth.Json.Encode.Auto.toString<'T> (4, obj, skipNullField = false)
 
+//    let inline encodeWithNull2<'T> obj =
+//        Thoth.Json.Encode.Auto.toString<'T> (0, obj, skipNullField = true)
+
+    let inline encodeWithNull<'T> obj =
+        JS.JSON.stringify (obj, (fun _ v -> if v = JS.undefined then null else v))
+
+    let inline encodeWithNullFormatted<'T> obj =
+        JS.JSON.stringify (obj, (fun _ v -> if v = JS.undefined then null else v), 4)
+
     let inline encode<'T> obj =
         Thoth.Json.Encode.Auto.toString<'T> (0, obj, skipNullField = false)
 

@@ -14,7 +14,7 @@ module Profiling =
             Timestamps = List<string * float> ()
         |}
 
-    Dom.set (nameof profilingState) profilingState
+    Dom.Global.set (nameof profilingState) profilingState
 
     let addCount id =
         if Dom.isDebug () then
