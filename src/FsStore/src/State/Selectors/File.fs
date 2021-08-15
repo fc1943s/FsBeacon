@@ -10,7 +10,7 @@ open FsStore
 
 
 module rec File =
-    let rec byteArray =
+    let rec hexString =
         Store.readSelectorFamily
             FsStore.root
             (nameof byteArray)
@@ -48,11 +48,48 @@ module rec File =
                                     chunks.[0].Length={if chunks.Length = 0 then unbox null else chunks.[0].Length}
                                     ")
 
-                        Some (
-                            chunks
-                            |> String.concat ""
-                            |> Js.hexStringToByteArray
-                        ))
+                        match chunks |> String.concat "" with
+                        | "" -> None
+                        | chunks -> Some chunks)
+
+    let rec byteArray =
+        Store.readSelectorFamily
+            FsStore.root
+            (nameof byteArray)
+            (fun (fileId: FileId) getter ->
+                let hexString = Store.value getter (hexString fileId)
+                hexString |> Option.map Js.hexStringToByteArray)
+
+    let rec progress =
+        Store.readSelectorFamily
+            FsStore.root
+            (nameof progress)
+            (fun (fileId: FileId) getter ->
+                let chunkCount = Store.value getter (Atoms.File.chunkCount fileId)
+
+                match chunkCount with
+                | 0 -> 0
+                | _ ->
+                    let completedChunkCount =
+                        [|
+                            0 .. chunkCount - 1
+                        |]
+                        |> Array.map (fun i -> Atoms.File.chunk (fileId, i))
+                        |> Store.waitForAll
+                        |> Store.value getter
+                        |> Array.filter (fun chunk -> chunk.Length > 0)
+                        |> Array.length
+
+                    let progress = 100 / chunkCount * completedChunkCount
+
+                    Dom.Logger.Default.Debug
+                        (fun () ->
+                            $"File.progress
+                                    chunkCount={chunkCount}
+                                    completedChunkCount={completedChunkCount}
+                                    progress={progress} ")
+
+                    progress)
 
 
     let rec blob =
