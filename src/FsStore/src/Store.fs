@@ -35,7 +35,7 @@ lastAccessors={lastAccessors.IsSome}
 timeout={timeout} "
 
         getLogger()
-            .Debug (fun () -> $"readSelectorInterval.constructor {getDebugInfo ()}")
+            .Trace (fun () -> $"readSelectorInterval.constructor {getDebugInfo ()}")
 
         let readSelector = Store.readSelector storeRoot name getFn
 
@@ -60,7 +60,7 @@ timeout={timeout} "
 
         let subscribe () =
             getLogger()
-                .Debug (fun () -> $"readSelectorInterval.onMount() {getDebugInfo ()}")
+                .Trace (fun () -> $"readSelectorInterval.onMount() {getDebugInfo ()}")
 
             let fn () =
                 getLogger()
@@ -88,7 +88,7 @@ timeout={timeout} "
 
         let unsubscribe () =
             getLogger()
-                .Debug (fun () -> $"readSelectorInterval.onUnmount() {getDebugInfo ()}")
+                .Trace (fun () -> $"readSelectorInterval.onUnmount() {getDebugInfo ()}")
 
             if timeout >= 0 then JS.clearTimeout timeout
             timeout <- -1
@@ -106,11 +106,11 @@ timeout={timeout} "
             (fun param -> readSelectorInterval storeRoot name interval defaultValue (getFn param))
             Object.compare
 
-    let inline gunAtomNodeFromAtomPath getter username atomPath =
-        match username, atomPath with
-        | Some username, Some atomPath ->
-            match Store.value getter (Selectors.Gun.gunAtomNode (username, atomPath)) with
-            | Some gunAtomNode -> Some ($">> atomPath={atomPath} username={username}", gunAtomNode)
+    let inline gunAtomNodeFromAtomPath getter alias atomPath =
+        match alias, atomPath with
+        | Some alias, Some atomPath ->
+            match Store.value getter (Selectors.Gun.gunAtomNode (alias, atomPath)) with
+            | Some gunAtomNode -> Some ($">> atomPath={atomPath} alias={alias}", gunAtomNode)
             | _ -> None
         | _ -> None
 
@@ -118,14 +118,14 @@ timeout={timeout} "
     type SyncEngine (mapGunAtomNode) =
         let mutable lastAtomPath = None
         let mutable lastAccessors = None
-        let mutable lastUsername = None
+        let mutable lastAlias = None
         let mutable lastGunOptions = None
         let mutable lastGunAtomNode = None
         let mutable lastHub = None
 
         member this.GetAtomPath () = lastAtomPath
         member this.GetAccessors () = lastAccessors
-        member this.GetUsername () = lastUsername
+        member this.GetAlias () = lastAlias
         member this.GetGunOptions () = lastGunOptions
         member this.GetGunAtomNode () = lastGunAtomNode
         member this.GetHub () = lastHub
@@ -139,12 +139,12 @@ timeout={timeout} "
             if lastAccessors.IsNone then
                 lastAccessors <- Store.value getter Selectors.atomAccessors
 
-            lastUsername <- Store.value getter Atoms.username
+            lastAlias <- Store.value getter Selectors.Gun.alias
             lastGunOptions <- Some (Store.value getter Atoms.gunOptions)
             lastLogger <- Some (Store.value getter Selectors.logger)
 
             lastGunAtomNode <-
-                gunAtomNodeFromAtomPath getter lastUsername lastAtomPath
+                gunAtomNodeFromAtomPath getter lastAlias lastAtomPath
                 |> Option.map (mapGunAtomNode |> Option.defaultValue id)
 
             match lastAtomPath, lastGunAtomNode with
@@ -154,7 +154,7 @@ timeout={timeout} "
             match lastAtomPath with
             | Some (AtomPath atomPath) ->
                 getLogger()
-                    .Debug (fun () ->
+                    .Trace (fun () ->
                         $"SyncEngine.SetProviders() atom={atom} atomPath={atomPath} this={Json.encodeWithNull this}")
             | _ -> ()
 
@@ -194,7 +194,7 @@ timeout={timeout} "
         match subscription with
         | Some ticks when DateTime.ticksDiff ticks < 1000. ->
             getLogger()
-                .Debug (fun () ->
+                .Trace (fun () ->
                     $"[syncUnsubscribe] skipping unsubscribe. jotai resubscribe glitch.
                         gunAtomNode={gunAtomNode}
                         {getDebugInfo ()} ")
@@ -205,7 +205,7 @@ timeout={timeout} "
                 Profiling.addCount $"{key} unsubscribe"
 
                 getLogger()
-                    .Debug (fun () ->
+                    .Trace (fun () ->
                         $"[syncUnsubscribe] {key} (######## actually skipped)
                             gunAtomNode={gunAtomNode}
                             {getDebugInfo ()} ")
@@ -214,14 +214,14 @@ timeout={timeout} "
                 success ()
             | None ->
                 getLogger()
-                    .Debug (fun () ->
+                    .Trace (fun () ->
                         $"[syncUnsubscribe] skipping unsubscribe, no gun atom node.
                             gunAtomNode={gunAtomNode}
                             {getDebugInfo ()} ")
 
         | None ->
             getLogger()
-                .Debug (fun () ->
+                .Trace (fun () ->
                     $"[syncUnsubscribe] skipping unsubscribe. no last subscription found.
                             gunAtomNode={gunAtomNode}
                             {getDebugInfo ()} ")
@@ -294,7 +294,7 @@ timeout={timeout} "
     let inline setInternalFromSync getDebugInfo setAtom syncPaused lastValue onError (ticks, newValue) =
         try
             getLogger()
-                .Debug (fun () ->
+                .Trace (fun () ->
                     $"gun.on() value. start.
 newValue={newValue} jsTypeof-newValue={jsTypeof newValue}
 lastValue={lastValue}
@@ -304,7 +304,7 @@ ticks={ticks}
             match syncPaused, lastValue with
             | true, _ ->
                 getLogger()
-                    .Debug (fun () ->
+                    .Trace (fun () ->
                         $"gun.on() value. skipping. Sync paused.
 newValue={newValue} jsTypeof-newValue={jsTypeof newValue}
 lastValue={lastValue}
@@ -320,7 +320,7 @@ ticks={ticks}
                 ->
 
                 getLogger()
-                    .Debug (fun () ->
+                    .Trace (fun () ->
                         $"gun.on() value. skipping.
 newValue={newValue} jsTypeof-newValue={jsTypeof newValue}
 lastValue={lastValue}
@@ -329,7 +329,7 @@ ticks={ticks}
             | _ ->
                 if unbox newValue = JS.undefined then
                     getLogger()
-                        .Debug (fun () ->
+                        .Trace (fun () ->
                             $"gun.on() value. skipping. newValue=undefined
 newValue={newValue} jsTypeof-newValue={jsTypeof newValue}
 lastValue={lastValue}
@@ -338,7 +338,7 @@ ticks={ticks}
                 else
                     try
                         getLogger()
-                            .Debug (fun () ->
+                            .Trace (fun () ->
                                 let _lastValue =
                                     match unbox lastValue with
                                     | Some (_, b) -> b
@@ -387,7 +387,7 @@ ticks={ticks}
             match syncEngine.GetGunAtomNode (), syncState.GunSubscription with
             | _, Some _ ->
                 getLogger()
-                    .Debug (fun () ->
+                    .Trace (fun () ->
                         $"[syncSubscribe] skipping subscribe, lastSubscription is set.
                                 {getDebugInfo ()} ")
             | Some (key, gunAtomNode), None ->
@@ -398,7 +398,7 @@ ticks={ticks}
                 Profiling.addCount $"{key} subscribe"
 
                 getLogger()
-                    .Debug (fun () ->
+                    .Trace (fun () ->
                         $"[syncSubscribe] batch subscribing. key={key}
                                 {getDebugInfo ()} ")
 
@@ -410,21 +410,21 @@ ticks={ticks}
                     | Some hub ->
                         promise {
                             try
-                                match syncState.HubSubscription, syncEngine.GetUsername () with
+                                match syncState.HubSubscription, syncEngine.GetAlias () with
                                 | Some _, _ ->
                                     getLogger()
                                         .Error (fun () -> $"sub already present key={key}")
-                                | None, None -> Dom.consoleError "username is none (subscription)"
-                                | None, Some (Username username) ->
+                                | None, None -> Dom.consoleError "alias is none (subscription)"
+                                | None, Some (Gun.Alias alias) ->
 
                                     let subscription =
                                         Gun.batchHubSubscribe
                                             hub
-                                            (Sync.Request.Get (username, atomPath |> AtomPath.Value))
+                                            (Sync.Request.Get (alias, atomPath |> AtomPath.Value))
                                             (Guid.newTicksGuid ())
                                             (fun (ticks, msg: Sync.Response) ->
                                                 getLogger()
-                                                    .Debug (fun () ->
+                                                    .Trace (fun () ->
                                                         $"[syncSubscribe] wrapper.next() HUB stream subscribe] msg={msg}
                                                                         {getDebugInfo ()} ")
 
@@ -432,7 +432,7 @@ ticks={ticks}
                                                     match msg with
                                                     | Sync.Response.GetResult result ->
                                                         getLogger()
-                                                            .Debug (fun () ->
+                                                            .Trace (fun () ->
                                                                 $"[syncSubscribe] Sync.Response.GetResult key={key} atomPath={atomPath}
                                                                                 {getDebugInfo ()} ")
 
@@ -451,7 +451,7 @@ ticks={ticks}
                                                 })
                                             (fun ex ->
                                                 getLogger()
-                                                    .Debug (fun () ->
+                                                    .Error (fun () ->
                                                         $"[syncSubscribe] onError... ex={ex} {getDebugInfo ()} ")
 
                                                 onError ())
@@ -463,7 +463,7 @@ ticks={ticks}
                         |> Promise.start
                     | None ->
                         getLogger()
-                            .Debug (fun () -> $"[syncSubscribe] skipping...{getDebugInfo ()} ")
+                            .Trace (fun () -> $"[syncSubscribe] skipping...{getDebugInfo ()} ")
 
                     match syncEngine.GetGunOptions (), syncEngine.GetAtomPath () with
                     | Some (GunOptions.Sync _), Some (AtomPath _atomPath) ->
@@ -496,19 +496,17 @@ ticks={ticks}
                                     if hubValue.IsNone
                                        || hubValue |> Object.compare newValue then
                                         getLogger()
-                                            .Debug (fun () ->
+                                            .Trace (fun () ->
                                                 $"debouncedPut() HUB (update from gun) SKIPPED
                 newValue={newValue} jsTypeof-newValue={jsTypeof newValue}
                 {getDebugInfo ()}                           ")
                                     else
-                                        match syncEngine.GetAtomPath (), syncEngine.GetHub (), syncEngine.GetUsername () with
-                                        | Some (AtomPath atomPath), Some hub, Some (Username username) ->
+                                        match syncEngine.GetAtomPath (), syncEngine.GetHub (), syncEngine.GetAlias () with
+                                        | Some (AtomPath atomPath), Some hub, Some (Gun.Alias alias) ->
                                             promise {
                                                 try
                                                     let! response =
-                                                        hub.invokeAsPromise (
-                                                            Sync.Request.Set (username, atomPath, data)
-                                                        )
+                                                        hub.invokeAsPromise (Sync.Request.Set (alias, atomPath, data))
 
                                                     match response with
                                                     | Sync.Response.SetResult result ->
@@ -516,7 +514,7 @@ ticks={ticks}
                                                             Dom.consoleError "$$$$ HUB PUT ERROR (backend console)"
                                                         else
                                                             getLogger()
-                                                                .Debug (fun () ->
+                                                                .Trace (fun () ->
                                                                     $"subscribe() hub set from gun
                                     newValue={newValue} jsTypeof-newValue={jsTypeof newValue}
                                     {getDebugInfo ()}                           ")
@@ -529,7 +527,7 @@ ticks={ticks}
                                             |> Promise.start
                                         | _ ->
                                             getLogger()
-                                                .Debug (fun () ->
+                                                .Trace (fun () ->
                                                     $"[$$$$ wrapper.on() HUB put]
                     {getDebugInfo ()}
                     newValue={newValue}
@@ -541,17 +539,17 @@ ticks={ticks}
                         syncState.GunSubscription <- Some DateTime.Now.Ticks
                     | _ ->
                         getLogger()
-                            .Debug (fun () -> $"[syncSubscribe] skipping. {getDebugInfo ()} ")
+                            .Trace (fun () -> $"[syncSubscribe] skipping. {getDebugInfo ()} ")
                 | _ ->
                     getLogger()
-                        .Debug (fun () -> $"[syncSubscribe] skipping. gun keys empty {getDebugInfo ()} ")
+                        .Trace (fun () -> $"[syncSubscribe] skipping. gun keys empty {getDebugInfo ()} ")
 
 
 
             | None, _ ->
                 getLogger()
-                    .Debug (fun () ->
-                        $"[syncSubscribe] skipping subscribe, no gun atom node. (maybe no username) {getDebugInfo ()} ")
+                    .Trace (fun () ->
+                        $"[syncSubscribe] skipping subscribe, no gun atom node. (maybe no alias) {getDebugInfo ()} ")
         }
 
 
@@ -565,13 +563,13 @@ ticks={ticks}
             let syncState = SyncState<'TValue> ()
 
             getLogger()
-                .Debug (fun () -> "atomFamily.wrapper.set() debounceGunPut promise. #1 newValue={newValue}")
+                .Trace (fun () -> "atomFamily.wrapper.set() debounceGunPut promise. #1 newValue={newValue}")
 
             try
                 match syncEngine.GetGunAtomNode () with
                 | Some (key, gunAtomNode) ->
                     getLogger()
-                        .Debug (fun () ->
+                        .Trace (fun () ->
                             $"atomFamily.wrapper.set() debounceGunPut promise. #2 before encode {key} newValue={newValue}")
 
                     let! newValueJson =
@@ -585,7 +583,7 @@ ticks={ticks}
                         }
 
                     getLogger()
-                        .Debug (fun () ->
+                        .Trace (fun () ->
                             $"atomFamily.wrapper.set() debounceGunPut promise. #3.
 before put {key} newValue={newValue}
     {getDebugInfo ()}                            ")
@@ -603,17 +601,17 @@ before put {key} newValue={newValue}
                         || unbox lastHubValue = null
                         ->
                         getLogger()
-                            .Debug (fun () ->
+                            .Trace (fun () ->
                                 $"debouncedPut() HUB SKIPPED
 newValue={newValue} jsTypeof-newValue={jsTypeof newValue}
 {getDebugInfo ()}                           ")
                     | _ ->
-                        match syncEngine.GetAtomPath (), syncEngine.GetHub (), syncEngine.GetUsername () with
-                        | Some (AtomPath atomPath), Some hub, Some (Username username) ->
+                        match syncEngine.GetAtomPath (), syncEngine.GetHub (), syncEngine.GetAlias () with
+                        | Some (AtomPath atomPath), Some hub, Some (Gun.Alias alias) ->
                             promise {
                                 try
                                     let! response =
-                                        hub.invokeAsPromise (Sync.Request.Set (username, atomPath, newValueJson))
+                                        hub.invokeAsPromise (Sync.Request.Set (alias, atomPath, newValueJson))
 
                                     match response with
                                     | Sync.Response.SetResult result ->
@@ -628,7 +626,7 @@ newValue={newValue} jsTypeof-newValue={jsTypeof newValue}
                             |> Promise.start
                         | _ ->
                             getLogger()
-                                .Debug (fun () ->
+                                .Trace (fun () ->
                                     $"[wrapper.on() HUB put]
                                             newValue={newValue}
     {getDebugInfo ()}
@@ -656,7 +654,7 @@ newValue={newValue} jsTypeof-newValue={jsTypeof newValue}
                                 syncTrigger (ticks, Some (AdapterValue.Gun newValue))
 
                                 getLogger()
-                                    .Debug (fun () ->
+                                    .Trace (fun () ->
                                         $"atomFamily.wrapper.set() debounceGunPut promise result.
     newValue={newValue}
     {key}
@@ -675,14 +673,14 @@ newValue={newValue} jsTypeof-newValue={jsTypeof newValue}
                                 | None -> ()
                     | _ ->
                         getLogger()
-                            .Debug (fun () ->
+                            .Trace (fun () ->
                                 $"debouncedPut() SKIPPED
 newValue={newValue} jsTypeof-newValue={jsTypeof newValue}
 {getDebugInfo ()}                           ")
 
                 | None ->
                     getLogger()
-                        .Debug (fun () ->
+                        .Trace (fun () ->
                             $"<filter> [gunEffect.debounceGunPut promise]
 skipping gun put. no gun atom node.
 newValue={newValue}
@@ -736,7 +734,7 @@ atomPath={atomPath} """
 
         let adapterValueMapAtom =
             jotaiUtils.atomFamily
-                (fun (_username: Username option) ->
+                (fun (_alias: Gun.Alias option) ->
                     jotai.atom (
                         [
                             Guid.newTicksGuid (), AdapterValue.Internal defaultValue
@@ -749,8 +747,8 @@ atomPath={atomPath} """
             Store.readSelectorFamily
                 FsStore.root
                 (nameof lastSyncValueByTypeAtom)
-                (fun (username: Username option) getter ->
-                    let adapterValueMap = Store.value getter (adapterValueMapAtom username)
+                (fun (alias: Gun.Alias option) getter ->
+                    let adapterValueMap = Store.value getter (adapterValueMapAtom alias)
 
                     groupAdapterValueMapByType adapterValueMap)
 
@@ -758,8 +756,8 @@ atomPath={atomPath} """
 //            Store.readSelectorFamily
 //                FsStore.root
 //                (nameof lastSyncValueAtom)
-//                (fun (username: Username option) getter ->
-//                    let lastSyncValueByTypeAtom = Store.value getter (lastSyncValueByTypeAtom username)
+//                (fun (alias: Alias option) getter ->
+//                    let lastSyncValueByTypeAtom = Store.value getter (lastSyncValueByTypeAtom alias)
 //
 //                    lastSyncValueByTypeAtom
 //                    |> Map.values
@@ -773,7 +771,7 @@ atomPath={atomPath} """
             | Some (_, setter) ->
                 Store.change
                     setter
-                    (adapterValueMapAtom (syncEngine.GetUsername ()))
+                    (adapterValueMapAtom (syncEngine.GetAlias ()))
                     (fun oldAdapterValueMap ->
                         oldAdapterValueMap
                         |> (match newValue with
@@ -852,8 +850,8 @@ atomPath={atomPath} """
                 (fun getter ->
                     syncEngine.SetProviders getter wrapper
 
-                    //                    let userAtom = lastSyncValueAtom (syncEngine.GetUsername ())
-                    let userAtom = lastSyncValueByTypeAtom (syncEngine.GetUsername ())
+                    //                    let userAtom = lastSyncValueAtom (syncEngine.GetAlias ())
+                    let userAtom = lastSyncValueByTypeAtom (syncEngine.GetAlias ())
                     let lastSyncValueByType = Store.value getter userAtom
 
                     syncState.AdapterValueMapByType <- Some lastSyncValueByType
@@ -869,7 +867,7 @@ atomPath={atomPath} """
                     Profiling.addCount $"{atomPath} get"
 
                     getLogger()
-                        .Debug (fun () ->
+                        .Trace (fun () ->
                             if (string result
                                 |> Option.ofObjUnbox
                                 |> Option.defaultValue "")
@@ -879,7 +877,7 @@ atomPath={atomPath} """
                                 $"atomFamily.wrapper.get() wrapper={wrapper} userAtom={userAtom} result={result} {getDebugInfo ()}               ")
 
                     getLogger()
-                        .Debug (fun () ->
+                        .Trace (fun () ->
                             if (string result
                                 |> Option.ofObjUnbox
                                 |> Option.defaultValue "")
@@ -896,13 +894,13 @@ atomPath={atomPath} """
                         match syncState.GunSubscription with
                         | None ->
                             getLogger()
-                                .Debug (fun () ->
+                                .Trace (fun () ->
                                     $"atomFamily.wrapper.get() subscribing wrapper={wrapper} userAtom={userAtom} {getDebugInfo ()}                       ")
 
                             debouncedSubscribe ()
                         | _ ->
                             getLogger()
-                                .Debug (fun () ->
+                                .Trace (fun () ->
                                     $"atomFamily.wrapper.get() skipping subscribe wrapper={wrapper} userAtom={userAtom} {getDebugInfo ()}                           ")
 
                     result)
@@ -912,7 +910,7 @@ atomPath={atomPath} """
 
                     Store.change
                         setter
-                        (adapterValueMapAtom (syncEngine.GetUsername ()))
+                        (adapterValueMapAtom (syncEngine.GetAlias ()))
                         (fun oldAdapterValueMap ->
                             let newValue =
                                 match jsTypeof newValueFn with
@@ -920,7 +918,7 @@ atomPath={atomPath} """
                                     eprintfn $"!!! sync atom change sync. function instead of value. {getDebugInfo ()}"
 
                                     //                                    let lastSyncValueAtom =
-//                                        Store.value getter (lastSyncValueAtom (syncEngine.GetUsername ()))
+//                                        Store.value getter (lastSyncValueAtom (syncEngine.GetAlias ()))
 
                                     //                                    (unbox newValueFn) lastSyncValueAtom |> unbox
                                     (unbox newValueFn) (unbox null) |> unbox
@@ -954,7 +952,7 @@ atomPath={atomPath} """
                                 |> Option.map snd
 
                             getLogger()
-                                .Debug (fun () ->
+                                .Trace (fun () ->
                                     $"<filter> atomFamily.wrapper.set()
 wrapper={wrapper}
 oldAdapterValueMap={oldAdapterValueMap}
@@ -972,7 +970,7 @@ z={box newValueOption = box gunValue
                             if box newValueOption = box gunValue
                                && box gunValue = box hubValue then
                                 getLogger()
-                                    .Debug (fun () ->
+                                    .Trace (fun () ->
                                         $"<filter> atomFamily.wrapper.set(). skipped debouncedPut
 wrapper={wrapper}
 oldAdapterValueMap={oldAdapterValueMap}
@@ -997,10 +995,10 @@ newValue={newValue} jsTypeof-newValue={jsTypeof newValue}
                             newAdapterValueMap))
 
         getLogger()
-            .Debug (fun () ->
-                $"[Trace] Store.atomWithSync constructor
-adapterValueMapAtom[username]={(adapterValueMapAtom (syncEngine.GetUsername ()))}
-lastSyncValueByTypeAtom[username]={(lastSyncValueByTypeAtom (syncEngine.GetUsername ()))}
+            .Trace (fun () ->
+                $"Store.atomWithSync constructor
+adapterValueMapAtom[alias]={(adapterValueMapAtom (syncEngine.GetAlias ()))}
+lastSyncValueByTypeAtom[alias]={(lastSyncValueByTypeAtom (syncEngine.GetAlias ()))}
 wrapper={wrapper}
 {getDebugInfo ()}")
 
@@ -1048,7 +1046,7 @@ wrapper={wrapper}
 
         let syncEngine = SyncEngine (Some (fun (key, node) -> key, node.back().back ()))
 
-        let internalAtom = jotaiUtils.atomFamily (fun _username -> jotai.atom [||]) Object.compare
+        let internalAtom = jotaiUtils.atomFamily (fun _alias -> jotai.atom [||]) Object.compare
 
         let getDebugInfo () =
             $"""
@@ -1057,7 +1055,7 @@ syncEngine={Json.encodeWithNull syncEngine}
 atomKey={Json.encodeWithNull atomKey}
 referenceAtom={referenceAtom}
 atomPath={atomPath}
-internalAtom[username]={internalAtom (syncEngine.GetUsername ())} """
+internalAtom[alias]={internalAtom (syncEngine.GetAlias ())} """
 
         let mutable lastValue: Set<'TKey> option = None
 
@@ -1066,7 +1064,7 @@ internalAtom[username]={internalAtom (syncEngine.GetUsername ())} """
                 atomKey
                 (fun getter ->
                     syncEngine.SetProviders getter referenceAtom
-                    let userAtom = internalAtom (syncEngine.GetUsername ())
+                    let userAtom = internalAtom (syncEngine.GetAlias ())
 
                     let result =
                         if not Js.jestWorkerId then
@@ -1083,8 +1081,8 @@ internalAtom[username]={internalAtom (syncEngine.GetUsername ())} """
                             | None -> [||]
 
                     getLogger()
-                        .Debug (fun () ->
-                            $"@@ selectAtomSyncKeys wrapper get()
+                        .Trace (fun () ->
+                            $"Store.selectAtomSyncKeys wrapper.get()
                                     wrapper={wrapper}
                                     userAtom={userAtom}
                                     result={result}
@@ -1093,7 +1091,7 @@ internalAtom[username]={internalAtom (syncEngine.GetUsername ())} """
                     result)
                 (fun getter setter newValueFn ->
                     syncEngine.SetProviders getter referenceAtom
-                    let userAtom = internalAtom (syncEngine.GetUsername ())
+                    let userAtom = internalAtom (syncEngine.GetAlias ())
 
                     Store.set
                         setter
@@ -1106,8 +1104,8 @@ internalAtom[username]={internalAtom (syncEngine.GetUsername ())} """
                                     | _ -> newValueFn
 
                                 getLogger()
-                                    .Debug (fun () ->
-                                        $"@@ selectAtomSyncKeys wrapper set()
+                                    .Trace (fun () ->
+                                        $"Store.selectAtomSyncKeys wrapper.set()
                                          newValue={newValue} newValueFn={newValueFn}
                                          wrapper={wrapper}
                                          userAtom={userAtom}
@@ -1150,10 +1148,10 @@ internalAtom[username]={internalAtom (syncEngine.GetUsername ())} """
 //                    lastValue <- Some (newItems |> Set.ofArray |> Set.union lastSet)
 
                     getLogger()
-                        .Debug (fun () ->
-                            $"@@ [batchKeys itemsArray callback]
-                                                           atomPath={atomPath}
+                        .Trace (fun () ->
+                            $"Store.selectAtomSyncKeys. batchKeys callback.
                                                            items.len={items.Length}
+                                                           atomPath={atomPath}
                                                            key={key}
                                                            {getDebugInfo ()} ")
 
@@ -1163,21 +1161,18 @@ internalAtom[username]={internalAtom (syncEngine.GetUsername ())} """
 
         let subscribe (setAtom: 'TKey [] -> unit) =
             promise {
-                getLogger().Debug (fun () -> "@@ #3")
-
                 match syncEngine.GetGunAtomNode (), lastSubscription with
                 | _, Some _ ->
                     getLogger()
-                        .Debug (fun () ->
-                            $"@@ [atomKeys gun.on() subscribing]
-                                                       {getDebugInfo ()}
-                                                    skipping subscribe, lastSubscription is set.
-                                      key={key}
-                                      {getDebugInfo ()} ")
+                        .Trace (fun () ->
+                            $"Store.selectAtomSyncKeys subscribe.
+                              skipping subscribe, lastSubscription is set.
+                              key={key}
+                              {getDebugInfo ()} ")
                 | Some (key, gunAtomNode), None ->
                     getLogger()
-                        .Debug (fun () ->
-                            $"@@ [atomKeys gun.on() subscribing] atomPath={atomPath}
+                        .Trace (fun () ->
+                            $"Store.selectAtomSyncKeys subscribe. subscribing. atomPath={atomPath}
                                       key={key}
                                       {getDebugInfo ()} ")
 
@@ -1196,9 +1191,8 @@ internalAtom[username]={internalAtom (syncEngine.GetUsername ())} """
                             .on (fun data (Gun.GunNodeSlice gunKey) ->
 
                                 getLogger()
-                                    .Debug (fun () ->
-                                        $"
-                                    @@$ atomKeys gun.on() HUB filter fetching/subscribing] @@@ gunAtomNode.map().on result
+                                    .Trace (fun () ->
+                                        $" @@$ atomKeys gun.on() HUB filter fetching/subscribing] @@@ gunAtomNode.map().on result
                                       data={data} typeof data={jsTypeof data} gunKey={gunKey} typeof gunKey={jsTypeof gunKey}
                                       atomPath={atomPath} syncEngine.atomPath={syncEngine.GetAtomPath ()}
                                       key={key}
@@ -1238,22 +1232,22 @@ internalAtom[username]={internalAtom (syncEngine.GetUsername ())} """
                         lastSubscription <- Some DateTime.Now.Ticks
                     | _ ->
                         getLogger()
-                            .Debug (fun () ->
+                            .Trace (fun () ->
                                 $"@@$ atomKeys gun.on() HUB filter fetching/subscribing] @@@ gunAtomNode.map().on skip.
                                   syncEngine.GetGunOptions() not in sync
                                   key={key}
                                   {getDebugInfo ()} ")
 
                     getLogger()
-                        .Debug (fun () ->
+                        .Trace (fun () ->
                             $"@@ [atomKeys gun.on() HUB filter fetching/subscribing] @@@
                             atomPath={atomPath} syncEngine.atomPath={syncEngine.GetAtomPath ()}
                             key={key}
                             {getDebugInfo ()} ")
 
                     //                        (db?data?find {| selector = {| key = atomPath |} |})?``$``?subscribe (fun items ->
-                    match syncEngine.GetAtomPath (), syncEngine.GetHub (), syncEngine.GetUsername () with
-                    | Some (AtomPath atomPath), Some hub, Some (Username username) ->
+                    match syncEngine.GetAtomPath (), syncEngine.GetHub (), syncEngine.GetAlias () with
+                    | Some (AtomPath atomPath), Some hub, Some (Gun.Alias alias) ->
                         promise {
                             try
                                 let storeRoot, collection =
@@ -1265,7 +1259,7 @@ internalAtom[username]={internalAtom (syncEngine.GetUsername ())} """
                                 //                                hubSubscriptionMap
                                 match storeRoot, collection with
                                 | Some storeRoot, Some collection ->
-                                    let collectionPath = username, storeRoot, collection
+                                    let collectionPath = alias, storeRoot, collection
 
                                     match Selectors.Hub.hubSubscriptionMap.TryGetValue collectionPath with
                                     | true, _sub ->
@@ -1275,7 +1269,7 @@ internalAtom[username]={internalAtom (syncEngine.GetUsername ())} """
                                         let handle items =
                                             if items |> Array.isEmpty |> not then
                                                 getLogger()
-                                                    .Debug (fun () ->
+                                                    .Trace (fun () ->
                                                         $"@@( atomKeys gun.on() HUB filter fetching/subscribing] @@@
                                                                       setting keys locally. items.Length={items.Length}
                                                                       atomPath={atomPath} syncEngine.atomPath={syncEngine.GetAtomPath ()}
@@ -1287,7 +1281,7 @@ internalAtom[username]={internalAtom (syncEngine.GetUsername ())} """
                                                     BatchKind.Replace
                                             else
                                                 getLogger()
-                                                    .Debug (fun () ->
+                                                    .Trace (fun () ->
                                                         $"@@( atomKeys gun.on() HUB filter fetching/subscribing] @@@
                                                                       skipping. items.Length=0
                                                                       atomPath={atomPath} syncEngine.atomPath={syncEngine.GetAtomPath ()}
@@ -1303,7 +1297,7 @@ internalAtom[username]={internalAtom (syncEngine.GetUsername ())} """
                                             (Guid.newTicksGuid ())
                                             (fun (ticks, response: Sync.Response) ->
                                                 getLogger()
-                                                    .Debug (fun () ->
+                                                    .Trace (fun () ->
                                                         $"@@ [wrapper.next() HUB keys stream subscribe]
                                                           ticks={ticks}
                                                           {getDebugInfo ()}
@@ -1315,7 +1309,7 @@ internalAtom[username]={internalAtom (syncEngine.GetUsername ())} """
                                                         handle items
 
                                                         getLogger()
-                                                            .Debug (fun () ->
+                                                            .Trace (fun () ->
                                                                 $"@@ [wrapper.on() HUB KEYS subscribe]
                                                                   atomPath={atomPath}
                                                                   items={JS.JSON.stringify items}
@@ -1347,14 +1341,14 @@ internalAtom[username]={internalAtom (syncEngine.GetUsername ())} """
                     //                                         "))
                     | _ ->
                         getLogger()
-                            .Debug (fun () ->
+                            .Trace (fun () ->
                                 $"@@ [wrapper.on() RX KEYS subscribe]
                                         {getDebugInfo ()}
                                      skipping.")
 
                 | None, _ ->
                     getLogger()
-                        .Debug (fun () ->
+                        .Trace (fun () ->
                             $"@@ [atomKeys gun.on() subscribing]
                                                        {getDebugInfo ()}
                                                     skipping subscribe, no gun atom node.")
@@ -1366,7 +1360,7 @@ internalAtom[username]={internalAtom (syncEngine.GetUsername ())} """
             match lastSubscription with
             | Some ticks when DateTime.ticksDiff ticks < 1000. ->
                 getLogger()
-                    .Debug (fun () ->
+                    .Trace (fun () ->
                         $"@@ [atomKeys gun.off()]
                                                     {getDebugInfo ()}
                                                     skipping unsubscribe. jotai resubscribe glitch.")
@@ -1375,7 +1369,7 @@ internalAtom[username]={internalAtom (syncEngine.GetUsername ())} """
                 | Some (key, _gunAtomNode) ->
 
                     getLogger()
-                        .Debug (fun () ->
+                        .Trace (fun () ->
                             $"@@  [atomFamily.unsubscribe()]
                                {key}
                                {getDebugInfo ()}
@@ -1386,13 +1380,13 @@ internalAtom[username]={internalAtom (syncEngine.GetUsername ())} """
 //                    lastSubscription <- None
                 | None ->
                     getLogger()
-                        .Debug (fun () ->
+                        .Trace (fun () ->
                             $"@@  [atomKeys gun.off()]
                                                                {getDebugInfo ()}
                                                                skipping unsubscribe, no gun atom node.")
             | None ->
                 getLogger()
-                    .Debug (fun () ->
+                    .Trace (fun () ->
                         $"[atomKeys gun.off()]
                                 {getDebugInfo ()}
                                 skipping unsubscribe. no last subscription found.")
@@ -1403,8 +1397,8 @@ internalAtom[username]={internalAtom (syncEngine.GetUsername ())} """
 
 
         getLogger()
-            .Debug (fun () ->
-                $"[Trace] Store.selectAtomSyncKeys constructor
+            .Trace (fun () ->
+                $"Store.selectAtomSyncKeys constructor
 wrapper={wrapper}
 lastValue={lastValue}
 lastSubscription={lastSubscription}
@@ -1459,7 +1453,7 @@ lastSubscription={lastSubscription}
                     | syncValue, storageValue when
                         syncValue |> Object.compare defaultValue
                         && (storageValue |> Object.compare defaultValue
-                            || (Store.value getter Atoms.username).IsNone
+                            || (Store.value getter Selectors.Gun.alias).IsNone
                             || lastValue.IsNone)
                         ->
                         Store.value getter storageAtom
@@ -1516,7 +1510,7 @@ lastSubscription={lastSubscription}
                     let atom = tempValue guidHash
 
                     getLogger()
-                        .Debug (fun () -> $"tempValueWrapper constructor. atomPath={atomPath} guidHash={guidHash}")
+                        .Trace (fun () -> $"tempValueWrapper constructor. atomPath={atomPath} guidHash={guidHash}")
 
                     let wrapper =
                         jotai.atom (
@@ -1525,7 +1519,7 @@ lastSubscription={lastSubscription}
                                 Profiling.addCount $"{atomPath} tempValue set"
 
                                 getLogger()
-                                    .Debug (fun () ->
+                                    .Trace (fun () ->
                                         $"tempValueWrapper.get(). atomPath={atomPath} guidHash={guidHash} value={value}")
 
                                 match value with
@@ -1539,14 +1533,14 @@ lastSubscription={lastSubscription}
                                     Profiling.addCount $"{atomPath} tempValue set"
 
                                     getLogger()
-                                        .Debug (fun () ->
+                                        .Trace (fun () ->
                                             $"tempValueWrapper.set(). atomPath={atomPath}
                                                                   guidHash={guidHash} newValue={newValue}")
 
                                     let newValue = Json.encode (atomPath, newValue |> Option.ofObj)
 
                                     getLogger()
-                                        .Debug (fun () -> $"tempValueWrapper.set(). newValue2={newValue} ")
+                                        .Trace (fun () -> $"tempValueWrapper.set(). newValue2={newValue} ")
 
                                     Store.set setter atom (newValue |> box |> unbox))
                         )
@@ -1625,10 +1619,10 @@ lastSubscription={lastSubscription}
 
     let inline deleteRoot getter atom =
         promise {
-            let username = Store.value getter Atoms.username
+            let alias = Store.value getter Selectors.Gun.alias
             let atomPath = Internal.queryAtomPath (AtomReference.Atom atom)
 
-            let gunAtomNode = gunAtomNodeFromAtomPath getter username atomPath
+            let gunAtomNode = gunAtomNodeFromAtomPath getter alias atomPath
 
             match gunAtomNode with
             | Some (_key, gunAtomNode) ->
@@ -1636,8 +1630,8 @@ lastSubscription={lastSubscription}
                 ()
             | None -> ()
 
-            match username, atomPath with
-            | Some (Username username), Some (AtomPath atomPath) ->
+            match alias, atomPath with
+            | Some (Gun.Alias alias), Some (AtomPath atomPath) ->
                 let hub = Store.value getter Selectors.Hub.hub
 
                 match hub with
@@ -1646,7 +1640,7 @@ lastSubscription={lastSubscription}
 
                     if nodes.Length > 3 then
                         let rootAtomPath = nodes |> Array.take 3 |> String.concat "/"
-                        do! hub.sendAsPromise (Sync.Request.Set (username, rootAtomPath, null))
+                        do! hub.sendAsPromise (Sync.Request.Set (alias, rootAtomPath, null))
                 | _ -> ()
             | _ -> ()
         }

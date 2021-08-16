@@ -41,7 +41,7 @@ lastValue={lastValue}
         Dom
             .Logger
             .getLogger()
-            .Debug (fun () -> $"atomAccessors.constructor {getDebugInfo ()}")
+            .Trace (fun () -> $"atomAccessors.constructor {getDebugInfo ()}")
 
         let rec valueWrapper =
             Store.selector
@@ -53,14 +53,14 @@ lastValue={lastValue}
                     Dom
                         .Logger
                         .getLogger()
-                        .Debug (fun () -> $"atomAccessors.valueWrapper.get() result={result} {getDebugInfo ()}")
+                        .Trace (fun () -> $"atomAccessors.valueWrapper.get() result={result} {getDebugInfo ()}")
 
                     result)
                 (fun getter setter newValue ->
                     Dom
                         .Logger
                         .getLogger()
-                        .Debug (fun () -> $"atomAccessors.valueWrapper.set() newValue={newValue} {getDebugInfo ()}")
+                        .Trace (fun () -> $"atomAccessors.valueWrapper.set() newValue={newValue} {getDebugInfo ()}")
 
                     Store.set setter accessorsAtom (Some (getter, setter))
                     Store.set setter valueAtom newValue)
@@ -70,7 +70,7 @@ lastValue={lastValue}
                 Dom
                     .Logger
                     .getLogger()
-                    .Debug (fun () -> $"atomAccessors.valueWrapper.onMount() lastValue={lastValue} {getDebugInfo ()}")
+                    .Trace (fun () -> $"atomAccessors.valueWrapper.onMount() lastValue={lastValue} {getDebugInfo ()}")
 
                 lastValue <- lastValue + 1
                 setAtom lastValue
@@ -79,7 +79,7 @@ lastValue={lastValue}
                     Dom
                         .Logger
                         .getLogger()
-                        .Debug (fun () ->
+                        .Trace (fun () ->
                             $"atomAccessors.valueWrapper.onUnmount() lastValue={lastValue} {getDebugInfo ()}")
 
                     ()
@@ -94,7 +94,7 @@ lastValue={lastValue}
                 Dom
                     .Logger
                     .getLogger()
-                    .Debug (fun () ->
+                    .Trace (fun () ->
                         $"atomAccessors.selfWrapper.get() value={value} accessors={accessors.IsSome} {getDebugInfo ()}")
 
                 accessors)
@@ -124,31 +124,45 @@ lastValue={lastValue}
                 FsStore.root
                 (nameof gun)
                 (fun getter ->
-                    let deviceInfo = Store.value getter deviceInfo
+                    //                    let deviceInfo = Store.value getter deviceInfo
                     let gunPeers = Store.value getter gunPeers
 
                     let gun =
-                        if deviceInfo.IsTesting then
-                            Bindings.Gun.gun
-                                {
-                                    GunProps.peers = None
-                                    GunProps.radisk = Some false
-                                    GunProps.localStorage = Some false
-                                    GunProps.multicast = None
-                                }
-                        else
-                            Bindings.Gun.gun
-                                {
-                                    GunProps.peers = Some gunPeers
-                                    GunProps.radisk = Some true
-                                    GunProps.localStorage = Some false
-                                    GunProps.multicast = None
-                                }
+                        //                        if deviceInfo.IsTesting then
+//                            Bindings.Gun.gun
+//                                {
+//                                    GunProps.peers = None
+//                                    GunProps.radisk = Some false
+//                                    GunProps.localStorage = Some false
+//                                    GunProps.multicast = None
+//                                }
+//                        else
+                        Bindings.Gun.gun
+                            {
+                                GunProps.peers = Some gunPeers
+                                GunProps.radisk = Some true
+                                GunProps.localStorage = Some false
+                                GunProps.multicast = None
+                            }
 
-                    printfn $"Gun selector. gunPeers={gunPeers}. gun={gun} returning..."
+                    Dom.Logger.Default.Debug
+                        (fun () -> $"Selectors.Gun.gun. gunPeers={gunPeers}. gun={gun} returning...")
 
                     gun)
 
+
+        let rec gunUser =
+            Store.readSelector
+                FsStore.root
+                (nameof gunUser)
+                (fun getter ->
+                    let _gunTrigger = Store.value getter Atoms.gunTrigger
+                    let gun = Store.value getter gun
+
+                    Dom.Logger.Default.Debug
+                        (fun () -> $"Selectors.Gun.gunUser. keys={gun.user().__.sea |> Js.objectKeys}")
+
+                    gun.user ())
 
         let rec gunNamespace =
             Store.readSelector
@@ -156,24 +170,61 @@ lastValue={lastValue}
                 (nameof gunNamespace)
                 (fun getter ->
                     let _gunTrigger = Store.value getter Atoms.gunTrigger
-                    let gun = Store.value getter gun
-                    let user = gun.user ()
+                    let gunUser = Store.value getter gunUser
 
-                    printfn
-                        $"gunNamespace selector.
-                            gunPeers={gunPeers}
-                            user().is.alias={user.is
-                                             |> Option.map
-                                                 (fun x ->
-                                                     match x.alias with
-                                                     | Some (GunUserAlias.Alias username) -> username
-                                                     | _ -> Alias null)}
-                            user().is={user.is |> Js.objectKeys}
-                            user().__.sea={user.__.sea |> Js.objectKeys}..."
+                    Dom.Logger.Default.Debug
+                        (fun () -> $"Selectors.Gun.gunNamespace. gunUser.is={JS.JSON.stringify gunUser.is}")
 
-                    user :> Types.IGunNode)
+                    gunUser :> Types.IGunNode)
 
-        let getRecursiveNode (gunNode: Types.IGunNode) (nodes: GunNodeSlice list) getter username =
+        let rec alias =
+            Store.readSelector
+                FsStore.root
+                (nameof alias)
+                (fun getter ->
+                    let _gunTrigger = Store.value getter Atoms.gunTrigger
+                    let gunUser = Store.value getter Gun.gunUser
+
+
+                    match gunUser.is with
+                    | Some {
+                               alias = Some (GunUserAlias.Alias (Alias (String.ValidString alias)))
+                           } ->
+                        Dom.Logger.Default.Debug
+                            (fun () -> $"Selectors.Gun.alias. alias={alias}  keys={gunUser.__.sea |> Js.objectKeys}")
+
+                        Some (Alias alias)
+                    | _ ->
+                        match gunUser.is with
+                        | Some {
+                                   alias = Some (GunUserAlias.GunKeys {
+                                                                          priv = Some (Priv (String.ValidString _))
+                                                                      })
+                               } ->
+                            Dom.Logger.Default.Debug
+                                (fun () ->
+                                    $"Selectors.Gun.alias. alias not found. keys found. user.is={gunUser.is |> Js.objectKeys}")
+
+                            None
+                        | _ ->
+                            Dom.Logger.Default.Debug
+                                (fun () ->
+                                    $"Selectors.Gun.alias. returning none.
+                                                  user.is={JS.JSON.stringify gunUser.is}")
+
+                            None)
+
+        let rec keys =
+            Store.readSelector
+                FsStore.root
+                (nameof keys)
+                (fun getter ->
+                    let _gunTrigger = Store.value getter Atoms.gunTrigger
+                    let gunUser = Store.value getter Gun.gunUser
+                    Dom.Logger.Default.Debug (fun () -> $"Selectors.Gun.keys. keys={gunUser.__.sea |> Js.objectKeys}")
+                    gunUser.__.sea)
+
+        let getRecursiveNode (gunNode: Types.IGunNode) (nodes: GunNodeSlice list) getter alias =
             match nodes with
             | [] -> None
             | [ root ] -> Some (gunNode.get root)
@@ -187,7 +238,7 @@ lastValue={lastValue}
                         |> String.concat "/"
                     )
 
-                let node = Store.value getter (gunAtomNode (username, parentAtomPath))
+                let node = Store.value getter (gunAtomNode (alias, parentAtomPath))
 
                 node
                 |> Option.map (fun (node: Types.IGunChainReference) -> node.get lastNode)
@@ -196,9 +247,8 @@ lastValue={lastValue}
             Store.readSelectorFamily
                 FsStore.root
                 (nameof gunAtomNode)
-                (fun (username, AtomPath atomPath) getter ->
-                    let gun = Store.value getter gun
-                    let gunKeys = Store.value getter Atoms.gunKeys
+                (fun (alias: Alias, AtomPath atomPath) getter ->
+                    let gunNamespace = Store.value getter gunNamespace
 
                     let nodes =
                         atomPath
@@ -213,29 +263,11 @@ lastValue={lastValue}
 //                                    result
 //                                    |> Option.map (fun result -> result.get node))
 
-                    let user = gun.user ()
 
-                    let getNode () =
-                        getRecursiveNode user nodes getter username
+                    getRecursiveNode gunNamespace nodes getter alias)
 
-                    match user.is with
-                    | Some {
-                               alias = Some (GunUserAlias.GunKeys gunKeys')
-                           } when gunKeys' = gunKeys ->
-
-                        getNode ()
-                    | Some {
-                               alias = Some (GunUserAlias.Alias (Alias alias))
-                           } when alias = (username |> Username.ValueOrDefault) -> getNode ()
-                    | _ ->
-                        Dom.Logger.Default.Debug
-                            (fun () ->
-                                $"gunAtomNode. Invalid username.
-                                          username={username}
-                                          atomPath={atomPath}
-                                          user.is={JS.JSON.stringify user.is}")
-
-                        None)
+    //    let rec username = Store.atom FsStore.root (nameof username) (None: Username option)
+//    let rec gunKeys = Store.atom FsStore.root (nameof gunKeys) Gun.GunKeys.Default
 
 
 
@@ -253,12 +285,13 @@ lastValue={lastValue}
                     let timeout = 2000
 
                     let hubUrl = Store.value getter Atoms.hubUrl
-                    let username = Store.value getter Atoms.username
+                    let alias = Store.value getter Gun.alias
 
-                    printfn $"hub connection selector. username={username} hubUrl={hubUrl}"
+                    Dom.Logger.Default.Debug
+                        (fun () -> $"Selectors.Hub.hubConnection. start. alias={alias} hubUrl={hubUrl}")
 
-                    match username, hubUrl with
-                    | Some (Username (String.ValidString _)), Some (String.ValidString hubUrl) ->
+                    match alias, hubUrl with
+                    | Some (Alias (String.ValidString _)), Some (String.ValidString hubUrl) ->
                         let connection =
                             SignalR.connect<Sync.Request, Sync.Request, obj, Sync.Response, Sync.Response>
                                 (fun hub ->
@@ -273,7 +306,7 @@ lastValue={lastValue}
                                                             .Logger
                                                             .getLogger()
                                                             .Debug (fun () ->
-                                                                "SignalR.connect(). withAutomaticReconnect")
+                                                                "Selectors.Hub.hubConnection. SignalR.connect(). withAutomaticReconnect")
 
                                                         Some timeout
                                             }
@@ -282,17 +315,20 @@ lastValue={lastValue}
                                             Dom
                                                 .Logger
                                                 .getLogger()
-                                                .Debug (fun () -> $"SignalR.connect(). onReconnecting ex={ex}"))
+                                                .Debug (fun () ->
+                                                    $"Selectors.Hub.hubConnection. SignalR.connect(). onReconnecting ex={ex}"))
                                         .onReconnected(fun ex ->
                                             Dom
                                                 .Logger
                                                 .getLogger()
-                                                .Debug (fun () -> $"SignalR.connect(). onReconnected ex={ex}"))
+                                                .Debug (fun () ->
+                                                    $"Selectors.Hub.hubConnection. SignalR.connect(). onReconnected ex={ex}"))
                                         .onClose(fun ex ->
                                             Dom
                                                 .Logger
                                                 .getLogger()
-                                                .Debug (fun () -> $"SignalR.connect(). onClose ex={ex}"))
+                                                .Debug (fun () ->
+                                                    $"Selectors.Hub.hubConnection. SignalR.connect(). onClose ex={ex}"))
                                         .configureLogging(LogLevel.Debug)
                                         .onMessage (fun msg ->
                                             match msg with
@@ -300,34 +336,38 @@ lastValue={lastValue}
                                                 Dom
                                                     .Logger
                                                     .getLogger()
-                                                    .Debug (fun () -> "Sync.Response.ConnectResult")
+                                                    .Debug (fun () ->
+                                                        "Selectors.Hub.hubConnection. Sync.Response.ConnectResult")
                                             | Sync.Response.SetResult result ->
                                                 Dom
                                                     .Logger
                                                     .getLogger()
-                                                    .Debug (fun () -> $"Sync.Response.SetResult result={result}")
+                                                    .Debug (fun () ->
+                                                        $"Selectors.Hub.hubConnection. Sync.Response.SetResult result={result}")
                                             | Sync.Response.GetResult value ->
                                                 Dom
                                                     .Logger
                                                     .getLogger()
-                                                    .Debug (fun () -> $"Sync.Response.GetResult value={value}")
+                                                    .Debug (fun () ->
+                                                        $"Selectors.Hub.hubConnection. Sync.Response.GetResult value={value}")
                                             | Sync.Response.GetStream (key, value) ->
                                                 Dom
                                                     .Logger
                                                     .getLogger()
                                                     .Debug (fun () ->
-                                                        $"Sync.Response.GetStream key={key} value={value}")
+                                                        $"Selectors.Hub.hubConnection. Sync.Response.GetStream key={key} value={value}")
                                             | Sync.Response.FilterResult keys ->
                                                 Dom
                                                     .Logger
                                                     .getLogger()
-                                                    .Debug (fun () -> $"Sync.Response.FilterResult keys={keys}")
+                                                    .Debug (fun () ->
+                                                        $"Selectors.Hub.hubConnection. Sync.Response.FilterResult keys={keys}")
                                             | Sync.Response.FilterStream (key, keys) ->
                                                 Dom
                                                     .Logger
                                                     .getLogger()
                                                     .Debug (fun () ->
-                                                        $"Sync.Response.FilterStream key={key} keys={keys}")
+                                                        $"Selectors.Hub.hubConnection. Sync.Response.FilterStream key={key} keys={keys}")
 
                                             match msg with
                                             | Sync.Response.FilterStream (key, keys) ->
@@ -336,7 +376,8 @@ lastValue={lastValue}
                                                     Dom
                                                         .Logger
                                                         .getLogger()
-                                                        .Debug (fun () -> $"Selectors.hub onMsg msg={msg}. triggering ")
+                                                        .Debug (fun () ->
+                                                            $"Selectors.Hub.hubConnection. Selectors.hub onMsg msg={msg}. triggering ")
 
                                                     fn keys
                                                 | _ ->
@@ -344,15 +385,18 @@ lastValue={lastValue}
                                                         .Logger
                                                         .getLogger()
                                                         .Debug (fun () ->
-                                                            $"Selectors.hub onMsg msg={msg}. skipping. not in map ")
+                                                            $"Selectors.Hub.hubConnection. onMsg msg={msg}. skipping. not in map ")
                                             | _ ->
                                                 Dom
                                                     .Logger
                                                     .getLogger()
                                                     .Debug (fun () ->
-                                                        $"Selectors.hub onMsg msg={msg}. skipping. not handled ")))
+                                                        $"Selectors.Hub.hubConnection.  onMsg msg={msg}. skipping. not handled ")))
 
-                        printfn $"hub connection selector. username={username} hubUrl={hubUrl}. starting connection..."
+                        Dom.Logger.Default.Debug
+                            (fun () ->
+                                $"Selectors.Hub.hubConnection. end. alias={alias} hubUrl={hubUrl}. starting connection...")
+
                         connection.startNow ()
                         Some connection
                     | _ -> None)
@@ -369,8 +413,9 @@ lastValue={lastValue}
 
                     match hubConnection with
                     | Some hubConnection ->
-                        printfn
-                            $"hub selector. hubTrigger={hubTrigger} hubConnection.connectionId={hubConnection.connectionId}"
+                        Dom.Logger.Default.Debug
+                            (fun () ->
+                                $"Selectors.Hub.hub. hubTrigger={hubTrigger} hubConnection.connectionId={hubConnection.connectionId}")
 
                         Some hubConnection
                     //                        match Store.value getter atomAccessors with

@@ -2,7 +2,6 @@ namespace FsUi.Hooks
 
 open Fable.Extras
 open Fable.Core
-open FsCore.Model
 open FsJs
 open FsStore
 open FsStore.Bindings
@@ -13,41 +12,18 @@ module rec Auth =
         Store.useCallbackRef
             (fun getter setter () ->
                 promise {
-                    printfn "before leave"
+                    printfn "useLogout(). before leave"
+                    let gunUser = Store.value getter Selectors.Gun.gunUser
+                    gunUser.leave ()
                     Store.change setter Atoms.gunTrigger ((+) 1)
                     Store.change setter Atoms.hubTrigger ((+) 1)
-                    let gun = Store.value getter Selectors.Gun.gun
-                    gun.user().leave ()
-                    Store.set setter Atoms.username None
-                    Store.set setter Atoms.gunKeys Gun.GunKeys.Default
-                })
-
-    let inline usePostSignIn () =
-        Store.useCallbackRef
-            (fun getter setter username ->
-                promise {
-                    Store.change setter Atoms.gunTrigger ((+) 1)
-                    Store.change setter Atoms.hubTrigger ((+) 1)
-                    let gun = Store.value getter Selectors.Gun.gun
-                    let user = gun.user ()
-                    let keys = user.__.sea
-
-                    match keys with
-                    | Some keys ->
-                        Store.set setter Atoms.gunKeys keys
-                        Store.set setter Atoms.username (Some username)
-                        return Ok (username, keys)
-                    | None -> return Error $"No keys found for user {user.is}"
                 })
 
     let inline useSignIn () =
-        let postSignIn = usePostSignIn ()
-
         Store.useCallbackRef
-            (fun getter _ (username, password) ->
+            (fun getter _setter (username, password) ->
                 promise {
-                    let gun = Store.value getter Selectors.Gun.gun
-                    let user = gun.user ()
+                    let gunUser = Store.value getter Selectors.Gun.gunUser
 
                     let! ack =
                         match username, password with
@@ -62,14 +38,23 @@ module rec Auth =
                                     printfn $"keys decode error: {ex.Message}"
                                     Gun.GunKeys.Default
 
-                            Gun.authKeys user keys
+                            Gun.authKeys gunUser keys
 
                         | username, password ->
                             printfn "user/pass sign in"
-                            Gun.authUser user (Gun.Alias username) (Gun.Pass password)
+                            Gun.authUser gunUser (Gun.Alias username) (Gun.Pass password)
 
                     match ack with
-                    | { err = None } -> return! postSignIn (Username username)
+                    | { err = None } ->
+                        let keys = gunUser.__.sea
+
+                        match keys with
+                        | Some keys ->
+                            //                        do! Promise.sleep 100
+//                            Store.change setter Atoms.gunTrigger ((+) 1)
+//                            Store.change setter Atoms.hubTrigger ((+) 1)
+                            return Ok (Gun.Alias username, keys)
+                        | None -> return Error $"No keys found for user {username} after sign in"
                     | { err = Some error } -> return Error error
                 })
 
@@ -77,14 +62,13 @@ module rec Auth =
         Store.useCallbackRef
             (fun getter setter (password, newPassword) ->
                 promise {
-                    let username = Store.value getter Atoms.username
-                    let gun = Store.value getter Selectors.Gun.gun
-                    let user = gun.user ()
+                    let alias = Store.value getter Selectors.Gun.alias
+                    let gunUser = Store.value getter Selectors.Gun.gunUser
 
-                    match username with
-                    | Some (Username username) ->
+                    match alias with
+                    | Some (Gun.Alias alias) ->
                         let! ack =
-                            Gun.changeUserPassword user (Gun.Alias username) (Gun.Pass password) (Gun.Pass newPassword)
+                            Gun.changeUserPassword gunUser (Gun.Alias alias) (Gun.Pass password) (Gun.Pass newPassword)
 
                         return!
                             promise {
@@ -105,14 +89,13 @@ module rec Auth =
         Store.useCallbackRef
             (fun getter _ password ->
                 promise {
-                    let username = Store.value getter Atoms.username
+                    let alias = Store.value getter Selectors.Gun.alias
 
-                    match username with
-                    | Some (Username username) ->
-                        let gun = Store.value getter Selectors.Gun.gun
-                        let user = gun.user ()
+                    match alias with
+                    | Some (Gun.Alias alias) ->
+                        let gunUser = Store.value getter Selectors.Gun.gunUser
 
-                        let! ack = Gun.deleteUser user (Gun.Alias username) (Gun.Pass password)
+                        let! ack = Gun.deleteUser gunUser (Gun.Alias alias) (Gun.Pass password)
                         printfn $"ack={JS.JSON.stringify ack}"
 
                         return!
@@ -141,12 +124,11 @@ module rec Auth =
                          |> not then
                         return Error "Invalid email address"
                     else
-                        let gun = Store.value getter Selectors.Gun.gun
-                        let user = gun.user ()
+                        let gunUser = Store.value getter Selectors.Gun.gunUser
 
-                        printfn $"Auth.useSignUp. user.is={user.is |> Js.objectKeys}"
+                        printfn $"Auth.useSignUp. gunUser.is={gunUser.is |> Js.objectKeys}"
 
-                        let! ack = Gun.createUser user (Gun.Alias username) (Gun.Pass password)
+                        let! ack = Gun.createUser gunUser (Gun.Alias username) (Gun.Pass password)
 
                         printfn $"Auth.useSignUp. Gun.createUser signUpAck={JS.JSON.stringify ack}"
 
@@ -158,7 +140,7 @@ module rec Auth =
                                       ok = Some 0
                                       pub = Some _
                                   } ->
-//                                    do! Gun.putPublicHash gun username
+                                    do! Gun.putPublicHash (gunUser :?> Gun.Types.IGunChainReference) username
 
 
                                     //            match! Gun.put (gun.get("#").get hash) data with

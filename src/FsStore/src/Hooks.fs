@@ -32,6 +32,13 @@ module HooksMagic =
 
             (if atom.IsNone then None else Some value), (if atom.IsNone then (fun _ -> ()) else setValue)
 
+        let inline useValue atom = jotaiUtils.useAtomValue atom
+
+        let inline useValueTuple a b =
+            let a = useValue a
+            let b = useValue b
+            a, b
+
         let inline useTempAtom<'TValue7> (atom: InputAtom<'TValue7> option) (inputScope: InputScope<'TValue7> option) =
             let currentAtomField, tempAtomField =
                 React.useMemo (
@@ -46,6 +53,7 @@ module HooksMagic =
 
             let currentValue, setCurrentValue = useStateOption currentAtomField
             let tempValue, setTempValue = useStateOption tempAtomField
+            let logger = useValue Selectors.logger
 
             React.useMemo (
                 (fun () ->
@@ -57,7 +65,7 @@ module HooksMagic =
                         | _, null -> currentValue |> Option.defaultValue (unbox null)
                         | Some (InputScope.Temp (_, jsonDecode)), tempValue ->
                             try
-                                Dom.Logger.Default.Debug
+                                logger.Debug
                                     (fun () ->
                                         $"useTempAtom
                                     currentValue={currentValue}
@@ -110,6 +118,7 @@ module HooksMagic =
                         SetTempValue = setTempValue
                     |}),
                 [|
+                    box logger
                     box inputScope
                     box atom
                     box currentValue
@@ -118,13 +127,6 @@ module HooksMagic =
                     box setTempValue
                 |]
             )
-
-        let inline useValue atom = jotaiUtils.useAtomValue atom
-
-        let inline useValueTuple a b =
-            let a = useValue a
-            let b = useValue b
-            a, b
 
         let inline useCallbackRef (fn: GetFn -> SetFn -> 'a -> JS.Promise<'c>) : ('a -> JS.Promise<'c>) =
             let fnCallback = React.useCallbackRef (fun (getter, setter, arg) -> fn getter setter arg)

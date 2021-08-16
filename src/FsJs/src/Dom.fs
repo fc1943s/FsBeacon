@@ -81,6 +81,7 @@ module Dom =
                 |> Option.map (fun userAgentData -> userAgentData.mobile)
                 |> Option.defaultValue false
 
+            let isTesting = Js.jestWorkerId || window?Cypress <> null
 
             let deviceId =
                 match window.localStorage.getItem "deviceId" with
@@ -109,7 +110,7 @@ module Dom =
                 IsElectron = jsTypeof window?electronApi = "object"
                 IsExtension = window.location.protocol = "chrome-extension:"
                 GitHubPages = window.location.host.EndsWith "github.io"
-                IsTesting = Js.jestWorkerId || window?Cypress <> null
+                IsTesting = isTesting
                 DeviceId = deviceId
             }
 
@@ -222,7 +223,7 @@ module Dom =
                             result
                         |])
 
-    let inline consoleLog (x: string []) = emitJsExpr x "console.log(...$0)"
+    let inline consoleLog (x: _ []) = emitJsExpr x "console.log(...$0)"
     let inline consoleError x = Browser.Dom.console.error x
 
     type LogLevel =
@@ -270,15 +271,6 @@ module Dom =
     type Logger with
 
 
-
-
-
-
-
-
-
-
-
         static member inline Create currentLogLevel =
             let log = logIf currentLogLevel
 
@@ -292,15 +284,18 @@ module Dom =
 
         static member inline Default = Logger.Create DEFAULT_LOG_LEVEL
 
-
-    Logger.Default.Info (fun () -> $"deviceInfo={JS.JSON.stringify deviceInfo}")
-
-
     module Logger =
-        let mutable lastLogger = None
+        let mutable lastLogger = Some Logger.Default
 
         let inline getLogger () =
             lastLogger |> Option.defaultValue Logger.Default
+
+
+    Logger
+        .getLogger()
+        .Info (fun () -> $"Dom. deviceInfo={JS.JSON.stringify deviceInfo}")
+
+
 
     let inline exited () =
         if not deviceInfo.IsTesting then
@@ -353,7 +348,9 @@ module Dom =
                     if deviceInfo.IsTesting then
                         do! Js.sleep 0
                     else
-                        Logger.Default.Info (fun () -> $"waitForSome: none. waiting... {fn.ToString ()}")
+                        Logger
+                            .getLogger()
+                            .Info (fun () -> $"waitForSome: none. waiting... {fn.ToString ()}")
 
                         do! Js.sleep 100
 

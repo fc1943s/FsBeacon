@@ -10,7 +10,8 @@ open FsUi.Components
 module Content =
     [<ReactComponent>]
     let LoggedContent () =
-        Dom.Logger.Default.Debug (fun () -> "LoggedContent.render.")
+        let logger = Store.useValue Selectors.logger
+        logger.Debug (fun () -> "LoggedContent.render.")
 
         React.suspense (
             [
@@ -20,6 +21,8 @@ module Content =
                         if Browser.Dom.window.location.port = "9762" then
                             HostComponent.HostComponent ()
                         else
+
+                            Component.HydrateContainer ()
                             Component.Component ()
                     ]
             ],

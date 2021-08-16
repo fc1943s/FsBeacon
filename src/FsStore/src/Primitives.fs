@@ -32,7 +32,7 @@ module Internal =
         Dom
             .Logger
             .getLogger()
-            .Debug (fun () -> $"registerAtom atomPath={atomPath} atom={atom} atomType={atomType}")
+            .Trace (fun () -> $"registerAtom atomPath={atomPath} atom={atom} atomType={atomType}")
 
         atomPathMap.[atomPath] <- atom.toString ()
         atomIdMap.[atom.toString ()] <- atomPath

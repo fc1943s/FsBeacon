@@ -3,9 +3,6 @@ namespace FsUi.Components
 open Fable.Core
 open FsCore
 open Fable.Core.JsInterop
-open FsCore
-open Fable.Core
-open FsCore.Model
 open Feliz
 open FsJs
 open FsStore
@@ -19,10 +16,9 @@ module GunObserver =
 
     [<ReactComponent>]
     let GunObserver () =
+        let logger = Store.useValue Selectors.logger
         let gun = Store.useValue Selectors.Gun.gun
         //        let appKeys = Gun.gunHooks.useGunKeys Browser.Dom.window?SEA (fun () -> null) false
-        let setUsername = Store.useSetState Atoms.username
-        let setGunKeys = Store.useSetState Atoms.gunKeys
 
         //        let gunState =
 //            Gun.gunHooks.useGunState
@@ -47,7 +43,7 @@ module GunObserver =
 
         //        let setSessionRestored = Store.useSetState Atoms.Session.sessionRestored
 
-        printfn "GunObserver.render: Constructor"
+        logger.Debug (fun () -> "GunObserver.render: Constructor")
 
 
         //        React.useEffect (
@@ -97,86 +93,104 @@ module GunObserver =
 //            |]
 //        )
 
+        let callbacks = Store.useCallbacks ()
+
         React.useDisposableEffect (
             (fun disposed ->
                 gun.on (
                     Gun.GunEvent "auth",
                     (fun () ->
                         if not disposed then
-                            let user = gun.user ()
+                            promise {
+                                let user = gun.user ()
 
-                            match user.is with
-                            | Some {
-                                       alias = Some (Gun.GunUserAlias.Alias (Gun.Alias (String.ValidString username)))
-                                   } ->
-                                printfn $"GunObserver.render: .on(auth) effect. setUsername. username={username}"
+                                match user.is with
+                                | Some {
+                                           alias = Some (Gun.GunUserAlias.Alias (Gun.Alias (String.ValidString username)))
+                                       } ->
+                                    logger.Debug
+                                        (fun () ->
+                                            $"GunObserver.render: .on(auth) effect. setUsername. username={username}")
 
-                                let keys = user.__.sea
+                                    let keys = user.__.sea
 
-                                match keys with
-                                | Some _keys -> ()
-                                //                                    setUsername (Some (Username username))
+                                    match keys with
+                                    | Some _keys -> ()
+                                    //                                    setUsername (Some (Username username))
 //                                    setGunKeys keys
-                                | None -> failwith $"GunObserver.render: No keys found for user {username}"
+                                    | None -> failwith $"GunObserver.render: No keys found for user {username}"
 
-                            //                                gunState.put ({| username = username |} |> toPlainJsObj)
-                            //                                |> Promise.start
-                            //                                setUsername (Some (UserInteraction.Username username))
-                            | Some {
-                                       pub = Some (Gun.Pub (String.ValidString pub))
-                                   } ->
-                                match Dom.window () with
-                                | Some window -> window?gun <- gun
-                                | None -> ()
+                                //                                gunState.put ({| username = username |} |> toPlainJsObj)
+                                //                                |> Promise.start
+                                //                                setUsername (Some (UserInteraction.Username username))
+                                | Some {
+                                           pub = Some (Gun.Pub (String.ValidString pub))
+                                       } ->
+                                    match Dom.window () with
+                                    | Some window -> window?gun <- gun
+                                    | None -> ()
 
-                                let _a =
-                                    user
-                                        .get(Gun.GunNodeSlice $"#{nameof Gun.data}")
-                                        .once (fun a b -> printfn $"_a. a={a} b={b}")
+                                    let _a =
+                                        user
+                                            .get(Gun.GunNodeSlice $"#{nameof Gun.data}")
+                                            .once (fun a b -> logger.Debug (fun () -> $"_a. a={a} b={b}"))
 
-                                let _b =
+                                    let _b =
+                                        user
+                                            .get(Gun.GunNodeSlice $"#{nameof Gun.data}")
+                                            .get(Gun.RadQuery (Gun.radQuery (Gun.Pub pub)))
+                                            .once (fun a b -> logger.Debug (fun () -> $"_b. a={a} b={b}"))
+
                                     user
                                         .get(Gun.GunNodeSlice $"#{nameof Gun.data}")
                                         .get(Gun.RadQuery (Gun.radQuery (Gun.Pub pub)))
-                                        .once (fun a b -> printfn $"_b. a={a} b={b}")
+                                        .map()
+                                        .once (fun encryptedUsername k ->
+                                            logger.Debug
+                                                (fun () ->
+                                                    $"@@@@@@@@@ encryptedUsername={encryptedUsername} k={k} pub={pub}")
 
-                                user
-                                    .get(Gun.GunNodeSlice $"#{nameof Gun.data}")
-                                    .get(Gun.RadQuery (Gun.radQuery (Gun.Pub pub)))
-                                    .map()
-                                    .once (fun encryptedUsername k ->
-                                        printfn $"@@@@@@@@@ encryptedUsername={encryptedUsername} k={k} pub={pub}"
+                                            match encryptedUsername with
+                                            | Gun.GunValue.NodeReference gunNodeSlice ->
+                                                gun
+                                                    .user(Gun.Pub pub)
+                                                    .get(Gun.GunNodeSlice (nameof Gun.data))
+                                                    .get(gunNodeSlice)
+                                                    .once (fun a b ->
+                                                        logger.Debug (fun () -> $"gun once! a={a} b={b}")
+                                                        ())
+                                            | _ -> ())
 
-                                        match encryptedUsername with
-                                        | Gun.GunValue.NodeReference gunNodeSlice ->
-                                            gun
-                                                .user(Gun.Pub pub)
-                                                .get(Gun.GunNodeSlice (nameof Gun.data))
-                                                .get(gunNodeSlice)
-                                                .once (fun a b ->
-                                                    printfn $"gun once! a={a} b={b}"
-                                                    ())
-                                        | _ -> ())
+                                    let username = pub
 
-                                let username = pub
-                                printfn $"GunObserver.render: fetched username: {username} (still a key)"
-                            | _ ->
-                                match Dom.window () with
-                                | Some window -> window?gun <- gun
-                                | None -> ()
+                                    logger.Debug
+                                        (fun () -> $"GunObserver.render: fetched username: {username} (still a key)")
+                                | _ ->
+                                    match Dom.window () with
+                                    | Some window -> window?gun <- gun
+                                    | None -> ()
 
-                                // @@@@ getImmutableUsername pub
+                                    // @@@@ getImmutableUsername pub
 
-                                printfn
-                                    $"GunObserver.render: Auth occurred without username.
+                                    logger.Debug
+                                        (fun () ->
+                                            $"GunObserver.render: Auth occurred without username.
                                     user.is={user.is |> Js.objectKeys}
-                                    user.is={user.is |> JS.JSON.stringify}
-                                    "
+                                    user.is={user.is |> JS.JSON.stringify} ")
+
+                                let! _getter, setter = callbacks ()
+                                ()
+
+                                Store.change setter Atoms.gunTrigger ((+) 1)
+                                Store.change setter Atoms.hubTrigger ((+) 1)
+                            }
+                            |> Promise.start
                         else
-                            printfn $"GunObserver.render: already disposed gun={gun}")
+                            logger.Debug (fun () -> $"GunObserver.render: already disposed gun={gun}"))
                 )),
             [|
                 box gun
+                box callbacks
             |]
         )
 

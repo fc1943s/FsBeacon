@@ -82,13 +82,14 @@ module Gun =
     [<Erase>]
     type EncryptedSignedValue = EncryptedSignedValue of value: string
 
+    [<Erase>]
+    type DecryptedValue<'T> = DecryptedValue of value: 'T
+
     [<Erase; RequireQualifiedAccess>]
-    type GunValue =
+    type GunValue<'T> =
         | NodeReference of GunNodeSlice
         | EncryptedSignedValue of EncryptedSignedValue
-
-    [<Erase>]
-    type DecryptedValue = DecryptedValue of value: string
+        | DecryptedValue of DecryptedValue<'T>
 
     [<Erase>]
     type Pass = Pass of pass: string
@@ -113,7 +114,7 @@ module Gun =
         type IGunNode =
             abstract get : RadQuery -> IGunChainReference
             abstract get : GunNodeSlice -> IGunChainReference
-            abstract set : GunValue -> IGunChainReference
+            abstract set : GunValue<'T> -> IGunChainReference
 
         //        module GunOps =
 //            let inline private (|HasAuth|) x = (^a: (member A : string) x)
@@ -158,10 +159,10 @@ module Gun =
             abstract map : unit -> IGunChainReference
             abstract off : unit -> IGunChainReference
             abstract back : unit -> IGunChainReference
-            abstract on : (GunValue -> GunNodeSlice -> unit) -> unit
-            abstract once : (GunValue -> GunNodeSlice -> unit) -> unit
+            abstract on : (GunValue<'T> -> GunNodeSlice -> unit) -> unit
+            abstract once : (GunValue<'T> -> GunNodeSlice -> unit) -> unit
             abstract on : event: GunEvent * (unit -> unit) -> unit
-            abstract put : GunValue -> (PutAck -> PutNode -> unit) -> IGunChainReference
+            abstract put : GunValue<'T> -> (PutAck -> PutNode -> unit) -> IGunChainReference
             abstract user : unit -> IGunUser
             abstract user : Pub -> IGunUser
     //        abstract once : (string -> unit) -> unit
@@ -170,13 +171,13 @@ module Gun =
 
 
     type ISEA =
-        abstract encrypt : data: DecryptedValue -> keys: GunKeys -> JS.Promise<EncryptedValue>
+        abstract encrypt : data: DecryptedValue<'T> -> keys: GunKeys -> JS.Promise<EncryptedValue>
         abstract sign : data: EncryptedValue -> keys: GunKeys -> JS.Promise<EncryptedSignedValue>
         abstract verify : data: EncryptedSignedValue -> pub: Pub -> JS.Promise<EncryptedValue option>
-        abstract decrypt : data: EncryptedValue -> keys: GunKeys -> JS.Promise<DecryptedValue>
+        abstract decrypt : data: EncryptedValue -> keys: GunKeys -> JS.Promise<DecryptedValue<'T>>
 
         abstract work :
-            data: GunValue ->
+            data: GunValue<'T> ->
             keys: GunKeys option ->
             x: unit option ->
             crypto: {| name: CryptoName option |} option ->
@@ -320,7 +321,7 @@ module Gun =
                     printfn $"userEncode. value={value} json={json} encrypted={encrypted} signed={signed}"
 
                     return signed
-                | None -> return failwith $"No keys found for user {user.is}"
+                | None -> return failwith $"userEncode. No keys found for user {user.is}"
             with
             | ex ->
                 Dom.consoleError ("[exception4]", ex, value)
@@ -331,7 +332,7 @@ module Gun =
 
     let inline defaultSerializer<'T> : Serializer<'T> = Json.encode<'T>, Json.decode<'T>
 
-    let inline put (gun: IGunChainReference) (value: GunValue) =
+    let inline put (gun: IGunChainReference) (value: GunValue<'T>) =
         Promise.create
             (fun res _err ->
                 let newValue = value
@@ -356,24 +357,27 @@ module Gun =
 
     let inline putPublicHash<'TValue> (gun: IGunChainReference) (value: 'TValue) =
         promise {
-            let! encryptedValue = userEncode<'TValue> gun value
-
             let user = gun.user ()
 
-            printfn $"#1 {JS.JSON.stringify user.is}"
+            printfn $"@@ Gun.putPublicHash. {JS.JSON.stringify user.is} value={value}"
 
             match user.is with
             | Some {
                        pub = Some (Pub (String.ValidString pub))
                    } ->
+                let dataSlice = GunNodeSlice (nameof data)
+                let node = user.get dataSlice
+                printfn $"@@ Gun.putPublicHash. node={dataSlice} dataSlice={dataSlice}"
+                let newValue = GunValue.DecryptedValue (DecryptedValue value)
+                let valueSet = node.set newValue
+                printfn $"@@ Gun.putPublicHash. newValue={newValue} valueSet={valueSet}"
 
-                user
-                    .get(GunNodeSlice (nameof data))
-                    .set(GunValue.EncryptedSignedValue encryptedValue)
-                    .on (fun data key ->
+                valueSet.on
+                    (fun data key ->
                         (promise {
+                            printfn $"#1@@ Gun.putPublicHash.  data={data} key={key}"
                             let! hash = sea.work data None None (Some {| name = Some (CryptoName "SHA-256") |})
-                            printfn $"#2 data={data} key={key} hash={hash}"
+                            printfn $"#2@@ Gun.putPublicHash.  data={data} key={key} hash={hash}"
 
                             let node =
                                 user

@@ -29,8 +29,9 @@ module DebugPanel =
         let showDebug = Store.useValue Atoms.showDebug
 
         let deviceInfo = Store.useValue Selectors.deviceInfo
+        let logger = Store.useValue Selectors.logger
 
-        Dom.Logger.Default.Info (fun () -> $"DebugPanel.render. showDebug={showDebug}")
+        logger.Info (fun () -> $"DebugPanel.render. showDebug={showDebug}")
 
         Scheduling.useScheduling
             Scheduling.Interval
@@ -101,9 +102,9 @@ module DebugPanel =
                     if showDebug then
                         Ui.box
                             (fun x ->
-                                x.id <- "diag"
+                                x.id <- "debug"
                                 x.whiteSpace <- "pre"
-                                x.fontFamily <- "Fira Code Light, system-ui, sans-serif")
+                                x.fontFamily <- "Roboto Condensed Light, system-ui, sans-serif")
                             [
                                 str text
                             ]

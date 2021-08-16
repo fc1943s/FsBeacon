@@ -3,5 +3,7 @@
   "chromeWebSecurity": false,
   "integrationFolder": "src/Tests",
   "testFiles": "**/*.spec.fs.js",
-  "video": true
+  "video": true,
+  "viewportWidth": 1000,
+  "viewportHeight": 800
 }

@@ -2,6 +2,9 @@ namespace FsBeacon.Template.Components
 
 
 open System
+open System.Collections.Generic
+open Browser.Types
+open Fable.Core
 open Fable.React
 open Feliz
 open FsCore.Model
@@ -11,6 +14,7 @@ open FsStore.State
 open FsStore.Bindings
 open FsStore.Hooks
 open FsUi.Bindings
+open FsUi.Hooks
 open FsUi.State
 open FsUi.Components
 
@@ -19,24 +23,40 @@ module State =
     module FsBeacon =
         let root = StoreRoot (nameof FsBeacon)
 
-    let rec asyncFileIdAtoms =
+    //    let rec asyncFileIdAtoms =
+//        Store.selectAtomSyncKeys
+//            FsBeacon.root
+//            (nameof asyncFileIdAtoms)
+//            Atoms.File.chunkCount
+//            (FileId Guid.Empty)
+//            (Guid >> FileId)
+
+    module Device =
+        let rec fileId: (DeviceId -> Jotai.Atom<FileId>) =
+            Store.atomFamilyWithSync
+                FsBeacon.root
+                Atoms.Device.collection
+                (nameof fileId)
+                (fun (_: DeviceId) -> FileId Guid.Empty)
+                Atoms.Device.deviceIdIdentifier
+
+
+    let rec asyncDeviceIdAtoms =
         Store.selectAtomSyncKeys
             FsBeacon.root
-            (nameof asyncFileIdAtoms)
-            Atoms.File.chunkCount
-            (FileId Guid.Empty)
-            (Guid >> FileId)
-
+            (nameof asyncDeviceIdAtoms)
+            Device.fileId
+            Dom.deviceInfo.DeviceId
+            (Guid >> DeviceId)
 
 module Component =
     let dataChar = "#"
-    let dataBlob = Fable.SimpleHttp.Blob.fromText (String.init (Hydrate.fileChunkSize * 1000) (fun _ -> dataChar))
+    let dataBlob = Fable.SimpleHttp.Blob.fromText (String.init (Hydrate.fileChunkSize * 2) (fun _ -> dataChar))
     let hexStringPromise = Js.blobToHexString dataBlob
 
 
     [<ReactComponent>]
-    let File i fileIdAtom =
-        let fileId = Store.useValue fileIdAtom
+    let File i fileId =
         let progress = Store.useValue (Selectors.File.progress fileId)
 
         Ui.stack
@@ -72,39 +92,135 @@ module Component =
             ]
 
     [<ReactComponent>]
-    let Component () =
-        Dom.Logger.Default.Debug (fun () -> "Component.render")
+    let Device (deviceIdAtom: Jotai.Atom<DeviceId>) =
+        let deviceId = Store.useValue deviceIdAtom
+        let fileId = Store.useValue (State.Device.fileId deviceId)
+        //        let progress = Store.useValue (Selectors.File.progress fileId)
+        Ui.stack
+            (fun _ -> ())
+            [
+                Ui.box
+                    (fun _ -> ())
+                    [
+                        str $"{Browser.Dom.window.location.port}:file[{0}]=0%%"
+                    ]
 
-        let callbacks = Store.useCallbacks ()
+                File 0 fileId
 
-        React.useEffect (
-            (fun () ->
-                promise {
-                    let! _getter, setter = callbacks ()
-                    let! hexString = hexStringPromise
-                    let fileId = Hydrate.hydrateFile setter (Model.AtomScope.Current, hexString)
+            //                                                                    Button.Button
+//                                                                        {|
+//                                                                            Icon =
+//                                                                                Some (Icons.bi.BiSave |> Icons.render, Button.IconPosition.Left)
+//                                                                            Hint = None
+//                                                                            Props = fun _ -> ()
+//                                                                            Children =
+//                                                                                [
+//                                                                                    str $"{Browser.Dom.window.location.port}:file[{i}]:save"
+//                                                                                ]
+//                                                                        |}
+//
+//                                                                    Button.Button
+//                                                                        {|
+//                                                                            Icon =
+//                                                                                Some (
+//                                                                                    Icons.bi.BiTrash |> Icons.render,
+//                                                                                    Button.IconPosition.Left
+//                                                                                )
+//                                                                            Hint = None
+//                                                                            Props = fun _ -> ()
+//                                                                            Children =
+//                                                                                [
+//                                                                                    str $"{Browser.Dom.window.location.port}:file[{i}]:delete"
+//                                                                                ]
+//                                                                        |}
+            ]
 
-                    Dom.Logger.Default.Debug (fun () -> $"Component.render useEffect() fileId={fileId}")
-                }
-                |> Promise.start),
-            [|
-                box callbacks
-            |]
-        )
+    let useHydrate () =
+        let logger = Store.useValue Selectors.logger
+        logger.Info (fun () -> "useHydrate()")
 
         Jotai.jotaiUtils.useHydrateAtoms [|
-            //            unbox Atoms.username, unbox (Some (Username "Test"))
             unbox Atoms.showDebug, unbox true
-            unbox Atoms.logLevel, unbox Dom.LogLevel.Debug
+            unbox Atoms.logLevel, unbox Dom.LogLevel.Trace
             unbox Atoms.gunOptions,
             unbox (
                 Model.GunOptions.Sync [|
-                    Gun.GunPeer "https://localhost:49221"
+                    Gun.GunPeer $"https://localhost:49221/gun"
                 |]
             )
-            unbox Atoms.hubUrl, unbox (Some "https://localhost:49211")
-        |]
+            //            unbox Atoms.hubUrl, unbox (Some "https://localhost:49211")
+            |]
 
+    let deviceHydrated = Dictionary<DeviceId, bool> ()
+
+    [<ReactComponent>]
+    let HydrateContainer () =
+        let logger = Store.useValue Selectors.logger
+        logger.Info (fun () -> "HydrateContainer.render")
+        useHydrate ()
+        let deviceInfo = Store.useValue Selectors.deviceInfo
+
+        let callbacks = Store.useCallbacks ()
+        let signIn = Auth.useSignIn ()
+        let signUp = Auth.useSignUp ()
+
+        let toast = Ui.useToast ()
+
+        React.useEffectOnce
+            (fun () ->
+                promise {
+                    if not (deviceHydrated.ContainsKey deviceInfo.DeviceId) then
+                        deviceHydrated.[deviceInfo.DeviceId] <- true
+
+                        let! _getter, _setter = callbacks ()
+
+                        if Browser.Dom.window.location.port = "49212" then
+                            let credentials = $"a@{Dom.deviceTag}"
+                            //
+//                            match! signIn (credentials, credentials) with
+//                            | Ok _ -> ()
+//                            | Error error ->
+//                                toast (fun x -> x.description <- $"1: {error}")
+//
+//                                match! signUp (credentials, credentials) with
+//                                | Ok _ -> ()
+//                                | Error error -> toast (fun x -> x.description <- $"2: {error}")
+
+                            match! signUp (credentials, credentials) with
+                            | Ok _ -> ()
+                            | Error error when error.Contains "User already created" ->
+                                //                                do! Promise.sleep 300
+                                match! signIn (credentials, credentials) with
+                                | Ok _ -> ()
+                                | Error error -> toast (fun x -> x.description <- $"1: {error}")
+                            | Error error -> toast (fun x -> x.description <- $"2: {error}")
+
+                            //                            let gun = Store.value getter Selectors.Gun.gun
+//                            let user = gun.user()
+//                            let! ack = Gun.createUser user (Gun.Alias deviceId) (Gun.Pass deviceId)
+//                            printfn $"ack={ack}"
+
+                            ()
+
+                        //                        let! hexString = hexStringPromise
+//                        let fileId = Hydrate.hydrateFile setter (Model.AtomScope.Current, hexString)
+//
+//                        Store.set setter (State.Device.fileId deviceInfo.DeviceId) fileId
+
+                        let fileId = null
+
+                        logger.Info
+                            (fun () -> $"Component.HydrateContainer().useEffectOnce() fileId={fileId} (currently null)")
+                }
+                |> Promise.start)
+
+        nothing
+
+
+    [<ReactComponent>]
+    let Component () =
+        let logger = Store.useValue Selectors.logger
+        logger.Info (fun () -> "Component.render")
         let deviceInfo = Store.useValue Selectors.deviceInfo
         let gunOptions = Store.useValue Atoms.gunOptions
         let gunPeers = Store.useValue Selectors.Gun.gunPeers
@@ -112,11 +228,33 @@ module Component =
         let uiState = Store.useValue Selectors.Ui.uiState
         let sessionRestored = Store.useValue Atoms.sessionRestored
         let showDebug = Store.useValue Atoms.showDebug
-        let username = Store.useValue Atoms.username
-        let fileIdAtoms = Store.useValue State.asyncFileIdAtoms
+        let alias = Store.useValue Selectors.Gun.alias
+        let keys = Store.useValue Selectors.Gun.keys
+        //        let fileIdAtoms = Store.useValue State.asyncFileIdAtoms
+        let deviceIdAtoms = Store.useValue State.asyncDeviceIdAtoms
+
+        let signIn = Auth.useSignIn ()
+
+        let onKeysChange =
+            Store.useCallbackRef
+                (fun _ _ key ->
+                    promise {
+                        let! signIn = signIn ("", key)
+
+                        logger.Warning (fun () -> $"test: signIn={JS.JSON.stringify signIn}")
+                    })
+
+        let debouncedOnKeysChange = onKeysChange
+        //            React.useMemo (
+//                (fun () -> Js.debounce onKeysChange 50),
+//                [|
+//                    box onKeysChange
+//                |]
+//            )
 
         Ui.box
             (fun x ->
+                x.id <- "component"
                 x.fontSize <- "11px"
                 x.margin <- "15px")
             [
@@ -124,6 +262,8 @@ module Component =
                     (fun _ -> ())
                     [
                         str $"#2 {Browser.Dom.window.location.href}"
+                        br []
+                        str $">>{deviceIdAtoms}<<"
                     ]
 
                 Ui.stack
@@ -142,54 +282,23 @@ module Component =
                                                 UiState = uiState
                                                 SessionRestored = sessionRestored
                                                 ShowDebug = showDebug
-                                                Username = username
+                                                Alias = alias
+                                                Keys = keys
                                             |}}"
                             ]
 
-                        yield! fileIdAtoms |> Array.mapi File
+                        Input.Input
+                            {|
+                                CustomProps = fun _ -> ()
+                                Props =
+                                    fun x ->
+                                        x.placeholder <- "Keys"
+                                        x.id <- "keys"
 
-                        yield!
-                            [
-                                0 .. 2
-                            ]
-                            |> List.map
-                                (fun i ->
-                                    Ui.stack
-                                        (fun _ -> ())
-                                        [
-                                            Ui.box
-                                                (fun _ -> ())
-                                                [
-                                                    str $"{Browser.Dom.window.location.port}:file[{i}]=0%%"
-                                                ]
+                                        x.onChange <- fun (x: KeyboardEvent) -> debouncedOnKeysChange x.Value
+                            |}
 
-                                            Button.Button
-                                                {|
-                                                    Icon =
-                                                        Some (Icons.bi.BiSave |> Icons.render, Button.IconPosition.Left)
-                                                    Hint = None
-                                                    Props = fun _ -> ()
-                                                    Children =
-                                                        [
-                                                            str $"{Browser.Dom.window.location.port}:file[{i}]:save"
-                                                        ]
-                                                |}
-
-                                            Button.Button
-                                                {|
-                                                    Icon =
-                                                        Some (
-                                                            Icons.bi.BiTrash |> Icons.render,
-                                                            Button.IconPosition.Left
-                                                        )
-                                                    Hint = None
-                                                    Props = fun _ -> ()
-                                                    Children =
-                                                        [
-                                                            str $"{Browser.Dom.window.location.port}:file[{i}]:delete"
-                                                        ]
-                                                |}
-                                        ])
+                        yield! deviceIdAtoms |> Array.map Device
                     ]
 
 

@@ -144,3 +144,4 @@ module Json =
 
     let inline decode<'T> data =
         Thoth.Json.Decode.Auto.unsafeFromString<'T> data
+
