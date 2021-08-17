@@ -6,8 +6,9 @@
   "author": "fc1943s",
   "private": true,
   "scripts": {
+    "local-ssl": "([ -d ssl ] || mkdir ssl) && cd ssl && curl -LO https://github.com/FiloSottile/mkcert/releases/download/v1.3.0/mkcert-v1.3.0-linux-amd64 && mv mkcert-v1.3.0-linux-amd64 mkcert && chmod +x mkcert && mkcert -install && mkcert %FSBEACON_DOMAIN%",
     "ssl": "([ -d ssl ] || mkdir ssl) && cd ssl && mkcert %FSBEACON_DOMAIN%",
-    "start": "yarn ssl && node server.js --root-path %ROOT_PATH%",
+    "start": "yarn local-ssl && node server.js --root-path %ROOT_PATH%",
     "start-ci": "cross-env HTTPS=true yarn start",
     "start-prod": "cross-env HTTPS=true FSBEACON_DOMAIN=%FSBEACON_GUN_PEER_CONTAINER_ID_1%.eastus.azurecontainer.io yarn start",
     "start-dev": "cross-env HTTPS=true FSBEACON_DOMAIN=localhost ROOT_PATH=%ROOT_PATH% yarn start"

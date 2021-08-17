@@ -27,7 +27,7 @@ const config = {
 };
 const Gun = require('gun');
 
-if (process.env.HTTPS) {
+if (process.env.HTTPS && process.env.FSBEACON_DOMAIN) {
   config.cert = fs.readFileSync('./ssl/' + process.env.FSBEACON_DOMAIN + '.pem');
   config.key = fs.readFileSync('./ssl/' + process.env.FSBEACON_DOMAIN + '-key.pem');
   config.server = require('https').createServer(config, Gun.serve(__dirname));
