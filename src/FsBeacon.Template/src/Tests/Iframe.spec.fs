@@ -45,6 +45,17 @@ module Iframe =
                 | _ :: x :: _ -> x |> Json.decode<'T> |> Some
                 | _ -> None)
 
+    let actorSignIn elFn fn =
+        waitForElSelectorObjectKey<Gun.GunKeys> elFn "#component" "PrivateKeys" "SessionRestored"
+        |> Promise.bind
+            (fun privateKeys ->
+                promise {
+                    let keysJson = JS.JSON.stringify privateKeys
+                    do! fn keysJson
+                })
+        |> Promise.iter id
+
+
     let typeText (el: Cy.Chainable2<_>) (text: string) =
         el.invoke ("val", text |> String.substring 0 (text.Length - 1))
         |> ignore
@@ -73,37 +84,29 @@ module Iframe =
 
                     Cy2.waitFor $""""<0> registerAtom() FsStore/logLevel atom3 AtomWithStorage": "1","""
 
-                    waitForElSelectorObjectKey<Gun.GunKeys>
+                    actorSignIn
                         Cy.getIframeBody1
-                        "#component"
-                        "PrivateKeys"
-                        "SessionRestored"
-                    |> Promise.bind
-                        (fun privateKeys ->
+                        (fun keysJson ->
                             promise {
-                                let keysJson = JS.JSON.stringify privateKeys
-
                                 Dom
                                     .Logger
                                     .getLogger()
                                     .Warning (fun () -> $"test: keys1={keysJson}")
 
-                                typeText (Cy.getIframeBody2().find "#privateKeys") keysJson
-                            })
-                    |> Promise.iter id
+                                typeText (Cy.getIframeBody3().find "#privateKeys") keysJson
 
-                    waitForElSelectorObjectKey<Gun.GunKeys>
-                        Cy.getIframeBody2
-                        "#component"
-                        "PrivateKeys"
-                        "SessionRestored"
-                    |> Promise.bind
-                        (fun privateKeys ->
-                            promise {
-                                let keysJson = JS.JSON.stringify privateKeys
-                                Dom.Logger.Default.Warning (fun () -> $"test: keys2={keysJson}")
                             })
-                    |> Promise.iter id
+
+                    actorSignIn
+                        Cy.getIframeBody2
+                        (fun keysJson ->
+                            promise {
+                                Dom
+                                    .Logger
+                                    .getLogger()
+                                    .Warning (fun () -> $"test: keys2={keysJson}")
+
+                            })
 
                     Cy2.waitForEl (Cy.getIframeBody2 ()) "async alias: a@"
 

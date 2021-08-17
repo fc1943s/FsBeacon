@@ -1,4 +1,7 @@
 const cluster = require('cluster');
+const fs = require('fs');
+const path = require('path');
+
 if (cluster.isMaster) {
   return cluster.fork() && cluster.on('exit', function () {
     cluster.fork();
@@ -12,12 +15,11 @@ if (process.argv[2] !== "--root-path") {
   throw new Error('Invalid --root-path');
 }
 
-const rootPath = process.argv[3];
+const rootPath = path.resolve(process.argv[3]);
 if (!rootPath) {
   throw new Error('Invalid --root-path');
 }
 
-const fs = require('fs');
 if(!fs.existsSync(rootPath)) {
   fs.mkdirSync(rootPath);
 }
