@@ -3,10 +3,9 @@ const fs = require('fs');
 const path = require('path');
 
 if (cluster.isMaster) {
-  return cluster.fork() && cluster.on('exit', function () {
+  return cluster.fork() && cluster.on('exit', () => {
     cluster.fork();
-    // require('gun/lib/crashed');
-    require('../lib/crashed');
+    require('gun/lib/crashed');
   });
 }
 
@@ -15,12 +14,12 @@ if (process.argv[2] !== "--root-path") {
   throw new Error('Invalid --root-path');
 }
 
-const rootPath = path.resolve(process.argv[3]);
-if (!rootPath) {
+const rootPath = process.argv[3];
+if (!rootPath || rootPath === "%ROOT_PATH%") {
   throw new Error('Invalid --root-path');
 }
 
-if(!fs.existsSync(rootPath)) {
+if (!fs.existsSync(rootPath)) {
   fs.mkdirSync(rootPath);
 }
 
@@ -54,6 +53,7 @@ const gun = Gun({
 console.log('Relay peer started on port ' + config.port + ' with /gun. ' +
   ' FSBEACON_DOMAIN=' + process.env.FSBEACON_DOMAIN +
   ' rootPath=' + rootPath +
+  ' path.resolve(rootPath)=' + path.resolve(rootPath) +
   ' https: ' + Boolean(process.env.HTTPS));
 
 module.exports = gun;
