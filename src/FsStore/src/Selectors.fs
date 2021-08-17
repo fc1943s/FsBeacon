@@ -177,6 +177,47 @@ lastValue={lastValue}
 
                     gunUser :> Types.IGunNode)
 
+        let rec asyncAlias =
+            Store.asyncReadSelector
+                FsStore.root
+                (nameof asyncAlias)
+                (fun getter ->
+                    promise {
+                        let _gunTrigger = Store.value getter Atoms.gunTrigger
+                        let gun = Store.value getter Gun.gun
+                        let user = gun.user ()
+
+                        match user.__.sea, user.is with
+                        | _,
+                          Some {
+                                   alias = Some (GunUserAlias.Alias (Alias (String.ValidString alias)))
+                               } ->
+                            Dom.Logger.Default.Debug
+                                (fun () -> $"Selectors.Gun.asyncAlias. alias={alias}  keys={user.__.sea |> Js.objectKeys}")
+
+                            return Some (Alias alias)
+                        | Some ({
+                                    priv = Some (Priv (String.ValidString _))
+                                } as keys),
+                          _ ->
+                            let! data = radQuery gun
+                            let! alias = userDecode<Gun.Alias> keys data
+
+                            Dom.Logger.Default.Debug
+                                (fun () ->
+                                    $"Selectors.Gun.asyncAlias. returning alias. alias={alias}
+                                                      user.is={JS.JSON.stringify user.is}")
+
+                            return alias
+                        | _ ->
+                            Dom.Logger.Default.Debug
+                                (fun () ->
+                                    $"Selectors.Gun.asyncAlias. returning none.
+                                                          user.is={JS.JSON.stringify user.is}")
+
+                            return None
+                    })
+
         let rec alias =
             Store.readSelector
                 FsStore.root
@@ -184,7 +225,6 @@ lastValue={lastValue}
                 (fun getter ->
                     let _gunTrigger = Store.value getter Atoms.gunTrigger
                     let gunUser = Store.value getter Gun.gunUser
-
 
                     match gunUser.is with
                     | Some {
@@ -214,10 +254,10 @@ lastValue={lastValue}
 
                             None)
 
-        let rec keys =
+        let rec privateKeys =
             Store.readSelector
                 FsStore.root
-                (nameof keys)
+                (nameof privateKeys)
                 (fun getter ->
                     let _gunTrigger = Store.value getter Atoms.gunTrigger
                     let gunUser = Store.value getter Gun.gunUser

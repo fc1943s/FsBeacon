@@ -75,6 +75,7 @@ module Cypress =
         let inline window () : JS.Promise<Window> = emitJsExpr () "cy.window()"
         let inline getIframeBody1 () : Chainable2<obj> = emitJsExpr () "cy.getIframeBody1()"
         let inline getIframeBody2 () : Chainable2<obj> = emitJsExpr () "cy.getIframeBody2()"
+        let inline getIframeBody3 () : Chainable2<obj> = emitJsExpr () "cy.getIframeBody3()"
 
         let inline contains (text: string) (options: {| timeout: int |} option) : Chainable2<'T> =
             emitJsExpr (text, options) "cy.contains($0, $1)"

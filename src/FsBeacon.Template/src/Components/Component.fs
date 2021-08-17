@@ -141,7 +141,7 @@ module Component =
 
         Jotai.jotaiUtils.useHydrateAtoms [|
             unbox Atoms.showDebug, unbox true
-            unbox Atoms.logLevel, unbox Dom.LogLevel.Trace
+            unbox Atoms.logLevel, unbox Dom.LogLevel.Debug
             unbox Atoms.gunOptions,
             unbox (
                 Model.GunOptions.Sync [|
@@ -218,6 +218,16 @@ module Component =
 
 
     [<ReactComponent>]
+    let AsyncAliasIndicator () =
+        let asyncAlias = Store.useValue Selectors.Gun.asyncAlias
+
+        Ui.flex
+            (fun x -> x.flex <- "1")
+            [
+                str $"async alias: {asyncAlias}"
+            ]
+
+    [<ReactComponent>]
     let Component () =
         let logger = Store.useValue Selectors.logger
         logger.Info (fun () -> "Component.render")
@@ -229,7 +239,7 @@ module Component =
         let sessionRestored = Store.useValue Atoms.sessionRestored
         let showDebug = Store.useValue Atoms.showDebug
         let alias = Store.useValue Selectors.Gun.alias
-        let keys = Store.useValue Selectors.Gun.keys
+        let privateKeys = Store.useValue Selectors.Gun.privateKeys
         //        let fileIdAtoms = Store.useValue State.asyncFileIdAtoms
         let deviceIdAtoms = Store.useValue State.asyncDeviceIdAtoms
 
@@ -266,6 +276,13 @@ module Component =
                         str $">>{deviceIdAtoms}<<"
                     ]
 
+                React.suspense (
+                    [
+                        AsyncAliasIndicator ()
+                    ],
+                    LoadingSpinner.InlineLoadingSpinner ()
+                )
+
                 Ui.stack
                     (fun x -> x.spacing <- "15px")
                     [
@@ -283,7 +300,7 @@ module Component =
                                                 SessionRestored = sessionRestored
                                                 ShowDebug = showDebug
                                                 Alias = alias
-                                                Keys = keys
+                                                PrivateKeys = privateKeys
                                             |}}"
                             ]
 
@@ -292,8 +309,8 @@ module Component =
                                 CustomProps = fun _ -> ()
                                 Props =
                                     fun x ->
-                                        x.placeholder <- "Keys"
-                                        x.id <- "keys"
+                                        x.placeholder <- "Private Keys"
+                                        x.id <- "privateKeys"
 
                                         x.onChange <- fun (x: KeyboardEvent) -> debouncedOnKeysChange x.Value
                             |}

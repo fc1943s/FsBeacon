@@ -44,3 +44,4 @@ function getIframeBody(n) {
 
 Cypress.Commands.add('getIframeBody1', () => getIframeBody(1))
 Cypress.Commands.add('getIframeBody2', () => getIframeBody(2))
+Cypress.Commands.add('getIframeBody3', () => getIframeBody(3))

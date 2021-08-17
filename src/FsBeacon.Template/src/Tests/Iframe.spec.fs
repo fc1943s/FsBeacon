@@ -73,22 +73,34 @@ module Iframe =
 
                     Cy2.waitFor $""""<0> registerAtom() FsStore/logLevel atom3 AtomWithStorage": "1","""
 
-                    waitForElSelectorObjectKey<Gun.GunKeys> Cy.getIframeBody1 "#component" "Keys" "SessionRestored"
+                    waitForElSelectorObjectKey<Gun.GunKeys>
+                        Cy.getIframeBody1
+                        "#component"
+                        "PrivateKeys"
+                        "SessionRestored"
                     |> Promise.bind
-                        (fun keys ->
+                        (fun privateKeys ->
                             promise {
-                                let keysJson = JS.JSON.stringify keys
-                                Dom.Logger.getLogger().Warning (fun () -> $"test: keys1={keysJson}")
+                                let keysJson = JS.JSON.stringify privateKeys
 
-                                typeText (Cy.getIframeBody2().find "#keys") keysJson
+                                Dom
+                                    .Logger
+                                    .getLogger()
+                                    .Warning (fun () -> $"test: keys1={keysJson}")
+
+                                typeText (Cy.getIframeBody2().find "#privateKeys") keysJson
                             })
                     |> Promise.iter id
 
-                    waitForElSelectorObjectKey<Gun.GunKeys> Cy.getIframeBody2 "#component" "Keys" "SessionRestored"
+                    waitForElSelectorObjectKey<Gun.GunKeys>
+                        Cy.getIframeBody2
+                        "#component"
+                        "PrivateKeys"
+                        "SessionRestored"
                     |> Promise.bind
-                        (fun keys ->
+                        (fun privateKeys ->
                             promise {
-                                let keysJson = JS.JSON.stringify keys
+                                let keysJson = JS.JSON.stringify privateKeys
                                 Dom.Logger.Default.Warning (fun () -> $"test: keys2={keysJson}")
                             })
                     |> Promise.iter id

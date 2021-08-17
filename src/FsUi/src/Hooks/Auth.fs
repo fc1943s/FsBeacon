@@ -21,12 +21,12 @@ module rec Auth =
 
     let inline useSignIn () =
         Store.useCallbackRef
-            (fun getter _setter (username, password) ->
+            (fun getter _setter (alias, password) ->
                 promise {
                     let gunUser = Store.value getter Selectors.Gun.gunUser
 
                     let! ack =
-                        match username, password with
+                        match alias, password with
                         | "", keys ->
                             printfn "keys sign in"
 
@@ -40,9 +40,9 @@ module rec Auth =
 
                             Gun.authKeys gunUser keys
 
-                        | username, password ->
+                        | alias, password ->
                             printfn "user/pass sign in"
-                            Gun.authUser gunUser (Gun.Alias username) (Gun.Pass password)
+                            Gun.authUser gunUser (Gun.Alias alias) (Gun.Pass password)
 
                     match ack with
                     | { err = None } ->
@@ -53,8 +53,8 @@ module rec Auth =
                             //                        do! Promise.sleep 100
 //                            Store.change setter Atoms.gunTrigger ((+) 1)
 //                            Store.change setter Atoms.hubTrigger ((+) 1)
-                            return Ok (Gun.Alias username, keys)
-                        | None -> return Error $"No keys found for user {username} after sign in"
+                            return Ok (Gun.Alias alias, keys)
+                        | None -> return Error $"No keys found for user {alias} after sign in"
                     | { err = Some error } -> return Error error
                 })
 
@@ -80,7 +80,7 @@ module rec Auth =
                                 | { err = Some error } -> return Error error
                                 | _ -> return Error $"invalid ack {JS.JSON.stringify ack}"
                             }
-                    | _ -> return Error "Invalid username"
+                    | _ -> return Error "Invalid alias"
                 })
 
     let inline useDeleteUser () =
@@ -107,28 +107,28 @@ module rec Auth =
                                 | { err = Some error } -> return Error error
                                 | _ -> return Error $"invalid ack {JS.JSON.stringify ack}"
                             }
-                    | _ -> return Error "Invalid username"
+                    | _ -> return Error "Invalid alias"
                 })
 
     let inline useSignUp () =
         let signIn = useSignIn ()
 
         Store.useCallbackRef
-            (fun getter _setter (username, password) ->
+            (fun getter _setter (alias, password) ->
                 promise {
-                    if username = "" || password = "" then
+                    if alias = "" || password = "" then
                         return Error "Required fields"
                     elif JSe
                              .RegExp(@"^[a-zA-Z0-9.!#$%&’*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$")
-                             .Test username
+                             .Test alias
                          |> not then
                         return Error "Invalid email address"
                     else
-                        let gunUser = Store.value getter Selectors.Gun.gunUser
+                        let gun = Store.value getter Selectors.Gun.gun
+                        let user = gun.user ()
+                        printfn $"Auth.useSignUp. gunUser.is={user.is |> Js.objectKeys}"
 
-                        printfn $"Auth.useSignUp. gunUser.is={gunUser.is |> Js.objectKeys}"
-
-                        let! ack = Gun.createUser gunUser (Gun.Alias username) (Gun.Pass password)
+                        let! ack = Gun.createUser user (Gun.Alias alias) (Gun.Pass password)
 
                         printfn $"Auth.useSignUp. Gun.createUser signUpAck={JS.JSON.stringify ack}"
 
@@ -140,19 +140,10 @@ module rec Auth =
                                       ok = Some 0
                                       pub = Some _
                                   } ->
-                                    do! Gun.putPublicHash (gunUser :?> Gun.Types.IGunChainReference) username
-
-
-                                    //            match! Gun.put (gun.get("#").get hash) data with
-//            | true -> return Ok hash
-//            | false -> return Error $"put error. data={data} hash={hash}"
-
-                                    //                                    "hash#atomPath"
-                                    //                                    "atomPath#hash"
-//                                    setImmutableUsername pub username
-
-                                    match! signIn (username, password) with
-                                    | Ok (username, keys) -> return Ok (username, keys)
+                                    match! signIn (alias, password) with
+                                    | Ok (alias, keys) ->
+                                        do! Gun.putPublicHash gun alias
+                                        return Ok (alias, keys)
                                     | Error error -> return Error error
                                 | { err = Some err } -> return Error err
                                 | _ -> return Error $"Invalid ack: {JS.JSON.stringify ack}"

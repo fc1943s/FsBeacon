@@ -107,7 +107,7 @@ module Gun =
     type GunPeer with
         static member inline Value (GunPeer url) = url
 
-    let inline radQuery (Pub pub) : {| ``.``: {| ``*``: Pub |} |} = emitJsExpr pub "{'.':{'*':$0}}"
+    let inline pubRadQuery (Pub pub) : {| ``.``: {| ``*``: Pub |} |} = emitJsExpr pub "{'.':{'*':$0}}"
 
 
     module rec Types =
@@ -271,7 +271,6 @@ module Gun =
                     | { pub = Some pub } ->
                         try
                             let! verified = sea.verify data pub
-
                             match verified with
                             | Some encryptedGunValue ->
                                 let! decrypted = sea.decrypt encryptedGunValue keys
@@ -301,27 +300,19 @@ module Gun =
             return decoded
         }
 
-    let inline userEncode<'TValue> (gun: IGunChainReference) (value: 'TValue) =
+    let inline userEncode<'TValue> (keys: GunKeys) (value: 'TValue) =
         promise {
             try
-                let user = gun.user ()
-                let keys = user.__.sea
+                let json =
+                    value
+                    |> Json.encode<'TValue>
+                    |> Json.encode<string>
 
-                match keys with
-                | Some keys ->
-                    let json =
-                        value
-                        |> Json.encode<'TValue>
-                        |> Json.encode<string>
+                let! encrypted = sea.encrypt (DecryptedValue json) keys
+                let! signed = sea.sign encrypted keys
+                printfn $"userEncode. value={value} json={json} encrypted={encrypted} signed={signed}"
 
-                    let! encrypted = sea.encrypt (DecryptedValue json) keys
-
-                    let! signed = sea.sign encrypted keys
-
-                    printfn $"userEncode. value={value} json={json} encrypted={encrypted} signed={signed}"
-
-                    return signed
-                | None -> return failwith $"userEncode. No keys found for user {user.is}"
+                return signed
             with
             | ex ->
                 Dom.consoleError ("[exception4]", ex, value)
@@ -359,39 +350,80 @@ module Gun =
         promise {
             let user = gun.user ()
 
-            printfn $"@@ Gun.putPublicHash. {JS.JSON.stringify user.is} value={value}"
-
-            match user.is with
-            | Some {
-                       pub = Some (Pub (String.ValidString pub))
-                   } ->
+            match user.__.sea with
+            | Some ({
+                        pub = Some (Pub (String.ValidString pub))
+                    } as keys) ->
                 let dataSlice = GunNodeSlice (nameof data)
                 let node = user.get dataSlice
-                printfn $"@@ Gun.putPublicHash. node={dataSlice} dataSlice={dataSlice}"
-                let newValue = GunValue.DecryptedValue (DecryptedValue value)
-                let valueSet = node.set newValue
-                printfn $"@@ Gun.putPublicHash. newValue={newValue} valueSet={valueSet}"
+                let! newValue = userEncode keys value
+                //                    GunValue.DecryptedValue (DecryptedValue value)
+//                let valueSet = node.set newValue
+                let valueSet = node.set (GunValue.EncryptedSignedValue newValue)
 
                 valueSet.on
                     (fun data key ->
                         (promise {
-                            printfn $"#1@@ Gun.putPublicHash.  data={data} key={key}"
                             let! hash = sea.work data None None (Some {| name = Some (CryptoName "SHA-256") |})
-                            printfn $"#2@@ Gun.putPublicHash.  data={data} key={key} hash={hash}"
 
                             let node =
-                                user
+                                gun
                                     .get(GunNodeSlice $"#{nameof data}")
                                     .get (GunNodeSlice $"{pub}#{hash}")
 
                             let! putResult = put node (GunValue.NodeReference key)
 
-                            if not putResult then
-                                eprintfn $"put public hash error key={key} pub={pub} hash={hash}"
+                            Dom
+                                .Logger
+                                .getLogger()
+                                .Debug (fun () ->
+                                    $"putPublicHash. putResult={putResult} key={key} pub={pub} hash={hash}")
                          }
                          |> Promise.start))
             | _ -> eprintfn $"invalid key. user.is={JS.JSON.stringify user.is}"
         }
+
+    type RawDataEntry = RawDataEntry of key: string * value: string
+
+    let inline radQuery (gun: IGunChainReference) =
+        Promise.create
+            (fun res err ->
+                try
+                    let user = gun.user ()
+
+                    match user.is with
+                    | Some {
+                               alias = (Some (GunUserAlias.GunKeys { pub = Some pub }))
+                           } ->
+                        gun
+                            .get(GunNodeSlice $"#{nameof data}")
+                            .get(RadQuery (pubRadQuery pub))
+                            .map()
+                            .once (fun gunValue _nodeSlice ->
+                                match gunValue with
+                                | GunValue.NodeReference gunNodeSlice ->
+                                    gun
+                                        .user(pub)
+                                        .get(GunNodeSlice (nameof data))
+                                        .get(gunNodeSlice)
+                                        .once (fun result _key ->
+                                            printfn $"hashData result={result} key={_key}"
+                                            res (result |> unbox<EncryptedSignedValue>)
+                                            ())
+                                | _ ->
+                                    Dom
+                                        .Logger
+                                        .getLogger()
+                                        .Debug (fun () -> "radQuery gunValue is not nodereference"))
+                    | _ ->
+                        Dom
+                            .Logger
+                            .getLogger()
+                            .Debug (fun () -> "radQuery. no pub found")
+                with
+                | ex ->
+                    printfn "radQuery error: {ex}"
+                    err ex)
 
     let inline subscribe (gun: IGunChainReference) fn =
         gun.on

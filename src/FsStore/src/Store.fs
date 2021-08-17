@@ -563,120 +563,129 @@ ticks={ticks}
             let syncState = SyncState<'TValue> ()
 
             getLogger()
-                .Trace (fun () -> "atomFamily.wrapper.set() debounceGunPut promise. #1 newValue={newValue}")
+                .Trace (fun () -> $"atomFamily.wrapper.set() debounceGunPut promise. #1 newValue={newValue}")
 
             try
                 match syncEngine.GetGunAtomNode () with
                 | Some (key, gunAtomNode) ->
-                    getLogger()
-                        .Trace (fun () ->
-                            $"atomFamily.wrapper.set() debounceGunPut promise. #2 before encode {key} newValue={newValue}")
+                    let user = gunAtomNode.user ()
+                    let keys = user.__.sea
 
-                    let! newValueJson =
-                        promise {
-                            if newValue |> Js.ofNonEmptyObj |> Option.isNone then
-                                return null
-                            else
-                                let! (Gun.EncryptedSignedValue encrypted) = Gun.userEncode<'TValue> gunAtomNode newValue
-
-                                return encrypted
-                        }
-
-                    getLogger()
-                        .Trace (fun () ->
-                            $"atomFamily.wrapper.set() debounceGunPut promise. #3.
-before put {key} newValue={newValue}
-    {getDebugInfo ()}                            ")
-
-                    let hubValue =
-                        match syncState.AdapterValueMapByType with
-                        | Some adapterValueMapByType ->
-                            adapterValueMapByType
-                            |> Map.tryFind AdapterType.Hub
-                        | None -> None
-
-                    match hubValue with
-                    | Some lastHubValue when
-                        lastHubValue |> Object.compare newValue
-                        || unbox lastHubValue = null
-                        ->
+                    match keys with
+                    | Some keys ->
                         getLogger()
                             .Trace (fun () ->
-                                $"debouncedPut() HUB SKIPPED
-newValue={newValue} jsTypeof-newValue={jsTypeof newValue}
-{getDebugInfo ()}                           ")
-                    | _ ->
-                        match syncEngine.GetAtomPath (), syncEngine.GetHub (), syncEngine.GetAlias () with
-                        | Some (AtomPath atomPath), Some hub, Some (Gun.Alias alias) ->
-                            promise {
-                                try
-                                    let! response =
-                                        hub.invokeAsPromise (Sync.Request.Set (alias, atomPath, newValueJson))
+                                $"atomFamily.wrapper.set() debounceGunPut promise. #2 before encode {key} newValue={newValue}")
 
-                                    match response with
-                                    | Sync.Response.SetResult result ->
-                                        if not result then
-                                            Dom.consoleError "HUB PUT ERROR (backend console)"
-                                        else
-                                            syncTrigger (ticks, Some (AdapterValue.Hub newValue))
-                                    | response -> Dom.consoleError ("#90592 response:", response)
-                                with
-                                | ex -> Dom.consoleError $"hub.set, error={ex.Message}"
+                        let! newValueJson =
+                            promise {
+                                if newValue |> Js.ofNonEmptyObj |> Option.isNone then
+                                    return null
+                                else
+                                    let! (Gun.EncryptedSignedValue encrypted) = Gun.userEncode<'TValue> keys newValue
+
+                                    return encrypted
                             }
-                            |> Promise.start
+
+                        getLogger()
+                            .Trace (fun () ->
+                                $"atomFamily.wrapper.set() debounceGunPut promise. #3.
+    before put {key} newValue={newValue}
+        {getDebugInfo ()}                            ")
+
+                        let hubValue =
+                            match syncState.AdapterValueMapByType with
+                            | Some adapterValueMapByType ->
+                                adapterValueMapByType
+                                |> Map.tryFind AdapterType.Hub
+                            | None -> None
+
+                        match hubValue with
+                        | Some lastHubValue when
+                            lastHubValue |> Object.compare newValue
+                            || unbox lastHubValue = null
+                            ->
+                            getLogger()
+                                .Trace (fun () ->
+                                    $"debouncedPut() HUB SKIPPED
+    newValue={newValue} jsTypeof-newValue={jsTypeof newValue}
+    {getDebugInfo ()}                           ")
+                        | _ ->
+                            match syncEngine.GetAtomPath (), syncEngine.GetHub (), syncEngine.GetAlias () with
+                            | Some (AtomPath atomPath), Some hub, Some (Gun.Alias alias) ->
+                                promise {
+                                    try
+                                        let! response =
+                                            hub.invokeAsPromise (Sync.Request.Set (alias, atomPath, newValueJson))
+
+                                        match response with
+                                        | Sync.Response.SetResult result ->
+                                            if not result then
+                                                Dom.consoleError "HUB PUT ERROR (backend console)"
+                                            else
+                                                syncTrigger (ticks, Some (AdapterValue.Hub newValue))
+                                        | response -> Dom.consoleError ("#90592 response:", response)
+                                    with
+                                    | ex -> Dom.consoleError $"hub.set, error={ex.Message}"
+                                }
+                                |> Promise.start
+                            | _ ->
+                                getLogger()
+                                    .Trace (fun () ->
+                                        $"[wrapper.on() HUB put]
+                                                newValue={newValue}
+        {getDebugInfo ()}
+        skipping.                                                               ")
+
+                        let gunValue =
+                            match syncState.AdapterValueMapByType with
+                            | Some adapterValueMapByType ->
+                                adapterValueMapByType
+                                |> Map.tryFind AdapterType.Gun
+                            | None -> None
+
+                        match syncEngine.GetGunOptions () with
+                        | Some (GunOptions.Sync _) when gunValue |> Object.compare (Some newValue) |> not ->
+                            if gunValue.IsNone
+                               || gunValue |> Object.compare newValue |> not
+                               || unbox newValue = null then
+
+                                let! putResult =
+                                    Gun.put
+                                        gunAtomNode
+                                        (Gun.GunValue.EncryptedSignedValue (Gun.EncryptedSignedValue newValueJson))
+
+                                if putResult then
+                                    syncTrigger (ticks, Some (AdapterValue.Gun newValue))
+
+                                    getLogger()
+                                        .Trace (fun () ->
+                                            $"atomFamily.wrapper.set() debounceGunPut promise result.
+        newValue={newValue}
+        {key}
+        {getDebugInfo ()}                                           ")
+                                else
+                                    Browser.Dom.window?lastPutResult <- putResult
+
+                                    match Dom.window () with
+                                    | Some window ->
+                                        if window?Cypress = null then
+                                            Dom.consoleError
+                                                $"atomFamily.wrapper.set() debounceGunPut promise put error.
+         newValue={newValue} putResult={putResult}
+         {key}
+                                          {getDebugInfo ()}         "
+                                    | None -> ()
                         | _ ->
                             getLogger()
                                 .Trace (fun () ->
-                                    $"[wrapper.on() HUB put]
-                                            newValue={newValue}
-    {getDebugInfo ()}
-    skipping.                                                               ")
-
-                    let gunValue =
-                        match syncState.AdapterValueMapByType with
-                        | Some adapterValueMapByType ->
-                            adapterValueMapByType
-                            |> Map.tryFind AdapterType.Gun
-                        | None -> None
-
-                    match syncEngine.GetGunOptions () with
-                    | Some (GunOptions.Sync _) when gunValue |> Object.compare (Some newValue) |> not ->
-                        if gunValue.IsNone
-                           || gunValue |> Object.compare newValue |> not
-                           || unbox newValue = null then
-
-                            let! putResult =
-                                Gun.put
-                                    gunAtomNode
-                                    (Gun.GunValue.EncryptedSignedValue (Gun.EncryptedSignedValue newValueJson))
-
-                            if putResult then
-                                syncTrigger (ticks, Some (AdapterValue.Gun newValue))
-
-                                getLogger()
-                                    .Trace (fun () ->
-                                        $"atomFamily.wrapper.set() debounceGunPut promise result.
-    newValue={newValue}
-    {key}
-    {getDebugInfo ()}                                           ")
-                            else
-                                Browser.Dom.window?lastPutResult <- putResult
-
-                                match Dom.window () with
-                                | Some window ->
-                                    if window?Cypress = null then
-                                        Dom.consoleError
-                                            $"atomFamily.wrapper.set() debounceGunPut promise put error.
-     newValue={newValue} putResult={putResult}
-     {key}
-                                      {getDebugInfo ()}         "
-                                | None -> ()
-                    | _ ->
+                                    $"debouncedPut() SKIPPED
+    newValue={newValue} jsTypeof-newValue={jsTypeof newValue}
+    {getDebugInfo ()}                           ")
+                    | None ->
                         getLogger()
-                            .Trace (fun () ->
-                                $"debouncedPut() SKIPPED
-newValue={newValue} jsTypeof-newValue={jsTypeof newValue}
-{getDebugInfo ()}                           ")
+                            .Trace (fun () -> $"atomFamily.wrapper.set(). skipped ...")
+
 
                 | None ->
                     getLogger()
