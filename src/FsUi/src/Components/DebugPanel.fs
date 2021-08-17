@@ -6,6 +6,7 @@ open Feliz
 open FsJs
 open FsStore
 open FsUi.Bindings
+open FsStore.Hooks
 open FsUi.Hooks
 
 
@@ -98,8 +99,6 @@ module DebugPanel =
 
                     x.flex <- "1"
                     x.fontSize <- "9px"
-                    x.overflow <- "auto"
-                    x.flexBasis <- 0
                     x.backgroundColor <- "#44444455")
                 [
                     if showDebug then

@@ -4,6 +4,7 @@ open FsJs
 open FsStore
 open FsStore.Model
 open FsUi.Bindings
+open FsStore.Hooks
 open FsCore
 open Feliz
 open Fable.Core.JsInterop

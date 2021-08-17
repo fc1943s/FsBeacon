@@ -121,6 +121,8 @@ module JsMagic =
     type Clipboard with
         member inline this.read () : JS.Promise<ClipboardRead> = clipboardRead this
 
+module Promise =
+    let inline ignore (fn: JS.Promise<_>) = Promise.map ignore fn
 
 
 module Json =
@@ -141,4 +143,3 @@ module Json =
 
     let inline decode<'T> data =
         Thoth.Json.Decode.Auto.unsafeFromString<'T> data
-

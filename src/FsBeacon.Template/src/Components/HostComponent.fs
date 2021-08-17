@@ -38,7 +38,6 @@ module HostComponent =
                                                 x.``as`` <- "iframe"
                                                 x.src <- "https://localhost:49212/#1"
                                                 x?``data-cy`` <- "iframe1"
-                                                x?scrolling <- "no"
                                                 x.flex <- "1")
                                             []
 
@@ -47,7 +46,6 @@ module HostComponent =
                                                 x.``as`` <- "iframe"
                                                 x.src <- "https://localhost:49222/#2"
                                                 x?``data-cy`` <- "iframe2"
-                                                x?scrolling <- "no"
                                                 x.flex <- "1")
                                             []
 
@@ -56,7 +54,6 @@ module HostComponent =
                                                 x.``as`` <- "iframe"
                                                 x.src <- "https://localhost:49222/#3"
                                                 x?``data-cy`` <- "iframe3"
-                                                x?scrolling <- "no"
                                                 x.flex <- "1")
                                             []
                                     ])

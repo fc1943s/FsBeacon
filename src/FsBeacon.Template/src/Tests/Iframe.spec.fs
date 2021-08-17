@@ -7,17 +7,10 @@ open Fable.Extras
 open FsJs
 open FsJs.Bindings.Cypress
 open FsStore.Bindings
+open FsStore
 
 
 module Iframe =
-    //    let toCypressPromise p =
-//        promise {
-//            let! value = p
-//            return value
-////            return! Cy.cypressPromise (fun res _err -> res value)
-//        }
-
-
     let inline waitForElSelectorObjectKey<'T> (elFn: unit -> Cy.Chainable2<obj>) selector key nextKey =
         Cy2.waitForEl (elFn ()) $"\"{key}\": {{"
         let el2 = (elFn ()).find selector
@@ -45,15 +38,15 @@ module Iframe =
                 | _ :: x :: _ -> x |> Json.decode<'T> |> Some
                 | _ -> None)
 
-    let inline actorSignIn elFn fn =
-        waitForElSelectorObjectKey<Gun.GunKeys> elFn "#component" "PrivateKeys" "SessionRestored"
-        |> Promise.bind
-            (fun privateKeys ->
-                promise {
-                    let keysJson = JS.JSON.stringify privateKeys
-                    do! fn keysJson
-                })
-        |> Promise.iter id
+    //    let inline actorSignIn elFn fn =
+//        waitForElSelectorObjectKey<Gun.GunKeys> elFn "#component" "PrivateKeys" "SessionRestored"
+//        |> Promise.bind
+//            (fun privateKeys ->
+//                promise {
+//                    let keysJson = JS.JSON.stringify privateKeys
+//                    do! fn keysJson
+//                })
+//        |> Promise.iter id
 
 
     //    let typeText (el: Cy.Chainable2<_>) (text: string) =
@@ -123,22 +116,31 @@ module Iframe =
                             promise {
                                 let keysJson = JS.JSON.stringify privateKeys
 
-                                Dom.logWarning (fun () -> $"test: keys2={keysJson}")
-
                                 let keys = keysJson |> Json.decode<Gun.GunKeys>
-                                printfn $"keys={JS.JSON.stringify keys}"
+                                let message = Model.Message.Command (Model.Command.KeySignIn keys)
+                                let messages = message |> Array.singleton
+                                let json = messages |> Json.encode<Model.Message []>
 
-                                let hash = "333"
+                                let base64 =
+                                    match Dom.window () with
+                                    | Some window -> window?btoa json
+                                    | None -> ""
 
-                                let! _ =
-                                    (getIframeN 3)
-                                        .invoke ("attr", "src", $"https://localhost:49222/#{hash}")
+                                Dom.logWarning
+                                    (fun () -> $"test: keys get2 waitForElSelectorObjectKey. json={json} base64={base64}")
+
+                                if base64 <> "" then
+                                    let! _ =
+                                        (getIframeN 3)
+                                            .invoke ("attr", "src", $"https://localhost:49222/#{base64}")
+
+                                    ()
 
                                 ()
                             })
                     |> Promise.iter id
 
-                    actorSignIn get2 (fun keysJson -> promise { Dom.logWarning (fun () -> $"test: keys2={keysJson}") })
+                    //                    actorSignIn get2 (fun keysJson -> promise { Dom.logWarning (fun () -> $"test: keys actorsignin get2 ={keysJson}") })
 
                     allFn Cy2.waitForEl "async alias: a@"
 

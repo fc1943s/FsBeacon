@@ -3,6 +3,7 @@ namespace FsUi.Components
 open FsCore
 open FsCore.Model
 open FsUi.State
+open FsStore.Hooks
 open Fable.React
 open Feliz
 open Fluke.UI.Frontend.Bindings

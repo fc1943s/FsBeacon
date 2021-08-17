@@ -4,6 +4,7 @@ open Browser.Types
 open Feliz
 open FsStore
 open FsStore.Model
+open FsStore.Hooks
 open FsUi.Bindings
 open Fable.Core
 open Feliz.UseListener

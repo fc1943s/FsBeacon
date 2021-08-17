@@ -1,6 +1,7 @@
 namespace FsUi.Components
 
 open Feliz
+open FsStore.Hooks
 open FsStore
 open FsStore.Model
 open FsUi.Bindings

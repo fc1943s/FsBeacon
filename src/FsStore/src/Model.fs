@@ -1,5 +1,6 @@
 namespace FsStore
 
+open System
 open Fable.Core
 open FsCore
 open FsCore.Model
@@ -101,3 +102,20 @@ module Model =
             ]
             |> String.concat "/"
             |> AtomPath
+
+
+    [<RequireQualifiedAccess>]
+    type Message =
+        | None
+        | Command of command: Command
+        | Event
+
+    and [<RequireQualifiedAccess>] Command =
+        | KeySignIn of keys: Gun.GunKeys
+        | Set of key: string * value: string
+
+    type MessageId = MessageId of Guid
+
+    type MessageId with
+        static member inline NewId () = MessageId (Guid.newTicksGuid ())
+        static member inline Value (MessageId guid) = guid

@@ -2,11 +2,12 @@ namespace FsBeacon.Template
 
 
 open System
+open FsCore
 open FsCore.Model
 open FsJs
 open FsStore
+open FsStore.Model
 open FsStore.State
-open FsStore.Bindings
 open FsUi.State
 
 
@@ -24,6 +25,7 @@ module State =
     [<RequireQualifiedAccess>]
     type AccordionType = | Host
 
+
     module Atoms =
 
         module rec Host =
@@ -37,18 +39,19 @@ module State =
                     (fun (_: AccordionType) -> [||]: string [])
                     (string >> List.singleton)
 
-
         let rec hydrateStarted = Store.atom FsBeacon.root (nameof hydrateStarted) false
         let rec signInStarted = Store.atom FsBeacon.root (nameof signInStarted) false
 
         module Device =
-            let rec fileId: (DeviceId -> Jotai.Atom<FileId>) =
+            let rec fileId =
                 Store.atomFamilyWithSync
                     FsBeacon.root
                     Atoms.Device.collection
                     (nameof fileId)
                     (fun (_: DeviceId) -> FileId Guid.Empty)
                     Atoms.Device.deviceIdIdentifier
+
+
 
     module Selectors =
         let rec asyncDeviceIdAtoms =
@@ -58,3 +61,11 @@ module State =
                 Atoms.Device.fileId
                 Dom.deviceInfo.DeviceId
                 (Guid >> DeviceId)
+
+        let rec asyncMessageIdAtoms =
+            Store.selectAtomSyncKeys
+                FsBeacon.root
+                (nameof asyncMessageIdAtoms)
+                Atoms.Message.ack
+                (MessageId Guid.Empty)
+                (Guid >> MessageId)

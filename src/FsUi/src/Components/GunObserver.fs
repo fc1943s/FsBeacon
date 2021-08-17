@@ -5,6 +5,7 @@ open FsStore
 open FsStore.Bindings
 open FsUi.Bindings
 open FsUi.Hooks
+open FsStore.Hooks
 open Fable.React
 
 

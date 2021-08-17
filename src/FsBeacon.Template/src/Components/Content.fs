@@ -2,6 +2,7 @@ namespace FsBeacon.Template.Components
 
 open Feliz
 open FsJs
+open FsStore.Hooks
 open FsStore
 open FsUi.Bindings
 open FsUi.Components

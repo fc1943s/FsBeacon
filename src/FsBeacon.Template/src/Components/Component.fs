@@ -1,17 +1,18 @@
 namespace FsBeacon.Template.Components
 
-
-open System.Collections.Generic
-open Fable.Core
+open FsCore
+open Browser.Types
 open Fable.React
 open Feliz
 open FsCore.Model
 open FsJs
 open FsStore
+open FsStore.Model
 open FsStore.State
 open FsStore.Bindings
 open FsStore.Hooks
 open FsBeacon.Template.State
+open FsBeacon.Template
 open FsUi.Bindings
 open FsUi.Hooks
 open FsUi.State
@@ -124,7 +125,7 @@ module Component =
         Jotai.jotaiUtils.useHydrateAtoms [|
             unbox Atoms.gunOptions,
             unbox (
-                Model.GunOptions.Sync [|
+                GunOptions.Sync [|
                     Gun.GunPeer "https://localhost:49221/gun"
                 |]
             )
@@ -133,30 +134,24 @@ module Component =
 
         nothing
 
-    let deviceSignUpCache = Dictionary<DeviceId, bool> ()
 
     [<ReactComponent>]
-    let SignInContainer () =
+    let rec SignInContainer () =
         let logger = Store.useValue Selectors.logger
         logger.Info (fun () -> "SignUpContainer.render")
         let deviceInfo = Store.useValue Selectors.deviceInfo
 
-        let callbacks = Store.useCallbacks ()
         let signIn = Auth.useSignIn ()
         let signUp = Auth.useSignUp ()
 
         let toast = Ui.useToast ()
 
-        React.useEffectOnce
-            (fun () ->
+        Store.useHashedEffectOnce
+            (nameof SignInContainer, deviceInfo.DeviceId)
+            (fun _getter _setter ->
                 promise {
-                    if not (deviceSignUpCache.ContainsKey deviceInfo.DeviceId) then
-                        deviceSignUpCache.[deviceInfo.DeviceId] <- true
-
-                        let! _getter, _setter = callbacks ()
-
-                        let credentials = $"a@{Dom.deviceTag}"
-                        //
+                    let credentials = $"a@{Dom.deviceTag}"
+                    //
 //                            match! signIn (credentials, credentials) with
 //                            | Ok _ -> ()
 //                            | Error error ->
@@ -166,32 +161,31 @@ module Component =
 //                                | Ok _ -> ()
 //                                | Error error -> toast (fun x -> x.description <- $"2: {error}")
 
-                        match! signUp (credentials, credentials) with
+                    match! signUp (credentials, credentials) with
+                    | Ok _ -> ()
+                    | Error error when error.Contains "User already created" ->
+                        //                                do! Promise.sleep 300
+                        match! signIn (credentials, credentials) with
                         | Ok _ -> ()
-                        | Error error when error.Contains "User already created" ->
-                            //                                do! Promise.sleep 300
-                            match! signIn (credentials, credentials) with
-                            | Ok _ -> ()
-                            | Error error -> toast (fun x -> x.description <- $"1: {error}")
-                        | Error error -> toast (fun x -> x.description <- $"2: {error}")
+                        | Error error -> toast (fun x -> x.description <- $"1: {error}")
+                    | Error error -> toast (fun x -> x.description <- $"2: {error}")
 
-                        //                            let gun = Store.value getter Selectors.Gun.gun
+                    //                            let gun = Store.value getter Selectors.Gun.gun
 //                            let user = gun.user()
 //                            let! ack = Gun.createUser user (Gun.Alias deviceId) (Gun.Pass deviceId)
 //                            printfn $"ack={ack}"
 
 
-                        //                        let! hexString = hexStringPromise
+                    //                        let! hexString = hexStringPromise
 //                        let fileId = Hydrate.hydrateFile setter (Model.AtomScope.Current, hexString)
 //
 //                        Store.set setter (State.Device.fileId deviceInfo.DeviceId) fileId
 
-                        let fileId = null
+                    let fileId = null
 
-                        logger.Info
-                            (fun () -> $"Component.HydrateContainer().useEffectOnce() fileId={fileId} (currently null)")
-                }
-                |> Promise.start)
+                    logger.Info
+                        (fun () -> $"Component.HydrateContainer().useEffectOnce() fileId={fileId} (currently null)")
+                })
 
         nothing
 
@@ -207,10 +201,16 @@ module Component =
             ]
 
     [<ReactComponent>]
+    let HrefIndicator () =
+        let logger = Store.useValue Selectors.logger
+        logger.Info (fun () -> "HrefIndicator.render")
+        let _routeTrigger = Store.useValue Atoms.routeTrigger
+        str $"href: {Browser.Dom.window.location.href}"
+
+    [<ReactComponent>]
     let InnerComponent () =
         let logger = Store.useValue Selectors.logger
         logger.Info (fun () -> "Component.render")
-        let toast = Ui.useToast ()
         let deviceInfo = Store.useValue Selectors.deviceInfo
         let gunOptions = Store.useValue Atoms.gunOptions
         let gunPeers = Store.useValue Selectors.Gun.gunPeers
@@ -222,28 +222,28 @@ module Component =
         let privateKeys = Store.useValue Selectors.Gun.privateKeys
         //        let fileIdAtoms = Store.useValue State.asyncFileIdAtoms
         let deviceIdAtoms = Store.useValue Selectors.asyncDeviceIdAtoms
-
-        let signIn = Auth.useSignIn ()
-
-        let onKeysChange =
-            Store.useCallbackRef
-                (fun _ _ key ->
-                    promise {
-                        let! signIn = signIn ("", key)
-
-                        logger.Warning (fun () -> $"test: signIn={JS.JSON.stringify signIn}")
-
-                        match signIn with
-                        | Ok (_alias, _keys) -> ()
-                        | Error error -> toast (fun x -> x.description <- error)
-                    })
-
         let setHydrateStarted = Store.useSetState Atoms.hydrateStarted
         let setSignInStarted = Store.useSetState Atoms.signInStarted
+
+        React.useEffect (
+            (fun () ->
+                match Dom.window () with
+                | Some window ->
+                    window.scrollTo (
+                        {|
+                            left = 0.
+                            top = 0.
+                            behavior = ScrollBehavior.Smooth
+                        |}: ScrollToOptions
+                    )
+                | None -> ()),
+            [||]
+        )
 
         Ui.stack
             (fun x ->
                 x.id <- "component"
+                x.alignItems <- "flex-start"
                 x.fontSize <- "11px"
                 x.maxWidth <- "100vw"
                 x.padding <- "15px"
@@ -274,7 +274,7 @@ module Component =
                 Ui.flex
                     (fun _ -> ())
                     [
-                        str $"#2 {Browser.Dom.window.location.href}"
+                        HrefIndicator ()
                         br []
                         str $">>{deviceIdAtoms}<<"
                     ]
@@ -290,7 +290,9 @@ module Component =
                     (fun x -> x.spacing <- "15px")
                     [
                         Ui.flex
-                            (fun x -> x.flex <- "1")
+                            (fun x ->
+                                x.flex <- "1"
+                                x.whiteSpace <- "pre-wrap")
                             [
                                 str
                                     $" {Json.encodeWithNullFormatted
@@ -315,12 +317,42 @@ module Component =
 
 
     [<ReactComponent>]
+    let MessageProcessor messageIdAtom =
+        let messageProcessor = Messaging.useMessageProcessor ()
+        let messageId = Store.useValue messageIdAtom
+        let message = Store.useValue (Atoms.Message.message messageId)
+        let ack, setAck = Store.useState (Atoms.Message.ack messageId)
+
+        React.useEffect (
+            (fun () ->
+                messageProcessor (ack, (fun () -> setAck (Some true)), message)
+                |> Promise.start),
+            [|
+                box messageProcessor
+                box message
+                box ack
+                box setAck
+            |]
+        )
+
+        nothing
+
+    [<ReactComponent>]
+    let MessagesListener () =
+        let messageIdAtoms = Store.useValue State.Selectors.asyncMessageIdAtoms
+
+        React.fragment [
+            yield! messageIdAtoms |> Array.map MessageProcessor
+        ]
+
+    [<ReactComponent>]
     let Component () =
         let hydrateStarted = Store.useValue Atoms.hydrateStarted
         let signInStarted = Store.useValue Atoms.signInStarted
 
         React.fragment [
             HydrateCoreContainer ()
+            MessagesListener ()
             if hydrateStarted then HydrateSyncContainer ()
             if signInStarted then SignInContainer ()
             InnerComponent ()

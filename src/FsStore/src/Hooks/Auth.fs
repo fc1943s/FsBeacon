@@ -1,4 +1,4 @@
-namespace FsUi.Hooks
+namespace FsStore.Hooks
 
 open Fable.Extras
 open Fable.Core

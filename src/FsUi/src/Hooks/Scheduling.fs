@@ -3,6 +3,7 @@ namespace FsUi.Hooks
 open FsCore
 open Fable.Core
 open Feliz
+open FsStore.Hooks
 open FsStore
 open FsStore.Model
 

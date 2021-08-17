@@ -1,6 +1,7 @@
 namespace FsUi.Components
 
 open FsStore.Model
+open FsStore.Hooks
 open FsUi.State
 open System
 open Browser.Types
