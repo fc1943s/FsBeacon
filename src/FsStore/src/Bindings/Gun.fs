@@ -159,7 +159,7 @@ module Gun =
             abstract map : unit -> IGunChainReference
             abstract off : unit -> IGunChainReference
             abstract back : unit -> IGunChainReference
-            abstract on : (GunValue<'T> -> GunNodeSlice -> unit) -> unit
+            abstract on : (GunValue<'T> -> GunNodeSlice -> JS.Promise<unit>) -> unit
             abstract once : (GunValue<'T> -> GunNodeSlice -> unit) -> unit
             abstract on : event: GunEvent * (unit -> unit) -> unit
             abstract put : GunValue<'T> -> (PutAck -> PutNode -> unit) -> IGunChainReference
@@ -271,6 +271,7 @@ module Gun =
                     | { pub = Some pub } ->
                         try
                             let! verified = sea.verify data pub
+
                             match verified with
                             | Some encryptedGunValue ->
                                 let! decrypted = sea.decrypt encryptedGunValue keys
@@ -352,19 +353,30 @@ module Gun =
 
             match user.__.sea with
             | Some ({
+                        priv = Some (Priv (String.ValidString _))
                         pub = Some (Pub (String.ValidString pub))
                     } as keys) ->
+
                 let dataSlice = GunNodeSlice (nameof data)
                 let node = user.get dataSlice
-                let! newValue = userEncode keys value
+
                 //                    GunValue.DecryptedValue (DecryptedValue value)
 //                let valueSet = node.set newValue
+
+                let! newValue = userEncode<'TValue> keys value
+                printfn $"putPublicHash 1. newValue={newValue} t={jsTypeof newValue}"
+
                 let valueSet = node.set (GunValue.EncryptedSignedValue newValue)
 
                 valueSet.on
-                    (fun data key ->
+                    (fun _data key ->
                         (promise {
-                            let! hash = sea.work data None None (Some {| name = Some (CryptoName "SHA-256") |})
+                            let! hash =
+                                sea.work
+                                    (GunValue.NodeReference key)
+                                    None
+                                    None
+                                    (Some {| name = Some (CryptoName "SHA-256") |})
 
                             let node =
                                 gun
@@ -377,9 +389,8 @@ module Gun =
                                 .Logger
                                 .getLogger()
                                 .Debug (fun () ->
-                                    $"putPublicHash. putResult={putResult} key={key} pub={pub} hash={hash}")
-                         }
-                         |> Promise.start))
+                                    $"putPublicHash 2. putResult={putResult} key={key} pub={pub} hash={hash}")
+                         }))
             | _ -> eprintfn $"invalid key. user.is={JS.JSON.stringify user.is}"
         }
 
@@ -428,14 +439,16 @@ module Gun =
     let inline subscribe (gun: IGunChainReference) fn =
         gun.on
             (fun data (GunNodeSlice key) ->
-                Dom.Logger.Default.Debug
-                    (fun () ->
-                        if key = "devicePing" then
-                            null
-                        else
-                            $"subscribe.on() data. batching...data={data} key={key}")
+                promise {
+                    Dom.Logger.Default.Debug
+                        (fun () ->
+                            if key = "devicePing" then
+                                null
+                            else
+                                $"subscribe.on() data. batching...data={data} key={key}")
 
-                fn data)
+                    fn data
+                })
 
         Object.newDisposable
             (fun () ->

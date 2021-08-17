@@ -28,12 +28,12 @@ jobs:
 
       - run: sudo apt-get install libnss3-tools
 
-#      - uses: cypress-io/github-action@v2
-#        with:
-#          working-directory: ./src/FsBeacon.Template
-#          build: npx cypress info
-#          start: yarn cypress-serve
-#          command: yarn cypress-run
+      - uses: cypress-io/github-action@v2
+        with:
+          working-directory: ./src/FsBeacon.Template
+          build: npx cypress info
+          start: yarn cypress-serve
+          command: yarn cypress-run
 
       - uses: actions/upload-artifact@v2
         if: failure()

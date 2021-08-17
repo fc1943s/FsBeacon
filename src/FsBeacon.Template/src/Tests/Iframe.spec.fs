@@ -105,7 +105,7 @@ module Iframe =
                             })
                     |> Promise.iter id
 
-                    Cy2.waitForEl (Cy.getIframeBody2 ()) "\"Alias\": \""
+                    Cy2.waitForEl (Cy.getIframeBody2 ()) "async alias: a@"
 
                     //                    Cy2.waitForEl (get1 ()) "\"<44> FsUi/systemUiFont get\": \"2\""
 

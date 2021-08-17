@@ -1198,25 +1198,26 @@ internalAtom[alias]={internalAtom (syncEngine.GetAlias ())} """
                         gunAtomNode
                             .map()
                             .on (fun data (Gun.GunNodeSlice gunKey) ->
-
-                                getLogger()
-                                    .Trace (fun () ->
-                                        $" @@$ atomKeys gun.on() HUB filter fetching/subscribing] @@@ gunAtomNode.map().on result
+                                promise {
+                                    getLogger()
+                                        .Trace (fun () ->
+                                            $" @@$ atomKeys gun.on() HUB filter fetching/subscribing] @@@ gunAtomNode.map().on result
                                       data={data} typeof data={jsTypeof data} gunKey={gunKey} typeof gunKey={jsTypeof gunKey}
                                       atomPath={atomPath} syncEngine.atomPath={syncEngine.GetAtomPath ()}
                                       key={key}
                                       {getDebugInfo ()} ")
 
-                                match data with
-                                | Gun.GunValue.EncryptedSignedValue (Gun.EncryptedSignedValue (String.ValidString _)) ->
-                                    let newValue =
-                                        [|
-                                            onFormat gunKey
-                                        |]
+                                    match data with
+                                    | Gun.GunValue.EncryptedSignedValue (Gun.EncryptedSignedValue (String.ValidString _)) ->
+                                        let newValue =
+                                            [|
+                                                onFormat gunKey
+                                            |]
 
 
-                                    batchKeysAtom (Guid.newTicksGuid (), newValue) BatchKind.Union
-                                | _ -> ())
+                                        batchKeysAtom (Guid.newTicksGuid (), newValue) BatchKind.Union
+                                    | _ -> ()
+                                })
 
                         //                        gunAtomNode.on
                         //                            (fun data _key ->
