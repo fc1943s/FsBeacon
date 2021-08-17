@@ -15,7 +15,5 @@ module App =
 
         (if wrap then RootWrapper.RootWrapper None else React.fragment)
             [
-                GunObserver.GunObserver ()
-
                 Content.Content ()
             ]

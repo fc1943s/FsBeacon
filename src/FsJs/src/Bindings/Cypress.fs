@@ -43,6 +43,7 @@ module Cypress =
             abstract debug : unit -> unit
             abstract clear : {| force: bool |} -> Chainable2<'T>
             abstract eq : int -> Chainable2<'T>
+            abstract its : string -> {| timeout: int |} option -> Chainable2<'T>
             abstract focus : unit -> unit
             abstract first : unit -> Chainable2<'T>
             abstract ``then`` : (Chainable2<'T> -> unit) -> unit
@@ -73,9 +74,6 @@ module Cypress =
         let inline pause () : unit = emitJsExpr () "cy.pause()"
         let inline wait (time: int) : unit = emitJsExpr time "cy.wait($0)"
         let inline window () : JS.Promise<Window> = emitJsExpr () "cy.window()"
-        let inline getIframeBody1 () : Chainable2<obj> = emitJsExpr () "cy.getIframeBody1()"
-        let inline getIframeBody2 () : Chainable2<obj> = emitJsExpr () "cy.getIframeBody2()"
-        let inline getIframeBody3 () : Chainable2<obj> = emitJsExpr () "cy.getIframeBody3()"
 
         let inline contains (text: string) (options: {| timeout: int |} option) : Chainable2<'T> =
             emitJsExpr (text, options) "cy.contains($0, $1)"
@@ -106,7 +104,10 @@ module Cypress =
             : Chainable2<'T> =
             emitJsExpr (el, text, options) "$0.contains($1, $2)"
 
-        let inline get (selector: string) : Chainable2<string> = emitJsExpr selector "cy.get($0)"
+        let inline get (selector: string) (options: {| timeout: int |} option) : Chainable2<'T> =
+            emitJsExpr (selector, options) "cy.get($0, $1)"
+
+        let defaultOptions = Some {| timeout = cypressTimeout |}
 
 
     module Cy2 =
@@ -138,7 +139,8 @@ module Cypress =
 
         let inline waitFocus selector wait =
             //            Cy.wait 50
-            Cy.get(selector).should "have.focus"
+            (Cy.get selector Cy.defaultOptions)
+                .should "have.focus"
 
             match wait with
             | Some ms -> Cy.wait ms
@@ -146,31 +148,38 @@ module Cypress =
 
         let inline selectorTypeText selector text wait =
             waitFocus selector wait
-            typeText (fun () -> Cy.get selector) text
+            typeText (fun () -> Cy.get selector Cy.defaultOptions) text
 
         let inline selectorFocusTypeText selector text =
-            Cy.get(selector).first().focus ()
-            typeText (fun () -> Cy.get selector) text
+            (Cy.get selector Cy.defaultOptions)
+                .first()
+                .focus ()
+
+            typeText (fun () -> Cy.get selector Cy.defaultOptions) text
 
         let inline clickTestId selector =
-            Cy
-                .get(selector)
+            (Cy.get selector Cy.defaultOptions)
                 .first()
                 .click (Some {| force = false |})
             |> ignore
 
         let inline selectorFocusTypeTextWithinSelector parent selector text =
-            Cy.get(parent).get(selector).first().focus ()
-            typeText (fun () -> Cy.get(parent).get selector) text
+            (Cy.get parent Cy.defaultOptions)
+                .get(selector)
+                .first()
+                .focus ()
+
+            typeText (fun () -> (Cy.get parent Cy.defaultOptions).get selector) text
 
         let inline clickTextWithinSelector selector text =
-            let contains = (Cy.get(selector).contains text None)
+            let contains = (Cy.get selector Cy.defaultOptions).contains text None
 
             contains.click (Some {| force = false |})
             |> ignore
 
         let inline clickEl (el: Cy.Chainable2<_>) =
             el.click (Some {| force = false |}) |> ignore
+
 
         let inline find selector (el: Cy.Chainable2<_>) = el.find selector // |> Cy.wrap
         //            Promise.create
@@ -182,15 +191,14 @@ module Cypress =
 //                        printfn $"find error: {ex}"
 //                        err ex)
 
-        let inline textContains text =
-            Cy.contains text (Some {| timeout = cypressTimeout |})
+        let inline textContains text = Cy.contains text Cy.defaultOptions
 
         let inline clickText text =
             let contains = textContains text
             clickEl contains
 
         let inline textEl el text =
-            (Cy.elContains el text (Some {| timeout = cypressTimeout |}))
+            (Cy.elContains el text Cy.defaultOptions)
 
         let inline clickTextEl el text = clickEl (textEl el text)
 
@@ -199,12 +207,15 @@ module Cypress =
             clickEl (contains.find selector)
 
         let inline clickSelector selector =
-            (Cy.get selector).first().click None |> ignore
+            (Cy.get selector Cy.defaultOptions)
+                .first()
+                .click None
+            |> ignore
 
         let inline shouldBeVisible (el: Cy.Chainable2<_>) = el.should "be.visible"
 
         let inline waitForWithinSelector selector text options =
-            let contains = Cy.get(selector).contains text options
+            let contains = (Cy.get selector Cy.defaultOptions).contains text options
             contains |> shouldBeVisible
 
         let inline waitForOptions text options =

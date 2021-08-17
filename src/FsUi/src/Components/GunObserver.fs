@@ -1,10 +1,6 @@
 namespace FsUi.Components
 
-open Fable.Core
-open FsCore
-open Fable.Core.JsInterop
 open Feliz
-open FsJs
 open FsStore
 open FsStore.Bindings
 open FsUi.Bindings

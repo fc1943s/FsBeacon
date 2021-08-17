@@ -41,8 +41,10 @@
         <Compile Include="src\Components\DebugPanel.fs" />
         <Compile Include="src\Components\ExternalLink.fs" />
         <Compile Include="src\Components\TransparentIconButton.fs" />
-        <Compile Include="src\Components\RootWrapper.fs" />
+        <Compile Include="src\Components\RouterObserver.fs" />
+        <Compile Include="src\Components\ThemeWrapper.fs" />
         <Compile Include="src\Components\GunObserver.fs" />
+        <Compile Include="src\Components\RootWrapper.fs" />
         <Content Include="package.json" />
         <Content Include="paket.references" />
         <Content Include=".gitignore" />

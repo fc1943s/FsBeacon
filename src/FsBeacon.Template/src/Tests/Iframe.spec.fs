@@ -45,7 +45,7 @@ module Iframe =
                 | _ :: x :: _ -> x |> Json.decode<'T> |> Some
                 | _ -> None)
 
-    let actorSignIn elFn fn =
+    let inline actorSignIn elFn fn =
         waitForElSelectorObjectKey<Gun.GunKeys> elFn "#component" "PrivateKeys" "SessionRestored"
         |> Promise.bind
             (fun privateKeys ->
@@ -56,30 +56,39 @@ module Iframe =
         |> Promise.iter id
 
 
-    let typeText (el: Cy.Chainable2<_>) (text: string) =
-        el.invoke ("val", text |> String.substring 0 (text.Length - 1))
-        |> ignore
+    //    let typeText (el: Cy.Chainable2<_>) (text: string) =
+//        el.invoke ("val", text |> String.substring 0 (text.Length - 1))
+//        |> ignore
+//
+//        el.``type``
+//            (text |> String.substringFrom -1)
+//            {|
+//                force = false
+//                parseSpecialCharSequences = false
+//            |}
+//        |> ignore
 
-        el.``type``
-            (text |> String.substringFrom -1)
-            {|
-                force = false
-                parseSpecialCharSequences = false
-            |}
-        |> ignore
+    let inline someFn fn p elFnList =
+        elFnList |> List.iter (fun elFn -> fn (elFn ()) p)
 
-    let someFn fn str elFnList =
-        elFnList
-        |> List.iter (fun elFn -> fn (elFn ()) str)
+    let inline getIframeN n =
+        (Cy.get $"""iframe[data-cy="iframe{n}"]""" Cy.defaultOptions)
+
+    let inline getIframeBodyN n =
+        (getIframeN n).its "0.contentDocument.body" Cy.defaultOptions
+
+    let inline get1 () = getIframeBodyN 1
+    let inline get2 () = getIframeBodyN 2
+    let inline get3 () = getIframeBodyN 3
 
     let iframes =
         [
-            Cy.getIframeBody1
-            Cy.getIframeBody2
-            Cy.getIframeBody3
+            get1
+            get2
+            get3
         ]
 
-    let allFn fn str = iframes |> someFn fn str
+    let inline allFn fn p = iframes |> someFn fn p
 
     describe
         "tests"
@@ -97,20 +106,18 @@ module Iframe =
 
                     Cy2.waitFor "\"IsTesting\": true,"
 
+                    allFn (fun node () -> node.should "not.be.empty") ()
+
                     allFn Cy2.waitForEl "async alias: undefined"
                     allFn Cy2.clickTextEl "hydrate"
 
                     [
-                        Cy.getIframeBody1
-                        Cy.getIframeBody2
+                        get1
+                        get2
                     ]
                     |> someFn Cy2.clickTextEl "sign in"
 
-                    waitForElSelectorObjectKey<Gun.GunKeys>
-                        Cy.getIframeBody2
-                        "#component"
-                        "PrivateKeys"
-                        "SessionRestored"
+                    waitForElSelectorObjectKey<Gun.GunKeys> get2 "#component" "PrivateKeys" "SessionRestored"
                     |> Promise.bind
                         (fun privateKeys ->
                             promise {
@@ -118,13 +125,20 @@ module Iframe =
 
                                 Dom.logWarning (fun () -> $"test: keys2={keysJson}")
 
-                                typeText (Cy.getIframeBody3().find "#privateKeys") keysJson
+                                let keys = keysJson |> Json.decode<Gun.GunKeys>
+                                printfn $"keys={JS.JSON.stringify keys}"
+
+                                let hash = "333"
+
+                                let! _ =
+                                    (getIframeN 3)
+                                        .invoke ("attr", "src", $"https://localhost:49222/#{hash}")
+
+                                ()
                             })
                     |> Promise.iter id
 
-                    actorSignIn
-                        Cy.getIframeBody2
-                        (fun keysJson -> promise { Dom.logWarning (fun () -> $"test: keys2={keysJson}") })
+                    actorSignIn get2 (fun keysJson -> promise { Dom.logWarning (fun () -> $"test: keys2={keysJson}") })
 
                     allFn Cy2.waitForEl "async alias: a@"
 

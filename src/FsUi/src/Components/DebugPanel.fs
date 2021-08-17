@@ -83,7 +83,7 @@ module DebugPanel =
 //                        str "test1"
 //                    ]
 
-            Ui.box
+            Ui.flex
                 (fun x ->
                     match display with
                     | DebugPanelDisplay.Overlay ->
@@ -96,12 +96,16 @@ module DebugPanel =
                         x.overflow <- if showDebug then "scroll" else "initial"
                     | _ -> ()
 
+                    x.flex <- "1"
                     x.fontSize <- "9px"
+                    x.overflow <- "auto"
+                    x.flexBasis <- 0
                     x.backgroundColor <- "#44444455")
                 [
                     if showDebug then
-                        Ui.box
+                        Ui.flex
                             (fun x ->
+                                x.flex <- "1"
                                 x.id <- "debug"
                                 x.whiteSpace <- "pre"
                                 x.fontFamily <- "Roboto Condensed Light, system-ui, sans-serif")

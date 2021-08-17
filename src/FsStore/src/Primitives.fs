@@ -143,8 +143,8 @@ module PrimitivesMagic =
             storeRoot
             collection
             name
-            keyIdentifier
             (defaultValueFn: 'TKey -> 'TValue)
+            keyIdentifier
             =
             jotaiUtils.atomFamily
                 (fun param ->

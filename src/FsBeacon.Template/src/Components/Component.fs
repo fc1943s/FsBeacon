@@ -1,9 +1,7 @@
 namespace FsBeacon.Template.Components
 
 
-open System
 open System.Collections.Generic
-open Browser.Types
 open Fable.Core
 open Fable.React
 open Feliz
@@ -13,45 +11,12 @@ open FsStore
 open FsStore.State
 open FsStore.Bindings
 open FsStore.Hooks
+open FsBeacon.Template.State
 open FsUi.Bindings
 open FsUi.Hooks
 open FsUi.State
 open FsUi.Components
 
-
-module State =
-    module FsBeacon =
-        let root = StoreRoot (nameof FsBeacon)
-
-    //    let rec asyncFileIdAtoms =
-//        Store.selectAtomSyncKeys
-//            FsBeacon.root
-//            (nameof asyncFileIdAtoms)
-//            Atoms.File.chunkCount
-//            (FileId Guid.Empty)
-//            (Guid >> FileId)
-
-    module Atoms =
-        let rec hydrateStarted = Store.atom FsBeacon.root (nameof hydrateStarted) false
-        let rec signInStarted = Store.atom FsBeacon.root (nameof signInStarted) false
-
-        module Device =
-            let rec fileId: (DeviceId -> Jotai.Atom<FileId>) =
-                Store.atomFamilyWithSync
-                    FsBeacon.root
-                    Atoms.Device.collection
-                    (nameof fileId)
-                    (fun (_: DeviceId) -> FileId Guid.Empty)
-                    Atoms.Device.deviceIdIdentifier
-
-    module Selectors =
-        let rec asyncDeviceIdAtoms =
-            Store.selectAtomSyncKeys
-                FsBeacon.root
-                (nameof asyncDeviceIdAtoms)
-                Atoms.Device.fileId
-                Dom.deviceInfo.DeviceId
-                (Guid >> DeviceId)
 
 module Component =
     let dataChar = "#"
@@ -98,7 +63,7 @@ module Component =
     [<ReactComponent>]
     let Device (deviceIdAtom: Jotai.Atom<DeviceId>) =
         let deviceId = Store.useValue deviceIdAtom
-        let fileId = Store.useValue (State.Atoms.Device.fileId deviceId)
+        let fileId = Store.useValue (Atoms.Device.fileId deviceId)
         //        let progress = Store.useValue (Selectors.File.progress fileId)
         Ui.stack
             (fun _ -> ())
@@ -236,7 +201,7 @@ module Component =
         let asyncAlias = Store.useValue Selectors.Gun.asyncAlias
 
         Ui.flex
-            (fun x -> x.flex <- "1")
+            (fun _ -> ())
             [
                 str $"async alias: {asyncAlias}"
             ]
@@ -245,6 +210,7 @@ module Component =
     let InnerComponent () =
         let logger = Store.useValue Selectors.logger
         logger.Info (fun () -> "Component.render")
+        let toast = Ui.useToast ()
         let deviceInfo = Store.useValue Selectors.deviceInfo
         let gunOptions = Store.useValue Atoms.gunOptions
         let gunPeers = Store.useValue Selectors.Gun.gunPeers
@@ -255,7 +221,7 @@ module Component =
         let alias = Store.useValue Selectors.Gun.alias
         let privateKeys = Store.useValue Selectors.Gun.privateKeys
         //        let fileIdAtoms = Store.useValue State.asyncFileIdAtoms
-        let deviceIdAtoms = Store.useValue State.Selectors.asyncDeviceIdAtoms
+        let deviceIdAtoms = Store.useValue Selectors.asyncDeviceIdAtoms
 
         let signIn = Auth.useSignIn ()
 
@@ -266,35 +232,28 @@ module Component =
                         let! signIn = signIn ("", key)
 
                         logger.Warning (fun () -> $"test: signIn={JS.JSON.stringify signIn}")
+
+                        match signIn with
+                        | Ok (_alias, _keys) -> ()
+                        | Error error -> toast (fun x -> x.description <- error)
                     })
 
-        let setHydrateStarted = Store.useSetState State.Atoms.hydrateStarted
-        let setSignInStarted = Store.useSetState State.Atoms.signInStarted
+        let setHydrateStarted = Store.useSetState Atoms.hydrateStarted
+        let setSignInStarted = Store.useSetState Atoms.signInStarted
 
-        let debouncedOnKeysChange =
-            React.useMemo (
-                (fun () -> Js.debounce onKeysChange 50),
-                [|
-                    box onKeysChange
-                |]
-            )
-
-        Ui.box
+        Ui.stack
             (fun x ->
                 x.id <- "component"
                 x.fontSize <- "11px"
-                x.margin <- "15px")
+                x.maxWidth <- "100vw"
+                x.padding <- "15px"
+                x.flex <- "1")
             [
                 Button.Button
                     {|
                         Hint = None
                         Icon = Some (Icons.bi.BiData |> Icons.render, Button.IconPosition.Left)
-                        Props =
-                            fun x ->
-                                x.borderRadius <- "0 5px 5px 0"
-                                x.minWidth <- "26px"
-
-                                x.onClick <- (fun _ -> promise { setHydrateStarted true })
+                        Props = fun x -> x.onClick <- (fun _ -> promise { setHydrateStarted true })
                         Children =
                             [
                                 str "hydrate"
@@ -305,19 +264,14 @@ module Component =
                     {|
                         Hint = None
                         Icon = Some (Icons.io5.IoKey |> Icons.render, Button.IconPosition.Left)
-                        Props =
-                            fun x ->
-                                x.borderRadius <- "0 5px 5px 0"
-                                x.minWidth <- "26px"
-
-                                x.onClick <- (fun _ -> promise { setSignInStarted true })
+                        Props = fun x -> x.onClick <- (fun _ -> promise { setSignInStarted true })
                         Children =
                             [
                                 str "sign in"
                             ]
                     |}
 
-                Ui.box
+                Ui.flex
                     (fun _ -> ())
                     [
                         str $"#2 {Browser.Dom.window.location.href}"
@@ -335,8 +289,8 @@ module Component =
                 Ui.stack
                     (fun x -> x.spacing <- "15px")
                     [
-                        Ui.box
-                            (fun _ -> ())
+                        Ui.flex
+                            (fun x -> x.flex <- "1")
                             [
                                 str
                                     $" {Json.encodeWithNullFormatted
@@ -353,17 +307,6 @@ module Component =
                                             |}}"
                             ]
 
-                        Input.Input
-                            {|
-                                CustomProps = fun _ -> ()
-                                Props =
-                                    fun x ->
-                                        x.placeholder <- "Private Keys"
-                                        x.id <- "privateKeys"
-
-                                        x.onChange <- fun (x: KeyboardEvent) -> debouncedOnKeysChange x.Value
-                            |}
-
                         yield! deviceIdAtoms |> Array.map Device
                     ]
 
@@ -373,8 +316,8 @@ module Component =
 
     [<ReactComponent>]
     let Component () =
-        let hydrateStarted = Store.useValue State.Atoms.hydrateStarted
-        let signInStarted = Store.useValue State.Atoms.signInStarted
+        let hydrateStarted = Store.useValue Atoms.hydrateStarted
+        let signInStarted = Store.useValue Atoms.signInStarted
 
         React.fragment [
             HydrateCoreContainer ()
