@@ -275,6 +275,7 @@ module Dom =
 
 
 
+
         static member inline Create currentLogLevel =
             let log = logIf currentLogLevel
 
@@ -289,16 +290,15 @@ module Dom =
         static member inline Default = Logger.Create DEFAULT_LOG_LEVEL
 
     module Logger =
-        let mutable lastLogger = Some Logger.Default
+        let mutable lastLogger = Logger.Default
 
-        let inline getLogger () =
-            lastLogger |> Option.defaultValue Logger.Default
+        let inline getLogger () = lastLogger // |> Option.defaultValue Logger.Default
 
-    let logTrace fn = Logger.getLogger().Trace fn
-    let logDebug fn = Logger.getLogger().Debug fn
-    let logInfo fn = Logger.getLogger().Info fn
-    let logWarning fn = Logger.getLogger().Warning fn
-    let logError fn = Logger.getLogger().Error fn
+    let inline logTrace fn = Logger.getLogger().Trace fn
+    let inline logDebug fn = Logger.getLogger().Debug fn
+    let inline logInfo fn = Logger.getLogger().Info fn
+    let inline logWarning fn = Logger.getLogger().Warning fn
+    let inline logError fn = Logger.getLogger().Error fn
 
     logInfo (fun () -> $"Dom. deviceInfo={JS.JSON.stringify deviceInfo}")
 

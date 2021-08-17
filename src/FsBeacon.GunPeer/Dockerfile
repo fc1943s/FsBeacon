@@ -1,5 +1,6 @@
 FROM node:16.5-alpine AS build
 RUN apk add --no-cache git
+RUN echo fs.inotify.max_user_watches=524288 | tee -a /etc/sysctl.conf && sysctl -p
 WORKDIR /repo
 COPY src/FsBeacon.GunPeer/package.json src/FsBeacon.GunPeer/package.json
 COPY src/FsBeacon.GunPeer/yarn.lock src/FsBeacon.GunPeer/yarn.lock

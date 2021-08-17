@@ -45,7 +45,7 @@ timeout={timeout} "
                     if lastAccessors.IsNone then
                         lastAccessors <- Store.value getter Selectors.atomAccessors
 
-                    Dom.Logger.lastLogger <- Store.value getter Selectors.logger |> Some
+                    Dom.Logger.lastLogger <- Store.value getter Selectors.logger
                     let cache = Store.value getter cache
 
                     Dom.logTrace
@@ -136,7 +136,7 @@ timeout={timeout} "
 
             lastAlias <- Store.value getter Selectors.Gun.alias
             lastGunOptions <- Some (Store.value getter Atoms.gunOptions)
-            Dom.Logger.lastLogger <- Some (Store.value getter Selectors.logger)
+            Dom.Logger.lastLogger <- Store.value getter Selectors.logger
 
             lastGunAtomNode <-
                 gunAtomNodeFromAtomPath getter lastAlias lastAtomPath
