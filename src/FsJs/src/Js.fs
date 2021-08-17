@@ -130,7 +130,7 @@ module Json =
     let inline encodeFormatted<'T> obj =
         Thoth.Json.Encode.Auto.toString<'T> (4, obj, skipNullField = false)
 
-//    let inline encodeWithNull2<'T> obj =
+    //    let inline encodeWithNull2<'T> obj =
 //        Thoth.Json.Encode.Auto.toString<'T> (0, obj, skipNullField = true)
 
     let inline encodeWithNull<'T> obj =
