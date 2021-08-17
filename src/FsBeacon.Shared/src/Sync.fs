@@ -4,10 +4,10 @@ namespace FsBeacon.Shared
 module rec Sync =
     [<RequireQualifiedAccess>]
     type Request =
-        | Connect of username: string
-        | Set of username: string * atomPath: string * value: string
-        | Get of username: string * atomPath: string
-        | Filter of username: string * storeRoot: string * collection: string
+        | Connect of alias: string
+        | Set of alias: string * atomPath: string * value: string
+        | Get of alias: string * atomPath: string
+        | Filter of alias: string * storeRoot: string * collection: string
 
     [<RequireQualifiedAccess>]
     type Response =

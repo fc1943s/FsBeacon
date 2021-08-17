@@ -143,6 +143,7 @@ module List =
 module String =
     let inline split (separator: string) (str: string) = str.Split separator
     let inline substring startIndex length (str: string) = str.Substring (startIndex, length)
+    let inline replace (a: string) (b: string) (str: string) = str.Replace (a, b)
     let inline substringFrom startIndex (str: string) = str.Substring startIndex
 
     let inline (|ValidString|WhitespaceString|NullString|) (str: string) =

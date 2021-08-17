@@ -15,6 +15,7 @@ module rec File =
             FsStore.root
             (nameof byteArray)
             (fun (fileId: FileId) getter ->
+                let logger = Store.value getter Selectors.logger
                 let chunkCount = Store.value getter (Atoms.File.chunkCount fileId)
 
                 match chunkCount with
@@ -29,7 +30,7 @@ module rec File =
                         |> Store.value getter
 
                     if chunks |> Array.exists (String.length >> (=) 0) then
-                        Dom.Logger.Default.Debug
+                        logger.Debug
                             (fun () ->
                                 $"File.blob
                                         incomplete blob. skipping
@@ -40,7 +41,7 @@ module rec File =
 
                         None
                     else
-                        Dom.Logger.Default.Debug
+                        logger.Debug
                             (fun () ->
                                 $"File.blob
                                     chunkCount={chunkCount}
@@ -65,6 +66,7 @@ module rec File =
             FsStore.root
             (nameof progress)
             (fun (fileId: FileId) getter ->
+                let logger = Store.value getter Selectors.logger
                 let chunkCount = Store.value getter (Atoms.File.chunkCount fileId)
 
                 match chunkCount with
@@ -82,7 +84,7 @@ module rec File =
 
                     let progress = 100 / chunkCount * completedChunkCount
 
-                    Dom.Logger.Default.Debug
+                    logger.Debug
                         (fun () ->
                             $"File.progress
                                     chunkCount={chunkCount}

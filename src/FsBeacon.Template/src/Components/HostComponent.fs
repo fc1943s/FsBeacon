@@ -10,29 +10,48 @@ module HostComponent =
 
     [<ReactComponent>]
     let HostComponent () =
-        Ui.flex
-            (fun x -> x.flex <- "1")
+        Ui.stack
+            (fun _ -> ())
             [
                 Ui.box
-                    (fun x -> x.flex <- "1")
+                    (fun x ->
+                        x.flex <- "1"
+                        x.overflow <- "auto"
+//                        x.maxWidth <- "33vw"
+                        x.maxHeight <- "300px")
                     [
                         str $"#1 {Browser.Dom.window.location.href}"
                         DebugPanel.DebugPanel DebugPanel.DebugPanelDisplay.Inline
                     ]
 
+                Ui.flex
+                    (fun x -> x.flex <- "1")
+                    [
+                        Ui.box
+                            (fun x ->
+                                x.``as`` <- "iframe"
+                                x.src <- "https://localhost:49212/#1"
+                                x.height <- "100vh"
+                                x?``data-cy`` <- "iframe1"
+                                x.flex <- "1")
+                            []
 
-                Ui.box
-                    (fun x ->
-                        x.``as`` <- "iframe"
-                        x.src <- "https://localhost:49212"
-                        x?``data-cy`` <- "iframe1"
-                        x.flex <- "1")
-                    []
-                Ui.box
-                    (fun x ->
-                        x.``as`` <- "iframe"
-                        x.src <- "https://localhost:49222"
-                        x?``data-cy`` <- "iframe2"
-                        x.flex <- "1")
-                    []
+                        Ui.box
+                            (fun x ->
+                                x.``as`` <- "iframe"
+                                x.src <- "https://localhost:49222/#2"
+                                x.height <- "100vh"
+                                x?``data-cy`` <- "iframe2"
+                                x.flex <- "1")
+                            []
+
+                        Ui.box
+                            (fun x ->
+                                x.``as`` <- "iframe"
+                                x.src <- "https://localhost:49222/#3"
+                                x.height <- "100vh"
+                                x?``data-cy`` <- "iframe3"
+                                x.flex <- "1")
+                            []
+                    ]
             ]

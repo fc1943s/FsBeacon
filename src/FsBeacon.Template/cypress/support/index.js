@@ -34,7 +34,8 @@ function getIframeBody(n) {
   // and retry until the body element is not empty
   return cy
     .get('iframe[data-cy="iframe' + n + '"]', {timeout: 40000})
-    .its('0.contentDocument.body')//.should('not.be.empty')
+    .its('0.contentDocument.body')
+    // .should('not.be.empty')
     // wraps "body" DOM element to allow
     // chaining more Cypress commands, like ".find(...)"
     // https://on.cypress.io/wrap
@@ -43,3 +44,4 @@ function getIframeBody(n) {
 
 Cypress.Commands.add('getIframeBody1', () => getIframeBody(1))
 Cypress.Commands.add('getIframeBody2', () => getIframeBody(2))
+Cypress.Commands.add('getIframeBody3', () => getIframeBody(3))

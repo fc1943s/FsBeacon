@@ -38,49 +38,35 @@ module Selectors =
 lastValue={lastValue}
 "
 
-        Dom
-            .Logger
-            .getLogger()
-            .Debug (fun () -> $"atomAccessors.constructor {getDebugInfo ()}")
+        Dom.logTrace (fun () -> $"atomAccessors.constructor {getDebugInfo ()}")
 
         let rec valueWrapper =
             Store.selector
                 FsStore.root
                 (nameof valueWrapper)
                 (fun getter ->
+                    let logger = Store.value getter logger
                     let result = Store.value getter valueAtom
-
-                    Dom
-                        .Logger
-                        .getLogger()
-                        .Debug (fun () -> $"atomAccessors.valueWrapper.get() result={result} {getDebugInfo ()}")
+                    logger.Trace (fun () -> $"atomAccessors.valueWrapper.get() result={result} {getDebugInfo ()}")
 
                     result)
                 (fun getter setter newValue ->
-                    Dom
-                        .Logger
-                        .getLogger()
-                        .Debug (fun () -> $"atomAccessors.valueWrapper.set() newValue={newValue} {getDebugInfo ()}")
+                    let logger = Store.value getter logger
+                    logger.Trace (fun () -> $"atomAccessors.valueWrapper.set() newValue={newValue} {getDebugInfo ()}")
 
                     Store.set setter accessorsAtom (Some (getter, setter))
                     Store.set setter valueAtom newValue)
 
         valueWrapper.onMount <-
             fun setAtom ->
-                Dom
-                    .Logger
-                    .getLogger()
-                    .Debug (fun () -> $"atomAccessors.valueWrapper.onMount() lastValue={lastValue} {getDebugInfo ()}")
+                Dom.logTrace (fun () -> $"atomAccessors.valueWrapper.onMount() lastValue={lastValue} {getDebugInfo ()}")
 
                 lastValue <- lastValue + 1
                 setAtom lastValue
 
                 fun () ->
-                    Dom
-                        .Logger
-                        .getLogger()
-                        .Debug (fun () ->
-                            $"atomAccessors.valueWrapper.onUnmount() lastValue={lastValue} {getDebugInfo ()}")
+                    Dom.logTrace
+                        (fun () -> $"atomAccessors.valueWrapper.onUnmount() lastValue={lastValue} {getDebugInfo ()}")
 
                     ()
 
@@ -88,13 +74,12 @@ lastValue={lastValue}
             FsStore.root
             (nameof atomAccessors)
             (fun getter ->
+                let logger = Store.value getter logger
                 let value = Store.value getter valueWrapper
                 let accessors = Store.value getter accessorsAtom
 
-                Dom
-                    .Logger
-                    .getLogger()
-                    .Debug (fun () ->
+                logger.Trace
+                    (fun () ->
                         $"atomAccessors.selfWrapper.get() value={value} accessors={accessors.IsSome} {getDebugInfo ()}")
 
                 accessors)
@@ -124,56 +109,151 @@ lastValue={lastValue}
                 FsStore.root
                 (nameof gun)
                 (fun getter ->
-                    let deviceInfo = Store.value getter deviceInfo
+                    let logger = Store.value getter logger
+                    //                    let deviceInfo = Store.value getter deviceInfo
                     let gunPeers = Store.value getter gunPeers
 
                     let gun =
-                        if deviceInfo.IsTesting then
-                            Bindings.Gun.gun
-                                {
-                                    GunProps.peers = None
-                                    GunProps.radisk = Some false
-                                    GunProps.localStorage = Some false
-                                    GunProps.multicast = None
-                                }
-                        else
-                            Bindings.Gun.gun
-                                {
-                                    GunProps.peers = Some gunPeers
-                                    GunProps.radisk = Some true
-                                    GunProps.localStorage = Some false
-                                    GunProps.multicast = None
-                                }
+                        //                        if deviceInfo.IsTesting then
+//                            Bindings.Gun.gun
+//                                {
+//                                    GunProps.peers = None
+//                                    GunProps.radisk = Some false
+//                                    GunProps.localStorage = Some false
+//                                    GunProps.multicast = None
+//                                }
+//                        else
+                        Bindings.Gun.gun
+                            {
+                                GunProps.peers = Some gunPeers
+                                GunProps.radisk = Some true
+                                GunProps.localStorage = Some false
+                                GunProps.multicast = None
+                            }
 
-                    printfn $"Gun selector. gunPeers={gunPeers}. gun={gun} returning..."
+                    logger.Debug (fun () -> $"Selectors.Gun.gun. gunPeers={gunPeers}. gun={gun} returning...")
 
                     gun)
 
+
+        let rec gunUser =
+            Store.readSelector
+                FsStore.root
+                (nameof gunUser)
+                (fun getter ->
+                    let logger = Store.value getter logger
+                    let _gunTrigger = Store.value getter Atoms.gunTrigger
+                    let gun = Store.value getter gun
+
+                    logger.Debug (fun () -> $"Selectors.Gun.gunUser. keys={gun.user().__.sea |> Js.objectKeys}")
+
+                    gun.user ())
 
         let rec gunNamespace =
             Store.readSelector
                 FsStore.root
                 (nameof gunNamespace)
                 (fun getter ->
+                    let logger = Store.value getter logger
                     let _gunTrigger = Store.value getter Atoms.gunTrigger
-                    let gun = Store.value getter gun
-                    let user = gun.user ()
+                    let gunUser = Store.value getter gunUser
 
-                    printfn
-                        $"gunNamespace selector.
-                            gunPeers={gunPeers}
-                            user().is.alias={user.is
-                                             |> Option.map
-                                                 (fun x ->
-                                                     match x.alias with
-                                                     | Some (GunUserAlias.Alias username) -> username
-                                                     | _ -> Alias null)}
-                            user().is={user.is |> Js.objectKeys}
-                            user().__.sea={user.__.sea |> Js.objectKeys}..."
+                    logger.Debug (fun () -> $"Selectors.Gun.gunNamespace. gunUser.is={JS.JSON.stringify gunUser.is}")
 
-                    user :> Types.IGunNode)
+                    gunUser :> Types.IGunNode)
 
-        let getRecursiveNode (gunNode: Types.IGunNode) (nodes: GunNodeSlice list) getter username =
+        let rec asyncAlias =
+            Store.asyncReadSelector
+                FsStore.root
+                (nameof asyncAlias)
+                (fun getter ->
+                    promise {
+                        let logger = Store.value getter logger
+                        let _gunTrigger = Store.value getter Atoms.gunTrigger
+                        let gun = Store.value getter Gun.gun
+                        let user = gun.user ()
+
+                        match user.__.sea, user.is with
+                        | _,
+                          Some {
+                                   alias = Some (GunUserAlias.Alias (Alias (String.ValidString alias)))
+                               } ->
+                            logger.Debug
+                                (fun () ->
+                                    $"Selectors.Gun.asyncAlias. alias={alias}  keys={user.__.sea |> Js.objectKeys}")
+
+                            return Some (Alias alias)
+                        | Some ({
+                                    priv = Some (Priv (String.ValidString _))
+                                } as keys),
+                          _ ->
+                            let! data = radQuery gun
+                            let! alias = userDecode<Gun.Alias> keys data
+
+                            logger.Debug
+                                (fun () ->
+                                    $"Selectors.Gun.asyncAlias. returning alias. alias={alias}
+                                                      user.is={JS.JSON.stringify user.is}")
+
+                            return alias
+                        | _ ->
+                            logger.Debug
+                                (fun () ->
+                                    $"Selectors.Gun.asyncAlias. returning none.
+                                                          user.is={JS.JSON.stringify user.is}")
+
+                            return None
+                    })
+
+        let rec alias =
+            Store.readSelector
+                FsStore.root
+                (nameof alias)
+                (fun getter ->
+                    let logger = Store.value getter logger
+                    let _gunTrigger = Store.value getter Atoms.gunTrigger
+                    let gunUser = Store.value getter Gun.gunUser
+
+                    match gunUser.is with
+                    | Some {
+                               alias = Some (GunUserAlias.Alias (Alias (String.ValidString alias)))
+                           } ->
+                        logger.Debug
+                            (fun () -> $"Selectors.Gun.alias. alias={alias}  keys={gunUser.__.sea |> Js.objectKeys}")
+
+                        Some (Alias alias)
+                    | _ ->
+                        match gunUser.is with
+                        | Some {
+                                   alias = Some (GunUserAlias.GunKeys {
+                                                                          priv = Some (Priv (String.ValidString _))
+                                                                      })
+                               } ->
+                            logger.Debug
+                                (fun () ->
+                                    $"Selectors.Gun.alias. alias not found. keys found. user.is={gunUser.is |> Js.objectKeys}")
+
+                            None
+                        | _ ->
+                            logger.Debug
+                                (fun () ->
+                                    $"Selectors.Gun.alias. returning none.
+                                                  user.is={JS.JSON.stringify gunUser.is}")
+
+                            None)
+
+        let rec privateKeys =
+            Store.readSelector
+                FsStore.root
+                (nameof privateKeys)
+                (fun getter ->
+                    let logger = Store.value getter logger
+                    let _gunTrigger = Store.value getter Atoms.gunTrigger
+                    let gunUser = Store.value getter Gun.gunUser
+                    logger.Debug (fun () -> $"Selectors.Gun.keys. keys={gunUser.__.sea |> Js.objectKeys}")
+                    gunUser.__.sea)
+
+        let getRecursiveNode (gunNode: Types.IGunNode) (nodes: GunNodeSlice list) getter alias =
             match nodes with
             | [] -> None
             | [ root ] -> Some (gunNode.get root)
@@ -187,7 +267,7 @@ lastValue={lastValue}
                         |> String.concat "/"
                     )
 
-                let node = Store.value getter (gunAtomNode (username, parentAtomPath))
+                let node = Store.value getter (gunAtomNode (alias, parentAtomPath))
 
                 node
                 |> Option.map (fun (node: Types.IGunChainReference) -> node.get lastNode)
@@ -196,9 +276,8 @@ lastValue={lastValue}
             Store.readSelectorFamily
                 FsStore.root
                 (nameof gunAtomNode)
-                (fun (username, AtomPath atomPath) getter ->
-                    let gun = Store.value getter gun
-                    let gunKeys = Store.value getter Atoms.gunKeys
+                (fun (alias: Alias, AtomPath atomPath) getter ->
+                    let gunNamespace = Store.value getter gunNamespace
 
                     let nodes =
                         atomPath
@@ -213,29 +292,11 @@ lastValue={lastValue}
 //                                    result
 //                                    |> Option.map (fun result -> result.get node))
 
-                    let user = gun.user ()
 
-                    let getNode () =
-                        getRecursiveNode user nodes getter username
+                    getRecursiveNode gunNamespace nodes getter alias)
 
-                    match user.is with
-                    | Some {
-                               alias = Some (GunUserAlias.GunKeys gunKeys')
-                           } when gunKeys' = gunKeys ->
-
-                        getNode ()
-                    | Some {
-                               alias = Some (GunUserAlias.Alias (Alias alias))
-                           } when alias = (username |> Username.ValueOrDefault) -> getNode ()
-                    | _ ->
-                        Dom.Logger.Default.Debug
-                            (fun () ->
-                                $"gunAtomNode. Invalid username.
-                                          username={username}
-                                          atomPath={atomPath}
-                                          user.is={JS.JSON.stringify user.is}")
-
-                        None)
+    //    let rec username = Store.atom FsStore.root (nameof username) (None: Username option)
+//    let rec gunKeys = Store.atom FsStore.root (nameof gunKeys) Gun.GunKeys.Default
 
 
 
@@ -250,15 +311,16 @@ lastValue={lastValue}
                 FsStore.root
                 (nameof hubConnection)
                 (fun getter ->
+                    let logger = Store.value getter logger
                     let timeout = 2000
 
                     let hubUrl = Store.value getter Atoms.hubUrl
-                    let username = Store.value getter Atoms.username
+                    let alias = Store.value getter Gun.alias
 
-                    printfn $"hub connection selector. username={username} hubUrl={hubUrl}"
+                    logger.Debug (fun () -> $"Selectors.Hub.hubConnection. start. alias={alias} hubUrl={hubUrl}")
 
-                    match username, hubUrl with
-                    | Some (Username (String.ValidString _)), Some (String.ValidString hubUrl) ->
+                    match alias, hubUrl with
+                    | Some (Alias (String.ValidString _)), Some (String.ValidString hubUrl) ->
                         let connection =
                             SignalR.connect<Sync.Request, Sync.Request, obj, Sync.Response, Sync.Response>
                                 (fun hub ->
@@ -269,90 +331,75 @@ lastValue={lastValue}
                                             {
                                                 nextRetryDelayInMilliseconds =
                                                     fun _context ->
-                                                        Dom
-                                                            .Logger
-                                                            .getLogger()
-                                                            .Debug (fun () ->
-                                                                "SignalR.connect(). withAutomaticReconnect")
+                                                        logger.Debug
+                                                            (fun () ->
+                                                                "Selectors.Hub.hubConnection. SignalR.connect(). withAutomaticReconnect")
 
                                                         Some timeout
                                             }
                                         )
                                         .onReconnecting(fun ex ->
-                                            Dom
-                                                .Logger
-                                                .getLogger()
-                                                .Debug (fun () -> $"SignalR.connect(). onReconnecting ex={ex}"))
+                                            logger.Debug
+                                                (fun () ->
+                                                    $"Selectors.Hub.hubConnection. SignalR.connect(). onReconnecting ex={ex}"))
                                         .onReconnected(fun ex ->
-                                            Dom
-                                                .Logger
-                                                .getLogger()
-                                                .Debug (fun () -> $"SignalR.connect(). onReconnected ex={ex}"))
+                                            logger.Debug
+                                                (fun () ->
+                                                    $"Selectors.Hub.hubConnection. SignalR.connect(). onReconnected ex={ex}"))
                                         .onClose(fun ex ->
-                                            Dom
-                                                .Logger
-                                                .getLogger()
-                                                .Debug (fun () -> $"SignalR.connect(). onClose ex={ex}"))
+                                            logger.Debug
+                                                (fun () ->
+                                                    $"Selectors.Hub.hubConnection. SignalR.connect(). onClose ex={ex}"))
                                         .configureLogging(LogLevel.Debug)
                                         .onMessage (fun msg ->
                                             match msg with
                                             | Sync.Response.ConnectResult ->
-                                                Dom
-                                                    .Logger
-                                                    .getLogger()
-                                                    .Debug (fun () -> "Sync.Response.ConnectResult")
+                                                logger.Debug
+                                                    (fun () ->
+                                                        "Selectors.Hub.hubConnection. Sync.Response.ConnectResult")
                                             | Sync.Response.SetResult result ->
-                                                Dom
-                                                    .Logger
-                                                    .getLogger()
-                                                    .Debug (fun () -> $"Sync.Response.SetResult result={result}")
+                                                logger.Debug
+                                                    (fun () ->
+                                                        $"Selectors.Hub.hubConnection. Sync.Response.SetResult result={result}")
                                             | Sync.Response.GetResult value ->
-                                                Dom
-                                                    .Logger
-                                                    .getLogger()
-                                                    .Debug (fun () -> $"Sync.Response.GetResult value={value}")
+                                                logger.Debug
+                                                    (fun () ->
+                                                        $"Selectors.Hub.hubConnection. Sync.Response.GetResult value={value}")
                                             | Sync.Response.GetStream (key, value) ->
-                                                Dom
-                                                    .Logger
-                                                    .getLogger()
-                                                    .Debug (fun () ->
-                                                        $"Sync.Response.GetStream key={key} value={value}")
+                                                logger.Debug
+                                                    (fun () ->
+                                                        $"Selectors.Hub.hubConnection. Sync.Response.GetStream key={key} value={value}")
                                             | Sync.Response.FilterResult keys ->
-                                                Dom
-                                                    .Logger
-                                                    .getLogger()
-                                                    .Debug (fun () -> $"Sync.Response.FilterResult keys={keys}")
+                                                logger.Debug
+                                                    (fun () ->
+                                                        $"Selectors.Hub.hubConnection. Sync.Response.FilterResult keys={keys}")
                                             | Sync.Response.FilterStream (key, keys) ->
-                                                Dom
-                                                    .Logger
-                                                    .getLogger()
-                                                    .Debug (fun () ->
-                                                        $"Sync.Response.FilterStream key={key} keys={keys}")
+                                                logger.Debug
+                                                    (fun () ->
+                                                        $"Selectors.Hub.hubConnection. Sync.Response.FilterStream key={key} keys={keys}")
 
                                             match msg with
                                             | Sync.Response.FilterStream (key, keys) ->
                                                 match hubSubscriptionMap.TryGetValue key with
                                                 | true, fn ->
-                                                    Dom
-                                                        .Logger
-                                                        .getLogger()
-                                                        .Debug (fun () -> $"Selectors.hub onMsg msg={msg}. triggering ")
+                                                    logger.Debug
+                                                        (fun () ->
+                                                            $"Selectors.Hub.hubConnection. Selectors.hub onMsg msg={msg}. triggering ")
 
                                                     fn keys
                                                 | _ ->
-                                                    Dom
-                                                        .Logger
-                                                        .getLogger()
-                                                        .Debug (fun () ->
-                                                            $"Selectors.hub onMsg msg={msg}. skipping. not in map ")
+                                                    logger.Debug
+                                                        (fun () ->
+                                                            $"Selectors.Hub.hubConnection. onMsg msg={msg}. skipping. not in map ")
                                             | _ ->
-                                                Dom
-                                                    .Logger
-                                                    .getLogger()
-                                                    .Debug (fun () ->
-                                                        $"Selectors.hub onMsg msg={msg}. skipping. not handled ")))
+                                                logger.Debug
+                                                    (fun () ->
+                                                        $"Selectors.Hub.hubConnection.  onMsg msg={msg}. skipping. not handled ")))
 
-                        printfn $"hub connection selector. username={username} hubUrl={hubUrl}. starting connection..."
+                        logger.Debug
+                            (fun () ->
+                                $"Selectors.Hub.hubConnection. end. alias={alias} hubUrl={hubUrl}. starting connection...")
+
                         connection.startNow ()
                         Some connection
                     | _ -> None)
@@ -364,13 +411,15 @@ lastValue={lastValue}
                 FsStore.root
                 (nameof hub)
                 (fun getter ->
+                    let logger = Store.value getter logger
                     let hubTrigger = Store.value getter Atoms.hubTrigger
                     let hubConnection = Store.value getter hubConnection
 
                     match hubConnection with
                     | Some hubConnection ->
-                        printfn
-                            $"hub selector. hubTrigger={hubTrigger} hubConnection.connectionId={hubConnection.connectionId}"
+                        logger.Debug
+                            (fun () ->
+                                $"Selectors.Hub.hub. hubTrigger={hubTrigger} hubConnection.connectionId={hubConnection.connectionId}")
 
                         Some hubConnection
                     //                        match Store.value getter atomAccessors with

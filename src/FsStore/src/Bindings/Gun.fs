@@ -82,13 +82,14 @@ module Gun =
     [<Erase>]
     type EncryptedSignedValue = EncryptedSignedValue of value: string
 
+    [<Erase>]
+    type DecryptedValue<'T> = DecryptedValue of value: 'T
+
     [<Erase; RequireQualifiedAccess>]
-    type GunValue =
+    type GunValue<'T> =
         | NodeReference of GunNodeSlice
         | EncryptedSignedValue of EncryptedSignedValue
-
-    [<Erase>]
-    type DecryptedValue = DecryptedValue of value: string
+        | DecryptedValue of DecryptedValue<'T>
 
     [<Erase>]
     type Pass = Pass of pass: string
@@ -106,14 +107,14 @@ module Gun =
     type GunPeer with
         static member inline Value (GunPeer url) = url
 
-    let inline radQuery (Pub pub) : {| ``.``: {| ``*``: Pub |} |} = emitJsExpr pub "{'.':{'*':$0}}"
+    let inline pubRadQuery (Pub pub) : {| ``.``: {| ``*``: Pub |} |} = emitJsExpr pub "{'.':{'*':$0}}"
 
 
     module rec Types =
         type IGunNode =
             abstract get : RadQuery -> IGunChainReference
             abstract get : GunNodeSlice -> IGunChainReference
-            abstract set : GunValue -> IGunChainReference
+            abstract set : GunValue<'T> -> IGunChainReference
 
         //        module GunOps =
 //            let inline private (|HasAuth|) x = (^a: (member A : string) x)
@@ -158,10 +159,10 @@ module Gun =
             abstract map : unit -> IGunChainReference
             abstract off : unit -> IGunChainReference
             abstract back : unit -> IGunChainReference
-            abstract on : (GunValue -> GunNodeSlice -> unit) -> unit
-            abstract once : (GunValue -> GunNodeSlice -> unit) -> unit
+            abstract on : (GunValue<'T> -> GunNodeSlice -> JS.Promise<unit>) -> unit
+            abstract once : (GunValue<'T> -> GunNodeSlice -> unit) -> unit
             abstract on : event: GunEvent * (unit -> unit) -> unit
-            abstract put : GunValue -> (PutAck -> PutNode -> unit) -> IGunChainReference
+            abstract put : GunValue<'T> -> (PutAck -> PutNode -> unit) -> IGunChainReference
             abstract user : unit -> IGunUser
             abstract user : Pub -> IGunUser
     //        abstract once : (string -> unit) -> unit
@@ -170,13 +171,13 @@ module Gun =
 
 
     type ISEA =
-        abstract encrypt : data: DecryptedValue -> keys: GunKeys -> JS.Promise<EncryptedValue>
+        abstract encrypt : data: DecryptedValue<'T> -> keys: GunKeys -> JS.Promise<EncryptedValue>
         abstract sign : data: EncryptedValue -> keys: GunKeys -> JS.Promise<EncryptedSignedValue>
         abstract verify : data: EncryptedSignedValue -> pub: Pub -> JS.Promise<EncryptedValue option>
-        abstract decrypt : data: EncryptedValue -> keys: GunKeys -> JS.Promise<DecryptedValue>
+        abstract decrypt : data: EncryptedValue -> keys: GunKeys -> JS.Promise<DecryptedValue<'T>>
 
         abstract work :
-            data: GunValue ->
+            data: GunValue<'T> ->
             keys: GunKeys option ->
             x: unit option ->
             crypto: {| name: CryptoName option |} option ->
@@ -288,8 +289,7 @@ module Gun =
                     match decrypted with
                     | Some (DecryptedValue decrypted) -> decrypted |> Json.decode<'TValue option>
                     | None ->
-                        Dom.Logger.Default.Debug
-                            (fun () -> $"userDecode decrypt empty. decrypted={decrypted} data={data}")
+                        Dom.logDebug (fun () -> $"userDecode decrypt empty. decrypted={decrypted} data={data}")
 
                         JS.undefined
                 with
@@ -300,27 +300,19 @@ module Gun =
             return decoded
         }
 
-    let inline userEncode<'TValue> (gun: IGunChainReference) (value: 'TValue) =
+    let inline userEncode<'TValue> (keys: GunKeys) (value: 'TValue) =
         promise {
             try
-                let user = gun.user ()
-                let keys = user.__.sea
+                let json =
+                    value
+                    |> Json.encode<'TValue>
+                    |> Json.encode<string>
 
-                match keys with
-                | Some keys ->
-                    let json =
-                        value
-                        |> Json.encode<'TValue>
-                        |> Json.encode<string>
+                let! encrypted = sea.encrypt (DecryptedValue json) keys
+                let! signed = sea.sign encrypted keys
+                printfn $"userEncode. value={value} json={json} encrypted={encrypted} signed={signed}"
 
-                    let! encrypted = sea.encrypt (DecryptedValue json) keys
-
-                    let! signed = sea.sign encrypted keys
-
-                    printfn $"userEncode. value={value} json={json} encrypted={encrypted} signed={signed}"
-
-                    return signed
-                | None -> return failwith $"No keys found for user {user.is}"
+                return signed
             with
             | ex ->
                 Dom.consoleError ("[exception4]", ex, value)
@@ -331,7 +323,7 @@ module Gun =
 
     let inline defaultSerializer<'T> : Serializer<'T> = Json.encode<'T>, Json.decode<'T>
 
-    let inline put (gun: IGunChainReference) (value: GunValue) =
+    let inline put (gun: IGunChainReference) (value: GunValue<'T>) =
         Promise.create
             (fun res _err ->
                 let newValue = value
@@ -356,50 +348,95 @@ module Gun =
 
     let inline putPublicHash<'TValue> (gun: IGunChainReference) (value: 'TValue) =
         promise {
-            let! encryptedValue = userEncode<'TValue> gun value
-
             let user = gun.user ()
 
-            printfn $"#1 {JS.JSON.stringify user.is}"
+            match user.__.sea with
+            | Some ({
+                        priv = Some (Priv (String.ValidString _))
+                        pub = Some (Pub (String.ValidString pub))
+                    } as keys) ->
 
-            match user.is with
-            | Some {
-                       pub = Some (Pub (String.ValidString pub))
-                   } ->
+                let dataSlice = GunNodeSlice (nameof data)
+                let node = user.get dataSlice
 
-                user
-                    .get(GunNodeSlice (nameof data))
-                    .set(GunValue.EncryptedSignedValue encryptedValue)
-                    .on (fun data key ->
+                //                    GunValue.DecryptedValue (DecryptedValue value)
+//                let valueSet = node.set newValue
+
+                let! newValue = userEncode<'TValue> keys value
+                printfn $"putPublicHash 1. newValue={newValue} t={jsTypeof newValue}"
+
+                let valueSet = node.set (GunValue.EncryptedSignedValue newValue)
+
+                valueSet.on
+                    (fun _data key ->
                         (promise {
-                            let! hash = sea.work data None None (Some {| name = Some (CryptoName "SHA-256") |})
-                            printfn $"#2 data={data} key={key} hash={hash}"
+                            let! hash =
+                                sea.work
+                                    (GunValue.NodeReference key)
+                                    None
+                                    None
+                                    (Some {| name = Some (CryptoName "SHA-256") |})
 
                             let node =
-                                user
+                                gun
                                     .get(GunNodeSlice $"#{nameof data}")
                                     .get (GunNodeSlice $"{pub}#{hash}")
 
                             let! putResult = put node (GunValue.NodeReference key)
 
-                            if not putResult then
-                                eprintfn $"put public hash error key={key} pub={pub} hash={hash}"
-                         }
-                         |> Promise.start))
+                            Dom.logDebug
+                                (fun () -> $"putPublicHash 2. putResult={putResult} key={key} pub={pub} hash={hash}")
+                         }))
             | _ -> eprintfn $"invalid key. user.is={JS.JSON.stringify user.is}"
         }
+
+    type RawDataEntry = RawDataEntry of key: string * value: string
+
+    let inline radQuery (gun: IGunChainReference) =
+        Promise.create
+            (fun res err ->
+                try
+                    let user = gun.user ()
+
+                    match user.is with
+                    | Some {
+                               alias = (Some (GunUserAlias.GunKeys { pub = Some pub }))
+                           } ->
+                        gun
+                            .get(GunNodeSlice $"#{nameof data}")
+                            .get(RadQuery (pubRadQuery pub))
+                            .map()
+                            .once (fun gunValue _nodeSlice ->
+                                match gunValue with
+                                | GunValue.NodeReference gunNodeSlice ->
+                                    gun
+                                        .user(pub)
+                                        .get(GunNodeSlice (nameof data))
+                                        .get(gunNodeSlice)
+                                        .once (fun result _key ->
+                                            printfn $"hashData result={result} key={_key}"
+                                            res (result |> unbox<EncryptedSignedValue>)
+                                            ())
+                                | _ -> Dom.logDebug (fun () -> "radQuery gunValue is not nodereference"))
+                    | _ -> Dom.logDebug (fun () -> "radQuery. no pub found")
+                with
+                | ex ->
+                    printfn "radQuery error: {ex}"
+                    err ex)
 
     let inline subscribe (gun: IGunChainReference) fn =
         gun.on
             (fun data (GunNodeSlice key) ->
-                Dom.Logger.Default.Debug
-                    (fun () ->
-                        if key = "devicePing" then
-                            null
-                        else
-                            $"subscribe.on() data. batching...data={data} key={key}")
+                promise {
+                    Dom.logDebug
+                        (fun () ->
+                            if key = "devicePing" then
+                                null
+                            else
+                                $"subscribe.on() data. batching...data={data} key={key}")
 
-                fn data)
+                    fn data
+                })
 
         Object.newDisposable
             (fun () ->
@@ -437,11 +474,11 @@ module Gun =
                         next = fun (msg: 'R) -> fn msg
                         complete =
                             fun () ->
-                                Dom.Logger.Default.Debug
+                                Dom.logDebug
                                     (fun () -> $"[hubSubscribe.complete() HUB stream subscription] action={action} ")
                         error =
                             fun err ->
-                                Dom.Logger.Default.Error
+                                Dom.logError
                                     (fun () ->
                                         $"[hubSubscribe.error() HUB stream subscription] action={action} err={err}")
 

@@ -57,7 +57,9 @@ module Dom =
 
     let deviceInfo =
         match window () with
-        | None -> DeviceInfo.Default
+        | None ->
+            printfn "deviceInfo: no window found"
+            DeviceInfo.Default
         | Some window ->
             let userAgentData =
                 window?navigator
@@ -81,6 +83,7 @@ module Dom =
                 |> Option.map (fun userAgentData -> userAgentData.mobile)
                 |> Option.defaultValue false
 
+            let isTesting = Js.jestWorkerId || window?Cypress <> null
 
             let deviceId =
                 match window.localStorage.getItem "deviceId" with
@@ -109,7 +112,7 @@ module Dom =
                 IsElectron = jsTypeof window?electronApi = "object"
                 IsExtension = window.location.protocol = "chrome-extension:"
                 GitHubPages = window.location.host.EndsWith "github.io"
-                IsTesting = Js.jestWorkerId || window?Cypress <> null
+                IsTesting = isTesting
                 DeviceId = deviceId
             }
 
@@ -204,8 +207,8 @@ module Dom =
 
     let inline log fn = logWithFn (fun x -> printfn $"{x}") fn
 
-    let inline log2 (fn: unit -> _ []) = logWithFn (fun x -> printfn $"{x}") fn
-    let inline logError fn = logWithFn (fun x -> eprintfn $"{x}") fn
+    let inline logArray (fn: unit -> _ []) = logWithFn (fun x -> printfn $"{x}") fn
+    let inline elog fn = logWithFn (fun x -> eprintfn $"{x}") fn
 
     let inline logFiltered newValue fn =
         log
@@ -222,7 +225,7 @@ module Dom =
                             result
                         |])
 
-    let inline consoleLog (x: string []) = emitJsExpr x "console.log(...$0)"
+    let inline consoleLog (x: _ []) = emitJsExpr x "console.log(...$0)"
     let inline consoleError x = Browser.Dom.console.error x
 
     type LogLevel =
@@ -251,7 +254,7 @@ module Dom =
             let result = fn ()
 
             if result |> Option.ofObjUnbox |> Option.isSome then
-                log2
+                logArray
                     (fun () ->
                         [|
                             match logLevel with
@@ -273,12 +276,6 @@ module Dom =
 
 
 
-
-
-
-
-
-
         static member inline Create currentLogLevel =
             let log = logIf currentLogLevel
 
@@ -292,15 +289,19 @@ module Dom =
 
         static member inline Default = Logger.Create DEFAULT_LOG_LEVEL
 
-
-    Logger.Default.Info (fun () -> $"deviceInfo={JS.JSON.stringify deviceInfo}")
-
-
     module Logger =
-        let mutable lastLogger = None
+        let mutable lastLogger = Logger.Default
 
-        let inline getLogger () =
-            lastLogger |> Option.defaultValue Logger.Default
+        let inline getLogger () = lastLogger // |> Option.defaultValue Logger.Default
+
+    let inline logTrace fn = Logger.getLogger().Trace fn
+    let inline logDebug fn = Logger.getLogger().Debug fn
+    let inline logInfo fn = Logger.getLogger().Info fn
+    let inline logWarning fn = Logger.getLogger().Warning fn
+    let inline logError fn = Logger.getLogger().Error fn
+
+    logInfo (fun () -> $"Dom. deviceInfo={JS.JSON.stringify deviceInfo}")
+
 
     let inline exited () =
         if not deviceInfo.IsTesting then
@@ -353,7 +354,7 @@ module Dom =
                     if deviceInfo.IsTesting then
                         do! Js.sleep 0
                     else
-                        Logger.Default.Info (fun () -> $"waitForSome: none. waiting... {fn.ToString ()}")
+                        logInfo (fun () -> $"waitForSome: none. waiting... {fn.ToString ()}")
 
                         do! Js.sleep 100
 

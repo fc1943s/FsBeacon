@@ -4,7 +4,7 @@ open System
 
 
 module Model =
-    type Username = Username of username: string
+    type Username = Username of alias: string
     type Color = Color of hex: string
     type StoreRoot = StoreRoot of name: string
     type Collection = Collection of collection: string
