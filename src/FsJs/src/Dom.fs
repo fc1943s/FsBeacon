@@ -57,7 +57,9 @@ module Dom =
 
     let deviceInfo =
         match window () with
-        | None -> DeviceInfo.Default
+        | None ->
+            printfn "deviceInfo: no window found"
+            DeviceInfo.Default
         | Some window ->
             let userAgentData =
                 window?navigator
@@ -205,8 +207,8 @@ module Dom =
 
     let inline log fn = logWithFn (fun x -> printfn $"{x}") fn
 
-    let inline log2 (fn: unit -> _ []) = logWithFn (fun x -> printfn $"{x}") fn
-    let inline logError fn = logWithFn (fun x -> eprintfn $"{x}") fn
+    let inline logArray (fn: unit -> _ []) = logWithFn (fun x -> printfn $"{x}") fn
+    let inline elog fn = logWithFn (fun x -> eprintfn $"{x}") fn
 
     let inline logFiltered newValue fn =
         log
@@ -252,7 +254,7 @@ module Dom =
             let result = fn ()
 
             if result |> Option.ofObjUnbox |> Option.isSome then
-                log2
+                logArray
                     (fun () ->
                         [|
                             match logLevel with
@@ -269,6 +271,8 @@ module Dom =
                         |])
 
     type Logger with
+
+
 
 
         static member inline Create currentLogLevel =
@@ -290,11 +294,13 @@ module Dom =
         let inline getLogger () =
             lastLogger |> Option.defaultValue Logger.Default
 
+    let logTrace fn = Logger.getLogger().Trace fn
+    let logDebug fn = Logger.getLogger().Debug fn
+    let logInfo fn = Logger.getLogger().Info fn
+    let logWarning fn = Logger.getLogger().Warning fn
+    let logError fn = Logger.getLogger().Error fn
 
-    Logger
-        .getLogger()
-        .Info (fun () -> $"Dom. deviceInfo={JS.JSON.stringify deviceInfo}")
-
+    logInfo (fun () -> $"Dom. deviceInfo={JS.JSON.stringify deviceInfo}")
 
 
     let inline exited () =
@@ -348,9 +354,7 @@ module Dom =
                     if deviceInfo.IsTesting then
                         do! Js.sleep 0
                     else
-                        Logger
-                            .getLogger()
-                            .Info (fun () -> $"waitForSome: none. waiting... {fn.ToString ()}")
+                        logInfo (fun () -> $"waitForSome: none. waiting... {fn.ToString ()}")
 
                         do! Js.sleep 100
 

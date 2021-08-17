@@ -30,7 +30,7 @@ module HostComponent =
                         Ui.box
                             (fun x ->
                                 x.``as`` <- "iframe"
-                                x.src <- "https://localhost:49212"
+                                x.src <- "https://localhost:49212/#1"
                                 x.height <- "100vh"
                                 x?``data-cy`` <- "iframe1"
                                 x.flex <- "1")
@@ -39,7 +39,7 @@ module HostComponent =
                         Ui.box
                             (fun x ->
                                 x.``as`` <- "iframe"
-                                x.src <- "https://localhost:49222"
+                                x.src <- "https://localhost:49222/#2"
                                 x.height <- "100vh"
                                 x?``data-cy`` <- "iframe2"
                                 x.flex <- "1")
@@ -48,7 +48,7 @@ module HostComponent =
                         Ui.box
                             (fun x ->
                                 x.``as`` <- "iframe"
-                                x.src <- "https://localhost:49222"
+                                x.src <- "https://localhost:49222/#3"
                                 x.height <- "100vh"
                                 x?``data-cy`` <- "iframe3"
                                 x.flex <- "1")

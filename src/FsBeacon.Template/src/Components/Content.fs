@@ -21,8 +21,6 @@ module Content =
                         if Browser.Dom.window.location.port = "9762" then
                             HostComponent.HostComponent ()
                         else
-
-                            Component.HydrateContainer ()
                             Component.Component ()
                     ]
             ],

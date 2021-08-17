@@ -68,6 +68,19 @@ module Iframe =
             |}
         |> ignore
 
+    let someFn fn str elFnList =
+        elFnList
+        |> List.iter (fun elFn -> fn (elFn ()) str)
+
+    let iframes =
+        [
+            Cy.getIframeBody1
+            Cy.getIframeBody2
+            Cy.getIframeBody3
+        ]
+
+    let allFn fn str = iframes |> someFn fn str
+
     describe
         "tests"
         (fun () ->
@@ -82,33 +95,69 @@ module Iframe =
 
                     Cy2.expectLocation $"{homeUrl}/"
 
-                    Cy2.waitFor $""""<0> registerAtom() FsStore/logLevel atom3 AtomWithStorage": "1","""
+                    Cy2.waitFor "\"IsTesting\": true,"
 
-                    actorSignIn
+                    allFn Cy2.waitForEl "async alias: undefined"
+                    allFn Cy2.clickTextEl "hydrate"
+
+                    [
                         Cy.getIframeBody1
-                        (fun keysJson ->
+                        Cy.getIframeBody2
+                    ]
+                    |> someFn Cy2.clickTextEl "sign in"
+
+                    waitForElSelectorObjectKey<Gun.GunKeys>
+                        Cy.getIframeBody2
+                        "#component"
+                        "PrivateKeys"
+                        "SessionRestored"
+                    |> Promise.bind
+                        (fun privateKeys ->
                             promise {
-                                Dom
-                                    .Logger
-                                    .getLogger()
-                                    .Warning (fun () -> $"test: keys1={keysJson}")
+                                let keysJson = JS.JSON.stringify privateKeys
+
+                                Dom.logWarning (fun () -> $"test: keys2={keysJson}")
 
                                 typeText (Cy.getIframeBody3().find "#privateKeys") keysJson
-
                             })
+                    |> Promise.iter id
 
                     actorSignIn
                         Cy.getIframeBody2
-                        (fun keysJson ->
-                            promise {
-                                Dom
-                                    .Logger
-                                    .getLogger()
-                                    .Warning (fun () -> $"test: keys2={keysJson}")
+                        (fun keysJson -> promise { Dom.logWarning (fun () -> $"test: keys2={keysJson}") })
 
-                            })
+                    allFn Cy2.waitForEl "async alias: a@"
 
-                    Cy2.waitForEl (Cy.getIframeBody2 ()) "async alias: a@"
+                    //                    Cy2.waitForEl (Cy.getIframeBody1 ()) "async alias: undefined"
+//                    Cy2.waitForEl (Cy.getIframeBody2 ()) "async alias: undefined"
+//                    Cy2.waitForEl (Cy.getIframeBody3 ()) "async alias: undefined"
+//
+//                    Cy2.clickTextEl (Cy.getIframeBody1 ()) "hydrate"
+//                    Cy2.clickTextEl (Cy.getIframeBody1 ()) "hydrate"
+
+                    //                    actorSignIn
+//                        Cy.getIframeBody1
+//                        (fun keysJson ->
+//                            promise {
+//                                Dom
+//                                    .logWarning (fun () -> $"test: keys1={keysJson}")
+//
+//                                typeText (Cy.getIframeBody3().find "#privateKeys") keysJson
+//
+//                            })
+//
+//                    actorSignIn
+//                        Cy.getIframeBody2
+//                        (fun keysJson ->
+//                            promise {
+//                                Dom
+//                                    .logWarning (fun () -> $"test: keys2={keysJson}")
+//
+//                            })
+//
+//                    Cy2.waitForEl (Cy.getIframeBody1 ()) "async alias: a@"
+//                    Cy2.waitForEl (Cy.getIframeBody2 ()) "async alias: a@"
+//                    Cy2.waitForEl (Cy.getIframeBody3 ()) "async alias: a@"
 
                     //                    Cy2.waitForEl (get1 ()) "\"<44> FsUi/systemUiFont get\": \"2\""
 

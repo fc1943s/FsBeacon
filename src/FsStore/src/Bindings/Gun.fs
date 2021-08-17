@@ -289,8 +289,7 @@ module Gun =
                     match decrypted with
                     | Some (DecryptedValue decrypted) -> decrypted |> Json.decode<'TValue option>
                     | None ->
-                        Dom.Logger.Default.Debug
-                            (fun () -> $"userDecode decrypt empty. decrypted={decrypted} data={data}")
+                        Dom.logDebug (fun () -> $"userDecode decrypt empty. decrypted={decrypted} data={data}")
 
                         JS.undefined
                 with
@@ -385,11 +384,8 @@ module Gun =
 
                             let! putResult = put node (GunValue.NodeReference key)
 
-                            Dom
-                                .Logger
-                                .getLogger()
-                                .Debug (fun () ->
-                                    $"putPublicHash 2. putResult={putResult} key={key} pub={pub} hash={hash}")
+                            Dom.logDebug
+                                (fun () -> $"putPublicHash 2. putResult={putResult} key={key} pub={pub} hash={hash}")
                          }))
             | _ -> eprintfn $"invalid key. user.is={JS.JSON.stringify user.is}"
         }
@@ -421,16 +417,8 @@ module Gun =
                                             printfn $"hashData result={result} key={_key}"
                                             res (result |> unbox<EncryptedSignedValue>)
                                             ())
-                                | _ ->
-                                    Dom
-                                        .Logger
-                                        .getLogger()
-                                        .Debug (fun () -> "radQuery gunValue is not nodereference"))
-                    | _ ->
-                        Dom
-                            .Logger
-                            .getLogger()
-                            .Debug (fun () -> "radQuery. no pub found")
+                                | _ -> Dom.logDebug (fun () -> "radQuery gunValue is not nodereference"))
+                    | _ -> Dom.logDebug (fun () -> "radQuery. no pub found")
                 with
                 | ex ->
                     printfn "radQuery error: {ex}"
@@ -440,7 +428,7 @@ module Gun =
         gun.on
             (fun data (GunNodeSlice key) ->
                 promise {
-                    Dom.Logger.Default.Debug
+                    Dom.logDebug
                         (fun () ->
                             if key = "devicePing" then
                                 null
@@ -486,11 +474,11 @@ module Gun =
                         next = fun (msg: 'R) -> fn msg
                         complete =
                             fun () ->
-                                Dom.Logger.Default.Debug
+                                Dom.logDebug
                                     (fun () -> $"[hubSubscribe.complete() HUB stream subscription] action={action} ")
                         error =
                             fun err ->
-                                Dom.Logger.Default.Error
+                                Dom.logError
                                     (fun () ->
                                         $"[hubSubscribe.error() HUB stream subscription] action={action} err={err}")
 

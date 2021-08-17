@@ -29,10 +29,7 @@ module Internal =
     let rec registerAtom (atomType: AtomType) (AtomPath atomPath) (atom: Atom<_>) =
         Profiling.addCount $"{nameof registerAtom}() {atomPath} {atom} {atomType}"
 
-        Dom
-            .Logger
-            .getLogger()
-            .Trace (fun () -> $"registerAtom atomPath={atomPath} atom={atom} atomType={atomType}")
+        Dom.logTrace (fun () -> $"registerAtom atomPath={atomPath} atom={atom} atomType={atomType}")
 
         atomPathMap.[atomPath] <- atom.toString ()
         atomIdMap.[atom.toString ()] <- atomPath
@@ -49,10 +46,7 @@ module Internal =
                 | true, value -> Some (AtomPath value)
                 | _ -> None
 
-        Dom
-            .Logger
-            .getLogger()
-            .Debug (fun () -> $"queryAtomPath atomReference={atomReference} result={result}")
+        Dom.logDebug (fun () -> $"queryAtomPath atomReference={atomReference} result={result}")
 
         result
 
