@@ -125,7 +125,12 @@ module Program =
     let main argv =
         let args = Startup.parseArgs argv
         let port = args.GetResult Args.Port
-        let rootPath = args.GetResult Args.Root_Path |> Path.GetFullPath
+
+        let rootPath =
+            args.GetResult Args.Root_Path
+            |> System.Environment.ExpandEnvironmentVariables
+            |> Path.GetFullPath
+
         printfn $"starting app. port={port} rootPath={rootPath}"
         run (Main.getApp port rootPath)
         0
