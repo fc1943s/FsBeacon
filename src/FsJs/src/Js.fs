@@ -45,7 +45,7 @@ module Js =
                 return audio;
             })().play();"
 
-    let playAudio = playAudioVolume 0.5
+    let inline playAudio file = playAudioVolume 0.5 file
 
     let inline newObj<'T> fn = jsOptions<'T> fn
     let inline cloneDeep<'T> (_: 'T) : 'T = importDefault "lodash.clonedeep"

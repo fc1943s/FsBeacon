@@ -1,10 +1,8 @@
 namespace FsStore
 
-open FsCore.Model
 open FsStore.Model
 open Microsoft.FSharp.Core.Operators
 open FsJs
-open FsStore.Bindings
 
 
 module Atoms =

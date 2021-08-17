@@ -90,7 +90,7 @@ module Model =
             | _ -> AtomScope.Current
 
     type AtomKey with
-        static member inline AtomPath atomKey =
+        static member AtomPath atomKey =
             [
                 yield atomKey.StoreRoot |> StoreRoot.Value
                 match atomKey.Collection with

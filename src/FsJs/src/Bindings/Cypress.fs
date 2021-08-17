@@ -80,10 +80,9 @@ module Cypress =
         let inline contains (text: string) (options: {| timeout: int |} option) : Chainable2<'T> =
             emitJsExpr (text, options) "cy.contains($0, $1)"
 
-
         let sinon: obj = emitJsExpr () "Cypress.sinon"
 
-        let cypressPromise<'T> (fn: ('T -> unit) -> (string -> unit) -> unit) : JS.Promise<'T> =
+        let inline cypressPromise<'T> (fn: ('T -> unit) -> (string -> unit) -> unit) : JS.Promise<'T> =
             emitJsExpr fn "new Cypress.Promise((res, err) => { $0(res, err) })"
 
 
