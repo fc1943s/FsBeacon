@@ -122,9 +122,6 @@ module JsMagic =
         member inline this.read () : JS.Promise<ClipboardRead> = clipboardRead this
 
 
-module Promise =
-    let inline ignore (fn: JS.Promise<_>) = Promise.map ignore fn
-
 
 module Json =
     let inline encodeFormatted<'T> obj =
