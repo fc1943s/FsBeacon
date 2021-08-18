@@ -27,7 +27,7 @@ jobs:
       - uses: cypress-io/github-action@v2
         with:
           working-directory: ./src/FsBeacon.Template
-          build: npx cypress info && yarn build:fable
+          build: npx cypress info; yarn build:fable
           start: yarn cypress-serve
           command: yarn cypress-run
 
