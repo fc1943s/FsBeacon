@@ -26,7 +26,7 @@ jobs:
 
 
       - run: cd ./src/FsBeacon.Template && yarn install
-      - run: cd ./src/FsBeacon.Template && yarn cypress info
+      - run: npx cypress info
 
       - uses: cypress-io/github-action@v2
         with:
