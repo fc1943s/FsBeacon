@@ -27,7 +27,7 @@
     "cypress": "cypress open",
 
     "cypress-serve-hub": "dotnet run --project ../FsBeacon.HubPeer/FsBeacon.HubPeer.fsproj --root-path %tmp%/fsbeacon-hubpeer-synctestdata --port 49211",
-    "cypress-serve-gun": "cd ../FsBeacon.GunPeer && cross-env PORT=49221 ROOT_PATH=%tmp%/fsbeacon-gunpeer-synctestdata yarn start-dev",
+    "cypress-serve-gun": "cd ../FsBeacon.GunPeer && cross-env PORT=49221 ROOT_PATH=%tmp%/fsbeacon-gunpeer-synctestdata yarn start-dev-local",
     "cypress-serve-template1": "cross-env HTTPS=true EXTEND_ESLINT=true BROWSER=none FAST_REFRESH=true PORT=49212 SKIP_PREFLIGHT_CHECK=true react-app-rewired start",
     "cypress-serve-template2": "cross-env HTTPS=true EXTEND_ESLINT=true BROWSER=none FAST_REFRESH=true PORT=49222 SKIP_PREFLIGHT_CHECK=true react-app-rewired start",
     "cypress-serve": "concurrently \"npm:watch\" \"yarn:cypress-serve-hub\" \"yarn:cypress-serve-gun\" \"yarn:cypress-serve-template1\" \"yarn:cypress-serve-template2\" ",
