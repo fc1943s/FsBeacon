@@ -149,7 +149,7 @@ module Popover =
 
     [<ReactComponent>]
     let CustomConfirmPopover (props: Ui.IChakraProps -> unit) closeButton trigger onConfirm children =
-        let isMounted = React.useIsMounted ()
+        let isMountedRef = React.useIsMountedRef ()
 
         CustomPopover
             {|
@@ -200,7 +200,7 @@ module Popover =
 
                                                                         let! result = onConfirm ()
 
-                                                                        if result && isMounted.current then
+                                                                        if result && isMountedRef.current then
                                                                             disclosure.onClose ()
                                                                     }
                                                     Children =

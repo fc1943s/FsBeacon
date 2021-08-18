@@ -4,8 +4,8 @@ namespace FsBeacon.Template
 open System
 open FsCore
 open FsCore.Model
-open FsJs
 open FsStore
+open FsStore.Bindings
 open FsStore.Model
 open FsStore.State
 open FsUi.State
@@ -14,16 +14,10 @@ open FsUi.State
 module State =
     module FsBeacon =
         let root = StoreRoot (nameof FsBeacon)
-    //    let rec asyncFileIdAtoms =
-//        Store.selectAtomSyncKeys
-//            FsBeacon.root
-//            (nameof asyncFileIdAtoms)
-//            Atoms.File.chunkCount
-//            (FileId Guid.Empty)
-//            (Guid >> FileId)
+
 
     [<RequireQualifiedAccess>]
-    type AccordionType = | Host
+    type AccordionType = | HostComponent
 
 
     module Atoms =
@@ -40,27 +34,27 @@ module State =
                     (string >> List.singleton)
 
         let rec hydrateStarted = Store.atom FsBeacon.root (nameof hydrateStarted) false
+        let rec hydrateCompleted = Store.atom FsBeacon.root (nameof hydrateCompleted) false
         let rec signInStarted = Store.atom FsBeacon.root (nameof signInStarted) false
 
-        module Device =
-            let rec fileId =
+        module File =
+            let rec pub =
                 Store.atomFamilyWithSync
-                    FsBeacon.root
-                    Atoms.Device.collection
-                    (nameof fileId)
-                    (fun (_: DeviceId) -> FileId Guid.Empty)
-                    Atoms.Device.deviceIdIdentifier
-
+                    FsStore.root
+                    Atoms.File.collection
+                    (nameof pub)
+                    (fun (_: FileId) -> None: Gun.Pub option)
+                    Atoms.File.fileIdIdentifier
 
 
     module Selectors =
-        let rec asyncDeviceIdAtoms =
+        let rec asyncFileIdAtoms =
             Store.selectAtomSyncKeys
-                FsBeacon.root
-                (nameof asyncDeviceIdAtoms)
-                Atoms.Device.fileId
-                Dom.deviceInfo.DeviceId
-                (Guid >> DeviceId)
+                FsStore.root
+                (nameof asyncFileIdAtoms)
+                Atoms.File.pub
+                (FileId Guid.Empty)
+                (Guid >> FileId)
 
         let rec asyncMessageIdAtoms =
             Store.selectAtomSyncKeys

@@ -310,7 +310,7 @@ module Gun =
 
                 let! encrypted = sea.encrypt (DecryptedValue json) keys
                 let! signed = sea.sign encrypted keys
-                printfn $"userEncode. value={value} json={json} encrypted={encrypted} signed={signed}"
+                Dom.logTrace (fun () -> $"userEncode. value={value} json={json} encrypted={encrypted} signed={signed}")
 
                 return signed
             with

@@ -174,7 +174,7 @@ module Dropdown =
 
     [<ReactComponent>]
     let CustomConfirmDropdown left onConfirm trigger children =
-        let isMounted = React.useIsMounted ()
+        let isMountedRef = React.useIsMountedRef ()
 
         Dropdown
             {|
@@ -202,14 +202,14 @@ module Dropdown =
                                                         )
                                                     Props =
                                                         fun x ->
-                                                            if isMounted.current then
+                                                            if isMountedRef.current then
                                                                 x.onClick <-
                                                                     fun _ ->
                                                                         promise {
-                                                                            if isMounted.current then
+                                                                            if isMountedRef.current then
                                                                                 let! result = onConfirm ()
 
-                                                                                if result && isMounted.current then
+                                                                                if result && isMountedRef.current then
                                                                                     onHide ()
                                                                         }
                                                     Children =

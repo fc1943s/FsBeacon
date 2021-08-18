@@ -19,18 +19,20 @@ module GunObserver =
         logger.Debug (fun () -> "GunObserver.render: Constructor")
 
         let callbacks = Store.useCallbacks ()
+        let isMountedRef = React.useIsMountedRef ()
 
-        React.useDisposableEffect (
-            (fun disposed ->
+        // TODO: arr deps warning is not working with files in this package (only on template main)
+        React.useEffect (
+            (fun () ->
                 gun.on (
                     Gun.GunEvent "auth",
                     (fun () ->
-                        if not disposed then
+                        if isMountedRef.current then
                             promise {
                                 ()
-//                                let user = gun.user ()
+                                //                                let user = gun.user ()
 
-//                                let! alias =
+                                //                                let! alias =
 //                                    match user.__.sea, user.is with
 //                                    | _,
 //                                      Some {
@@ -70,7 +72,7 @@ module GunObserver =
 //                                        Promise.lift None
 //
                                 let! _getter, setter = callbacks ()
-//                                ()
+                                //                                ()
 
                                 Store.change setter Atoms.gunTrigger ((+) 1)
                                 Store.change setter Atoms.hubTrigger ((+) 1)
@@ -80,6 +82,7 @@ module GunObserver =
                             logger.Debug (fun () -> $"GunObserver.render: already disposed gun={gun}"))
                 )),
             [|
+                box isMountedRef
                 box gun
                 box callbacks
             |]

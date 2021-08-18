@@ -16,7 +16,7 @@ module HostComponent =
             [
                 Accordion.AccordionAtom
                     {|
-                        Atom = Atoms.Host.accordionHiddenFlag AccordionType.Host
+                        Atom = Atoms.Host.accordionHiddenFlag AccordionType.HostComponent
                         Props = fun _ -> ()
                         Items =
                             [

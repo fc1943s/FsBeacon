@@ -4,9 +4,9 @@ open FsCore
 open Browser.Types
 open Fable.React
 open Feliz
-open FsCore.Model
 open FsJs
 open FsStore
+open FsStore.Bindings.Gun
 open FsStore.Model
 open FsStore.State
 open FsStore.Bindings
@@ -26,84 +26,73 @@ module Component =
 
 
     [<ReactComponent>]
-    let File i fileId =
+    let File fileIdAtom =
+        let fileId = Store.useValue fileIdAtom
+        let privateKeys = Store.useValue Selectors.Gun.privateKeys
+        let pub = Store.useValue (Atoms.File.pub fileId)
         let progress = Store.useValue (Selectors.File.progress fileId)
 
+        let logger = Store.useValue Selectors.logger
+        logger.Info (fun () -> $"File.render. fileId={fileId} progress={progress}")
+
+
+        //        let valid, setValid = React.useState false
+//
+//        let valid =
+//            React.useEffect (
+//                (fun () ->
+//                    promise {
+//                        if progress >= 100 then
+//                            let! hexString = hexStringPromise
+//                            setValid (hexString = )
+//                        ()
+//                    }
+//                    |> Promise.start),
+//                [||]
+//            )
+
         Ui.stack
             (fun _ -> ())
             [
-                Ui.box
-                    (fun _ -> ())
-                    [
-                        str $"{Browser.Dom.window.location.port}:file[{i}]={progress}%%"
-                    ]
+                match privateKeys with
+                | Some { pub = pub' } when pub' = pub -> str $"fileId={fileId} progress={progress}%%"
+                | _ -> str $"fileId={fileId} progress=invalid"
 
-                Button.Button
-                    {|
-                        Icon = Some (Icons.bi.BiSave |> Icons.render, Button.IconPosition.Left)
-                        Hint = None
-                        Props = fun _ -> ()
-                        Children =
-                            [
-                                str $"{Browser.Dom.window.location.port}:file[{i}]:save"
-                            ]
-                    |}
-
-                Button.Button
-                    {|
-                        Icon = Some (Icons.bi.BiTrash |> Icons.render, Button.IconPosition.Left)
-                        Hint = None
-                        Props = fun _ -> ()
-                        Children =
-                            [
-                                str $"{Browser.Dom.window.location.port}:file[{i}]:delete"
-                            ]
-                    |}
+            //                Button.Button
+//                    {|
+//                        Icon = Some (Icons.bi.BiSave |> Icons.render, Button.IconPosition.Left)
+//                        Hint = None
+//                        Props = fun _ -> ()
+//                        Children =
+//                            [
+//                                str $"{Browser.Dom.window.location.port}:file[{fileId}]:save"
+//                            ]
+//                    |}
+//
+//                Button.Button
+//                    {|
+//                        Icon = Some (Icons.bi.BiTrash |> Icons.render, Button.IconPosition.Left)
+//                        Hint = None
+//                        Props = fun _ -> ()
+//                        Children =
+//                            [
+//                                str $"{Browser.Dom.window.location.port}:file[{fileId}]:delete"
+//                            ]
+//                    |}
             ]
+
 
     [<ReactComponent>]
-    let Device (deviceIdAtom: Jotai.Atom<DeviceId>) =
-        let deviceId = Store.useValue deviceIdAtom
-        let fileId = Store.useValue (Atoms.Device.fileId deviceId)
-        //        let progress = Store.useValue (Selectors.File.progress fileId)
-        Ui.stack
-            (fun _ -> ())
-            [
-                Ui.box
-                    (fun _ -> ())
-                    [
-                        str $"{Browser.Dom.window.location.port}:file[{0}]=0%%"
-                    ]
+    let Files () =
+        let logger = Store.useValue Selectors.logger
+        let fileIdAtoms = Store.useValue Selectors.asyncFileIdAtoms
+        logger.Info (fun () -> $"Files.render. fileIdAtoms.Length={fileIdAtoms.Length}")
+        //        let fileIdAtoms = Store.useValue State.Selectors.asyncFileIdAtoms
 
-                File 0 fileId
+        React.fragment [
+            yield! fileIdAtoms |> Array.map File
+        ]
 
-            //                                                                    Button.Button
-//                                                                        {|
-//                                                                            Icon =
-//                                                                                Some (Icons.bi.BiSave |> Icons.render, Button.IconPosition.Left)
-//                                                                            Hint = None
-//                                                                            Props = fun _ -> ()
-//                                                                            Children =
-//                                                                                [
-//                                                                                    str $"{Browser.Dom.window.location.port}:file[{i}]:save"
-//                                                                                ]
-//                                                                        |}
-//
-//                                                                    Button.Button
-//                                                                        {|
-//                                                                            Icon =
-//                                                                                Some (
-//                                                                                    Icons.bi.BiTrash |> Icons.render,
-//                                                                                    Button.IconPosition.Left
-//                                                                                )
-//                                                                            Hint = None
-//                                                                            Props = fun _ -> ()
-//                                                                            Children =
-//                                                                                [
-//                                                                                    str $"{Browser.Dom.window.location.port}:file[{i}]:delete"
-//                                                                                ]
-//                                                                        |}
-            ]
 
     [<ReactComponent>]
     let HydrateCoreContainer () =
@@ -112,7 +101,7 @@ module Component =
 
         Jotai.jotaiUtils.useHydrateAtoms [|
             unbox Atoms.showDebug, unbox true
-            unbox Atoms.logLevel, unbox Dom.LogLevel.Debug
+            unbox Atoms.logLevel, unbox Dom.LogLevel.Trace
         |]
 
         nothing
@@ -126,11 +115,25 @@ module Component =
             unbox Atoms.gunOptions,
             unbox (
                 GunOptions.Sync [|
-                    Gun.GunPeer "https://localhost:49221/gun"
+                    GunPeer "https://localhost:49221/gun"
                 |]
             )
             //            unbox Atoms.hubUrl, unbox (Some "https://localhost:49211")
             |]
+
+        let callbacks = Store.useCallbacks ()
+
+        React.useEffect (
+            (fun () ->
+                promise {
+                    let! _getter, setter = callbacks ()
+                    Store.set setter Atoms.hydrateCompleted true
+                }
+                |> Promise.start),
+            [|
+                box callbacks
+            |]
+        )
 
         nothing
 
@@ -138,7 +141,8 @@ module Component =
     [<ReactComponent>]
     let rec SignInContainer () =
         let logger = Store.useValue Selectors.logger
-        logger.Info (fun () -> "SignUpContainer.render")
+        logger.Info (fun () -> "SignInContainer.render")
+
         let deviceInfo = Store.useValue Selectors.deviceInfo
 
         let signIn = Auth.useSignIn ()
@@ -191,7 +195,100 @@ module Component =
 
 
     [<ReactComponent>]
+    let HydrateButton () =
+        let logger = Store.useValue Selectors.logger
+        logger.Info (fun () -> "HydrateButton.render")
+
+        let hydrateCompleted = Store.useValue Atoms.hydrateCompleted
+        let setHydrateStarted = Store.useSetState Atoms.hydrateStarted
+
+        Button.Button
+            {|
+                Hint = None
+                Icon = Some (Icons.bi.BiData |> Icons.render, Button.IconPosition.Left)
+                Props =
+                    fun x ->
+                        x.onClick <- (fun _ -> promise { setHydrateStarted true })
+                        x.disabled <- hydrateCompleted
+                Children =
+                    [
+                        str "hydrate"
+                    ]
+            |}
+
+    [<ReactComponent>]
+    let SignInButton () =
+        let logger = Store.useValue Selectors.logger
+        logger.Info (fun () -> "SignInButton.render")
+
+        let alias = Store.useValue Selectors.Gun.alias
+        let hydrateCompleted = Store.useValue Atoms.hydrateCompleted
+        let setSignInStarted = Store.useSetState Atoms.signInStarted
+
+        Button.Button
+            {|
+                Hint = None
+                Icon = Some (Icons.io5.IoKey |> Icons.render, Button.IconPosition.Left)
+                Props =
+                    fun x ->
+                        x.onClick <- (fun _ -> promise { setSignInStarted true })
+                        x.disabled <- not hydrateCompleted || alias.IsSome
+                Children =
+                    [
+                        str "sign in"
+                    ]
+            |}
+
+    [<ReactComponent>]
+    let AddFileButton () =
+        let logger = Store.useValue Selectors.logger
+        logger.Info (fun () -> "AddFileButton.render")
+
+        let alias = Store.useValue Selectors.Gun.alias
+        let privateKeys = Store.useValue Selectors.Gun.privateKeys
+
+        let addFile =
+            Store.useCallbackRef
+                (fun _ setter _ ->
+                    promise {
+                        printfn "add file!"
+
+                        let! hexString = hexStringPromise
+                        let fileId = Hydrate.hydrateFile setter (AtomScope.Current, hexString)
+
+                        match fileId, privateKeys with
+                        | Some fileId, Some privateKeys ->
+                            Store.set setter (State.Atoms.File.pub fileId) privateKeys.pub
+                        | _ -> logger.Error (fun () -> $"add file error. fileId={fileId}")
+                    })
+
+        Button.Button
+            {|
+                Hint = None
+                Icon = Some (Icons.io5.IoAdd |> Icons.render, Button.IconPosition.Left)
+                Props =
+                    fun x ->
+                        x.onClick <- (fun _ -> addFile ())
+                        x.disabled <- alias.IsNone
+                Children =
+                    [
+                        str "add file"
+                    ]
+            |}
+
+    [<ReactComponent>]
+    let HrefIndicator () =
+        let logger = Store.useValue Selectors.logger
+        logger.Info (fun () -> "HrefIndicator.render")
+
+        let _routeTrigger = Store.useValue Atoms.routeTrigger
+        str $"href: {Browser.Dom.window.location.href}"
+
+    [<ReactComponent>]
     let AsyncAliasIndicator () =
+        let logger = Store.useValue Selectors.logger
+        logger.Trace (fun () -> "AsyncAliasIndicator.render")
+
         let asyncAlias = Store.useValue Selectors.Gun.asyncAlias
 
         Ui.flex
@@ -201,16 +298,10 @@ module Component =
             ]
 
     [<ReactComponent>]
-    let HrefIndicator () =
+    let SettingsIndicator () =
         let logger = Store.useValue Selectors.logger
-        logger.Info (fun () -> "HrefIndicator.render")
-        let _routeTrigger = Store.useValue Atoms.routeTrigger
-        str $"href: {Browser.Dom.window.location.href}"
+        logger.Info (fun () -> "SettingsIndicator.render")
 
-    [<ReactComponent>]
-    let InnerComponent () =
-        let logger = Store.useValue Selectors.logger
-        logger.Info (fun () -> "Component.render")
         let deviceInfo = Store.useValue Selectors.deviceInfo
         let gunOptions = Store.useValue Atoms.gunOptions
         let gunPeers = Store.useValue Selectors.Gun.gunPeers
@@ -220,10 +311,47 @@ module Component =
         let showDebug = Store.useValue Atoms.showDebug
         let alias = Store.useValue Selectors.Gun.alias
         let privateKeys = Store.useValue Selectors.Gun.privateKeys
-        //        let fileIdAtoms = Store.useValue State.asyncFileIdAtoms
-        let deviceIdAtoms = Store.useValue Selectors.asyncDeviceIdAtoms
-        let setHydrateStarted = Store.useSetState Atoms.hydrateStarted
-        let setSignInStarted = Store.useSetState Atoms.signInStarted
+
+        let text =
+            React.useMemo (
+                (fun () ->
+                    $" {Json.encodeWithNullFormatted
+                            {|
+                                DeviceInfo = deviceInfo
+                                GunOptions = gunOptions
+                                GunPeers = gunPeers
+                                HubUrl = hubUrl
+                                UiState = uiState
+                                SessionRestored = sessionRestored
+                                ShowDebug = showDebug
+                                Alias = alias
+                                PrivateKeys = privateKeys
+                            |}}"),
+                [|
+                    box deviceInfo
+                    box gunOptions
+                    box gunPeers
+                    box hubUrl
+                    box uiState
+                    box sessionRestored
+                    box showDebug
+                    box alias
+                    box privateKeys
+                |]
+            )
+
+        Ui.flex
+            (fun x ->
+                x.flex <- "1"
+                x.whiteSpace <- "pre-wrap")
+            [
+                str text
+            ]
+
+    [<ReactComponent>]
+    let InnerComponent () =
+        let logger = Store.useValue Selectors.logger
+        logger.Trace (fun () -> "InnerComponent.render")
 
         React.useEffect (
             (fun () ->
@@ -249,35 +377,13 @@ module Component =
                 x.padding <- "15px"
                 x.flex <- "1")
             [
-                Button.Button
-                    {|
-                        Hint = None
-                        Icon = Some (Icons.bi.BiData |> Icons.render, Button.IconPosition.Left)
-                        Props = fun x -> x.onClick <- (fun _ -> promise { setHydrateStarted true })
-                        Children =
-                            [
-                                str "hydrate"
-                            ]
-                    |}
+                HydrateButton ()
 
-                Button.Button
-                    {|
-                        Hint = None
-                        Icon = Some (Icons.io5.IoKey |> Icons.render, Button.IconPosition.Left)
-                        Props = fun x -> x.onClick <- (fun _ -> promise { setSignInStarted true })
-                        Children =
-                            [
-                                str "sign in"
-                            ]
-                    |}
+                SignInButton ()
 
-                Ui.flex
-                    (fun _ -> ())
-                    [
-                        HrefIndicator ()
-                        br []
-                        str $">>{deviceIdAtoms}<<"
-                    ]
+                AddFileButton ()
+
+                HrefIndicator ()
 
                 React.suspense (
                     [
@@ -286,31 +392,9 @@ module Component =
                     LoadingSpinner.InlineLoadingSpinner ()
                 )
 
-                Ui.stack
-                    (fun x -> x.spacing <- "15px")
-                    [
-                        Ui.flex
-                            (fun x ->
-                                x.flex <- "1"
-                                x.whiteSpace <- "pre-wrap")
-                            [
-                                str
-                                    $" {Json.encodeWithNullFormatted
-                                            {|
-                                                DeviceInfo = deviceInfo
-                                                GunOptions = gunOptions
-                                                GunPeers = gunPeers
-                                                HubUrl = hubUrl
-                                                UiState = uiState
-                                                SessionRestored = sessionRestored
-                                                ShowDebug = showDebug
-                                                Alias = alias
-                                                PrivateKeys = privateKeys
-                                            |}}"
-                            ]
+                Files ()
 
-                        yield! deviceIdAtoms |> Array.map Device
-                    ]
+                SettingsIndicator ()
 
                 DebugPanel.DebugPanel DebugPanel.DebugPanelDisplay.Inline
             ]
@@ -318,6 +402,8 @@ module Component =
 
     [<ReactComponent>]
     let MessageProcessor messageIdAtom =
+        let logger = Store.useValue Selectors.logger
+        logger.Trace (fun () -> "MessageProcessor.render")
         let messageProcessor = Messaging.useMessageProcessor ()
         let messageId = Store.useValue messageIdAtom
         let message = Store.useValue (Atoms.Message.message messageId)
@@ -339,6 +425,8 @@ module Component =
 
     [<ReactComponent>]
     let MessagesListener () =
+        let logger = Store.useValue Selectors.logger
+        logger.Trace (fun () -> "MessagesListener.render")
         let messageIdAtoms = Store.useValue State.Selectors.asyncMessageIdAtoms
 
         React.fragment [
@@ -347,6 +435,8 @@ module Component =
 
     [<ReactComponent>]
     let Component () =
+        let logger = Store.useValue Selectors.logger
+        logger.Trace (fun () -> "Component.render")
         let hydrateStarted = Store.useValue Atoms.hydrateStarted
         let signInStarted = Store.useValue Atoms.signInStarted
 

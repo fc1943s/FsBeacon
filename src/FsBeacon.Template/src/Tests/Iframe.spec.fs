@@ -144,6 +144,8 @@ module Iframe =
 
                     allFn Cy2.waitForEl "async alias: a@"
 
+                    Cy2.clickTextEl (get2()) "add file"
+
                     //                    Cy2.waitForEl (Cy.getIframeBody1 ()) "async alias: undefined"
 //                    Cy2.waitForEl (Cy.getIframeBody2 ()) "async alias: undefined"
 //                    Cy2.waitForEl (Cy.getIframeBody3 ()) "async alias: undefined"
