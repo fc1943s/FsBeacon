@@ -22,17 +22,12 @@ jobs:
         with:
           node-version: 16
 
-      - run: dotnet tool restore
-      - run: dotnet paket restore
-      - run: dotnet build
-
       - run: sudo apt-get install libnss3-tools && echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p
-
 
       - uses: cypress-io/github-action@v2
         with:
           working-directory: ./src/FsBeacon.Template
-          build: npx cypress info
+          build: npx cypress info && yarn build:fable
           start: yarn cypress-serve
           command: yarn cypress-run
 

@@ -127,7 +127,7 @@ module Component =
             (fun () ->
                 promise {
                     let! _getter, setter = callbacks ()
-                    Store.set setter Atoms.hydrateCompleted true
+                    Store.set setter Atoms.syncHydrateCompleted true
                 }
                 |> Promise.start),
             [|
@@ -199,8 +199,8 @@ module Component =
         let logger = Store.useValue Selectors.logger
         logger.Info (fun () -> "HydrateButton.render")
 
-        let hydrateCompleted = Store.useValue Atoms.hydrateCompleted
-        let setHydrateStarted = Store.useSetState Atoms.hydrateStarted
+        let syncHydrateCompleted = Store.useValue Atoms.syncHydrateCompleted
+        let setSyncHydrateStarted = Store.useSetState Atoms.syncHydrateStarted
 
         Button.Button
             {|
@@ -208,8 +208,8 @@ module Component =
                 Icon = Some (Icons.bi.BiData |> Icons.render, Button.IconPosition.Left)
                 Props =
                     fun x ->
-                        x.onClick <- (fun _ -> promise { setHydrateStarted true })
-                        x.disabled <- hydrateCompleted
+                        x.onClick <- (fun _ -> promise { setSyncHydrateStarted true })
+                        x.disabled <- syncHydrateCompleted
                 Children =
                     [
                         str "hydrate"
@@ -222,7 +222,7 @@ module Component =
         logger.Info (fun () -> "SignInButton.render")
 
         let alias = Store.useValue Selectors.Gun.alias
-        let hydrateCompleted = Store.useValue Atoms.hydrateCompleted
+        let syncHydrateCompleted = Store.useValue Atoms.syncHydrateCompleted
         let setSignInStarted = Store.useSetState Atoms.signInStarted
 
         Button.Button
@@ -232,7 +232,7 @@ module Component =
                 Props =
                     fun x ->
                         x.onClick <- (fun _ -> promise { setSignInStarted true })
-                        x.disabled <- not hydrateCompleted || alias.IsSome
+                        x.disabled <- not syncHydrateCompleted || alias.IsSome
                 Children =
                     [
                         str "sign in"
@@ -434,16 +434,23 @@ module Component =
         ]
 
     [<ReactComponent>]
-    let Component () =
-        let logger = Store.useValue Selectors.logger
-        logger.Trace (fun () -> "Component.render")
-        let hydrateStarted = Store.useValue Atoms.hydrateStarted
-        let signInStarted = Store.useValue Atoms.signInStarted
+    let HydrateContainer () =
+        let syncHydrateStarted = Store.useValue Atoms.syncHydrateStarted
 
         React.fragment [
             HydrateCoreContainer ()
+            if syncHydrateStarted then HydrateSyncContainer ()
+        ]
+
+    [<ReactComponent>]
+    let Component () =
+        let logger = Store.useValue Selectors.logger
+        logger.Trace (fun () -> "Component.render")
+        let signInStarted = Store.useValue Atoms.signInStarted
+
+        React.fragment [
+            HydrateContainer ()
             MessagesListener ()
-            if hydrateStarted then HydrateSyncContainer ()
             if signInStarted then SignInContainer ()
             InnerComponent ()
         ]

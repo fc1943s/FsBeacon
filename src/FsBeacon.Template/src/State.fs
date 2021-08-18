@@ -33,8 +33,8 @@ module State =
                     (fun (_: AccordionType) -> [||]: string [])
                     (string >> List.singleton)
 
-        let rec hydrateStarted = Store.atom FsBeacon.root (nameof hydrateStarted) false
-        let rec hydrateCompleted = Store.atom FsBeacon.root (nameof hydrateCompleted) false
+        let rec syncHydrateStarted = Store.atom FsBeacon.root (nameof syncHydrateStarted) false
+        let rec syncHydrateCompleted = Store.atom FsBeacon.root (nameof syncHydrateCompleted) false
         let rec signInStarted = Store.atom FsBeacon.root (nameof signInStarted) false
 
         module File =
