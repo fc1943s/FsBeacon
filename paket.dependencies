@@ -2,18 +2,20 @@ version 6.0.3
 framework: net6.0
 storage: none
 source https://api.nuget.org/v3/index.json
+source https://nuget.pkg.github.com/fc1943s/index.json
 
 nuget FSharp.Core ~> 5.0
 
 
 // FsBeacon.HubPeer
-nuget Argu
+nuget Argu ~> 6.1
 nuget Fable.SignalR.Saturn ~> 0.11
 nuget FSharp.Control.AsyncSeq ~> 3.0
 
 
 // FsBeacon.Template
-nuget Feliz
+nuget Feliz ~> 1.51
+nuget FsJs ~> 0.0.1 prerelease
 
 // Build
 nuget Fake.Core.Target ~> 5.20 prerelease
@@ -22,15 +24,6 @@ nuget Fake.IO.FileSystem ~> 5.20 prerelease
 
 // Deploy
 nuget Farmer ~> 1.6
-
-
-
-// FsCore
-
-// FsJs
-nuget Fable.DateFunctions ~> 3.6
-nuget Fable.Extras ~> 0.4
-nuget Thoth.Json ~> 6.0
 
 // FsStore
 nuget Fable.SignalR ~> 0.11
