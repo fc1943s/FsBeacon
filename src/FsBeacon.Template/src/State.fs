@@ -3,7 +3,7 @@ namespace FsBeacon.Template
 
 open System
 open FsCore
-open FsCore.Model
+open FsCore.BaseModel
 open FsStore
 open FsStore.Bindings
 open FsStore.Model

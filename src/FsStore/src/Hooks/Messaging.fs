@@ -19,7 +19,7 @@ module Messaging =
                     match ack, message with
                     | Some false,
                       Message.Command (Command.KeySignIn ({
-                                                              priv = Some (Gun.Priv (String.ValidString _))
+                                                              priv = Some (Gun.Priv (String.Valid _))
                                                           } as keys)) ->
                         match! signIn ("", keys |> Json.encode<Gun.GunKeys>) with
                         | Ok _ ->

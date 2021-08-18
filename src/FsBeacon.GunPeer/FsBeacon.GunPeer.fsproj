@@ -9,5 +9,7 @@
 		<Content Include="server.js" />
         <Content Include="yarn.lock" />
         <Content Include="Dockerfile" />
+        <Content Include="paket.references" />
     </ItemGroup>
+    <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>

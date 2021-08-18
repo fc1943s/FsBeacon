@@ -1,7 +1,7 @@
 namespace FsStore.Hooks
 
 open FsCore
-open FsCore.Model
+open FsCore.BaseModel
 open FsJs
 open FsStore
 open System
@@ -16,9 +16,9 @@ module Hydrate =
         let chunkCount = int (Math.Ceiling (float hexString.Length / float fileChunkSize))
 
         match hexString, chunkCount with
-        | String.InvalidString, _
+        | String.Invalid, _
         | _, 0 ->
-            Dom.logDebug
+            Logger.logDebug
                 (fun () -> $"hydrateFile. invalid hexString.Length={hexString.Length} chunkCount={chunkCount} ")
 
             None
@@ -31,7 +31,7 @@ module Hydrate =
                         unicodeAware = false
                     |}
 
-            Dom.logDebug
+            Logger.logDebug
                 (fun () ->
                     $"hydrateFile.
             hexString.Length={hexString.Length}

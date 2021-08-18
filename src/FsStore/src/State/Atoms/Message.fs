@@ -1,6 +1,6 @@
 namespace FsStore.State.Atoms
 
-open FsCore.Model
+open FsCore.BaseModel
 open FsStore
 open FsStore.Model
 

@@ -1,6 +1,6 @@
 namespace FsUi
 
-open FsCore.Model
+open FsCore.BaseModel
 
 
 module FsUi =

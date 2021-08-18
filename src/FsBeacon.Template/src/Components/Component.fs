@@ -101,7 +101,7 @@ module Component =
 
         Jotai.jotaiUtils.useHydrateAtoms [|
             unbox Atoms.showDebug, unbox true
-            unbox Atoms.logLevel, unbox Dom.LogLevel.Trace
+            unbox Atoms.logLevel, unbox Logger.LogLevel.Trace
         |]
 
         nothing

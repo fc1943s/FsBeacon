@@ -279,7 +279,7 @@ module Gun =
                             | None -> return None
                         with
                         | ex ->
-                            Dom.consoleError ("userDecode decrypt exception", ex, data)
+                            Logger.consoleError ("userDecode decrypt exception", ex, data)
                             return None
                     | _ -> return None
                 }
@@ -289,12 +289,12 @@ module Gun =
                     match decrypted with
                     | Some (DecryptedValue decrypted) -> decrypted |> Json.decode<'TValue option>
                     | None ->
-                        Dom.logDebug (fun () -> $"userDecode decrypt empty. decrypted={decrypted} data={data}")
+                        Logger.logDebug (fun () -> $"userDecode decrypt empty. decrypted={decrypted} data={data}")
 
                         JS.undefined
                 with
                 | ex ->
-                    Dom.consoleError ("userDecode decode error. ex=", ex, "data=", data, "decrypted=", decrypted)
+                    Logger.consoleError ("userDecode decode error. ex=", ex, "data=", data, "decrypted=", decrypted)
                     None
 
             return decoded
@@ -310,12 +310,14 @@ module Gun =
 
                 let! encrypted = sea.encrypt (DecryptedValue json) keys
                 let! signed = sea.sign encrypted keys
-                Dom.logTrace (fun () -> $"userEncode. value={value} json={json} encrypted={encrypted} signed={signed}")
+
+                Logger.logTrace
+                    (fun () -> $"userEncode. value={value} json={json} encrypted={encrypted} signed={signed}")
 
                 return signed
             with
             | ex ->
-                Dom.consoleError ("[exception4]", ex, value)
+                Logger.consoleError ("[exception4]", ex, value)
                 return raise ex
         }
 
@@ -338,7 +340,8 @@ module Gun =
                             match Dom.window () with
                             | Some window ->
                                 if window?Cypress = null then
-                                    Dom.consoleError $"Gun.put error. newValue={newValue} ack={JS.JSON.stringify ack} "
+                                    Logger.consoleError
+                                        $"Gun.put error. newValue={newValue} ack={JS.JSON.stringify ack} "
                             | None -> ()
 
                             res false)
@@ -352,8 +355,8 @@ module Gun =
 
             match user.__.sea with
             | Some ({
-                        priv = Some (Priv (String.ValidString _))
-                        pub = Some (Pub (String.ValidString pub))
+                        priv = Some (Priv (String.Valid _))
+                        pub = Some (Pub (String.Valid pub))
                     } as keys) ->
 
                 let dataSlice = GunNodeSlice (nameof data)
@@ -384,7 +387,7 @@ module Gun =
 
                             let! putResult = put node (GunValue.NodeReference key)
 
-                            Dom.logDebug
+                            Logger.logDebug
                                 (fun () -> $"putPublicHash 2. putResult={putResult} key={key} pub={pub} hash={hash}")
                          }))
             | _ -> eprintfn $"invalid key. user.is={JS.JSON.stringify user.is}"
@@ -417,8 +420,8 @@ module Gun =
                                             printfn $"hashData result={result} key={_key}"
                                             res (result |> unbox<EncryptedSignedValue>)
                                             ())
-                                | _ -> Dom.logDebug (fun () -> "radQuery gunValue is not nodereference"))
-                    | _ -> Dom.logDebug (fun () -> "radQuery. no pub found")
+                                | _ -> Logger.logDebug (fun () -> "radQuery gunValue is not nodereference"))
+                    | _ -> Logger.logDebug (fun () -> "radQuery. no pub found")
                 with
                 | ex ->
                     printfn "radQuery error: {ex}"
@@ -428,7 +431,7 @@ module Gun =
         gun.on
             (fun data (GunNodeSlice key) ->
                 promise {
-                    Dom.logDebug
+                    Logger.logDebug
                         (fun () ->
                             if key = "devicePing" then
                                 null
@@ -474,11 +477,11 @@ module Gun =
                         next = fun (msg: 'R) -> fn msg
                         complete =
                             fun () ->
-                                Dom.logDebug
+                                Logger.logDebug
                                     (fun () -> $"[hubSubscribe.complete() HUB stream subscription] action={action} ")
                         error =
                             fun err ->
-                                Dom.logError
+                                Logger.logError
                                     (fun () ->
                                         $"[hubSubscribe.error() HUB stream subscription] action={action} err={err}")
 

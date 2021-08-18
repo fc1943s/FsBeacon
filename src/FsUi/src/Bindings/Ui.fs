@@ -514,7 +514,7 @@ module Ui =
         |> Option.filter (
             string
             >> function
-                | String.ValidString _ -> true
+                | String.Valid _ -> true
                 | _ -> false
         )
         |> Option.map fn

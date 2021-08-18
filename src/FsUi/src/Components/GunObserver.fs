@@ -36,7 +36,7 @@ module GunObserver =
 //                                    match user.__.sea, user.is with
 //                                    | _,
 //                                      Some {
-//                                               alias = Some (Gun.GunUserAlias.Alias (Gun.Alias (String.ValidString alias)))
+//                                               alias = Some (Gun.GunUserAlias.Alias (Gun.Alias (String.Valid alias)))
 //                                           } ->
 //                                        logger.Debug
 //                                            (fun () ->
@@ -48,7 +48,7 @@ module GunObserver =
 //                                        | Some _keys -> Some (Gun.Alias alias) |> Promise.lift
 //                                        | None -> failwith $"GunObserver.render: No keys found for user {alias}"
 //                                    | Some ({
-//                                                pub = Some (Gun.Pub (String.ValidString _))
+//                                                pub = Some (Gun.Pub (String.Valid _))
 //                                            } as keys),
 //                                      _ ->
 //                                        promise {

@@ -1,7 +1,6 @@
 namespace FsStore.State.Selectors
 
-open Fable.Extras
-open FsCore.Model
+open FsCore.BaseModel
 open FsStore.State
 open FsJs
 open FsStore
@@ -102,7 +101,7 @@ module rec File =
                 let byteArray = Store.value getter (byteArray fileId)
 
                 byteArray
-                |> Option.map (fun bytes -> Js.uint8ArrayToBlob (JSe.Uint8Array (unbox<uint8 []> bytes)) "image/png"))
+                |> Option.map (Js.byteArrayToBlob "image/png"))
 
 
     let rec objectUrl =

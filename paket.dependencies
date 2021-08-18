@@ -2,7 +2,7 @@ version 6.0.3
 framework: net6.0
 storage: none
 source https://api.nuget.org/v3/index.json
-source https://nuget.pkg.github.com/fc1943s/index.json
+source https://nuget.pkg.github.com/fc1943s/index.json username: "%GITHUB_ACTOR%" password: "%GITHUB_READ_PACKAGES_TOKEN%"
 
 nuget FSharp.Core ~> 5.0
 
@@ -12,15 +12,9 @@ nuget Argu ~> 6.1
 nuget Fable.SignalR.Saturn ~> 0.11
 nuget FSharp.Control.AsyncSeq ~> 3.0
 
-
 // FsBeacon.Template
 nuget Feliz ~> 1.51
-nuget FsJs ~> 0.0.1 prerelease
-
-// Build
-nuget Fake.Core.Target ~> 5.20 prerelease
-nuget Fake.DotNet.Cli ~> 5.20 prerelease
-nuget Fake.IO.FileSystem ~> 5.20 prerelease
+nuget FsJs
 
 // Deploy
 nuget Farmer ~> 1.6

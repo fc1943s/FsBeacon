@@ -6,7 +6,7 @@ open FsJs
 
 
 module Atoms =
-    let rec logLevel = Store.atomWithStorage FsStore.root (nameof logLevel) Dom.DEFAULT_LOG_LEVEL
+    let rec logLevel = Store.atomWithStorage FsStore.root (nameof logLevel) Logger.DEFAULT_LOG_LEVEL
     let rec showDebug = Store.atomWithStorage FsStore.root (nameof showDebug) Dom.deviceInfo.IsTesting
     let rec gunOptions = Store.atomWithStorage FsStore.root (nameof gunOptions) (GunOptions.Sync [||])
     let rec hubUrl = Store.atomWithStorage FsStore.root (nameof hubUrl) (None: string option)

@@ -79,7 +79,7 @@ module Hub =
 //                                Sync.Response.GetResult (
 //                                    key,
 //                                    match value with
-//                                    | String.ValidString _ -> Some value
+//                                    | String.Valid _ -> Some value
 //                                    | _ -> None
 //                                )
 //                            )

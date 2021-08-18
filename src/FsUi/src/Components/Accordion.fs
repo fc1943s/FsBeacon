@@ -22,7 +22,7 @@ module Accordion =
                            let props: {| props: Ui.IChakraProps |} = unbox cmp
 
                            match props.props.flex with
-                           | String.ValidString _ -> true
+                           | String.Valid _ -> true
                            | _ -> false) then
                     x.flex <- "1"
 

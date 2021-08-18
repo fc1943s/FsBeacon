@@ -3,7 +3,7 @@ namespace FsStore
 open System.Collections.Generic
 open Fable.Core
 open FsCore
-open FsCore.Model
+open FsCore.BaseModel
 open FsStore.Bindings.Gun
 open FsStore.Bindings.Jotai
 open FsStore.Model
@@ -25,7 +25,7 @@ module Selectors =
             (nameof logger)
             (fun getter ->
                 let logLevel = Store.value getter Atoms.logLevel
-                Dom.Logger.Create logLevel)
+                Logger.Logger.Create logLevel)
 
     let rec atomAccessors =
         let mutable lastValue = 0
@@ -38,7 +38,7 @@ module Selectors =
 lastValue={lastValue}
 "
 
-        Dom.logTrace (fun () -> $"atomAccessors.constructor {getDebugInfo ()}")
+        Logger.logTrace (fun () -> $"atomAccessors.constructor {getDebugInfo ()}")
 
         let rec valueWrapper =
             Store.selector
@@ -59,13 +59,14 @@ lastValue={lastValue}
 
         valueWrapper.onMount <-
             fun setAtom ->
-                Dom.logTrace (fun () -> $"atomAccessors.valueWrapper.onMount() lastValue={lastValue} {getDebugInfo ()}")
+                Logger.logTrace
+                    (fun () -> $"atomAccessors.valueWrapper.onMount() lastValue={lastValue} {getDebugInfo ()}")
 
                 lastValue <- lastValue + 1
                 setAtom lastValue
 
                 fun () ->
-                    Dom.logTrace
+                    Logger.logTrace
                         (fun () -> $"atomAccessors.valueWrapper.onUnmount() lastValue={lastValue} {getDebugInfo ()}")
 
                     ()
@@ -101,7 +102,7 @@ lastValue={lastValue}
                         gunPeers
                         |> Array.filter
                             (function
-                            | GunPeer (String.ValidString _) -> true
+                            | GunPeer (String.Valid _) -> true
                             | _ -> false))
 
         let rec gun =
@@ -176,17 +177,14 @@ lastValue={lastValue}
                         match user.__.sea, user.is with
                         | _,
                           Some {
-                                   alias = Some (GunUserAlias.Alias (Alias (String.ValidString alias)))
+                                   alias = Some (GunUserAlias.Alias (Alias (String.Valid alias)))
                                } ->
                             logger.Debug
                                 (fun () ->
                                     $"Selectors.Gun.asyncAlias. alias={alias}  keys={user.__.sea |> Js.objectKeys}")
 
                             return Some (Alias alias)
-                        | Some ({
-                                    priv = Some (Priv (String.ValidString _))
-                                } as keys),
-                          _ ->
+                        | Some ({ priv = Some (Priv (String.Valid _)) } as keys), _ ->
                             let! data = radQuery gun
                             let! alias = userDecode<Gun.Alias> keys data
 
@@ -216,7 +214,7 @@ lastValue={lastValue}
 
                     match gunUser.is with
                     | Some {
-                               alias = Some (GunUserAlias.Alias (Alias (String.ValidString alias)))
+                               alias = Some (GunUserAlias.Alias (Alias (String.Valid alias)))
                            } ->
                         logger.Debug
                             (fun () -> $"Selectors.Gun.alias. alias={alias}  keys={gunUser.__.sea |> Js.objectKeys}")
@@ -225,9 +223,7 @@ lastValue={lastValue}
                     | _ ->
                         match gunUser.is with
                         | Some {
-                                   alias = Some (GunUserAlias.GunKeys {
-                                                                          priv = Some (Priv (String.ValidString _))
-                                                                      })
+                                   alias = Some (GunUserAlias.GunKeys { priv = Some (Priv (String.Valid _)) })
                                } ->
                             logger.Debug
                                 (fun () ->
@@ -320,7 +316,7 @@ lastValue={lastValue}
                     logger.Debug (fun () -> $"Selectors.Hub.hubConnection. start. alias={alias} hubUrl={hubUrl}")
 
                     match alias, hubUrl with
-                    | Some (Alias (String.ValidString _)), Some (String.ValidString hubUrl) ->
+                    | Some (Alias (String.Valid _)), Some (String.Valid hubUrl) ->
                         let connection =
                             SignalR.connect<Sync.Request, Sync.Request, obj, Sync.Response, Sync.Response>
                                 (fun hub ->

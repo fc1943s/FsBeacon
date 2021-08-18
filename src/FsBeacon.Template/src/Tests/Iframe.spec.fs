@@ -126,8 +126,9 @@ module Iframe =
                                     | Some window -> window?btoa json
                                     | None -> ""
 
-                                Dom.logWarning
-                                    (fun () -> $"test: keys get2 waitForElSelectorObjectKey. json={json} base64={base64}")
+                                Logger.logWarning
+                                    (fun () ->
+                                        $"test: keys get2 waitForElSelectorObjectKey. json={json} base64={base64}")
 
                                 if base64 <> "" then
                                     let! _ =
@@ -144,7 +145,7 @@ module Iframe =
 
                     allFn Cy2.waitForEl "async alias: a@"
 
-                    Cy2.clickTextEl (get2()) "add file"
+                    Cy2.clickTextEl (get2 ()) "add file"
 
                     //                    Cy2.waitForEl (Cy.getIframeBody1 ()) "async alias: undefined"
 //                    Cy2.waitForEl (Cy.getIframeBody2 ()) "async alias: undefined"

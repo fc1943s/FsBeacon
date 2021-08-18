@@ -1,7 +1,7 @@
 namespace FsUi.Components
 
 open FsCore
-open FsCore.Model
+open FsCore.BaseModel
 open FsUi.State
 open FsStore.Hooks
 open Fable.React

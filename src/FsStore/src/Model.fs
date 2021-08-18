@@ -3,7 +3,7 @@ namespace FsStore
 open System
 open Fable.Core
 open FsCore
-open FsCore.Model
+open FsCore.BaseModel
 open FsStore.Bindings
 
 module FsStore =

@@ -33,7 +33,7 @@ module RouterObserver =
                     emitJsExpr () "delete sessionStorage.redirect"
 
                     match redirect with
-                    | String.ValidString _ when redirect <> window.location.href ->
+                    | String.Valid _ when redirect <> window.location.href ->
                         Router.navigatePath (redirect |> String.split "/" |> Array.skip 3)
                     | _ -> ()
                 | None -> ()),
