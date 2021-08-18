@@ -24,10 +24,12 @@ jobs:
 
       - run: sudo apt-get install libnss3-tools && echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p
 
+      - run: npx cypress info
+
       - uses: cypress-io/github-action@v2
         with:
           working-directory: ./src/FsBeacon.Template
-          build: npx cypress info; yarn build:fable
+          build: yarn build:fable
           start: yarn cypress-serve
           command: yarn cypress-run
 
