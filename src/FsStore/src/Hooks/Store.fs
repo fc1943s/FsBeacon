@@ -138,6 +138,17 @@ module Store =
 
         useScopeState<'T> inputAtom inputScope
 
+    let inline useAtomTempState<'T> (atom: Atom<'T>) =
+        let atomReference =
+            React.useMemo (
+                (fun () -> AtomReference.Atom atom),
+                [|
+                    box atom
+                |]
+            )
+
+        useTempState<'T> atomReference
+
     let inline useCallbackRef (fn: GetFn -> SetFn -> 'a -> JS.Promise<'c>) : ('a -> JS.Promise<'c>) =
         let fnCallback = React.useCallbackRef (fun (getter, setter, arg) -> fn getter setter arg)
 

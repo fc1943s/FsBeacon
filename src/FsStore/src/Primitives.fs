@@ -9,6 +9,17 @@ open FsCore
 open FsJs
 open FsStore.Bindings.Jotai
 
+module Enum =
+    let inline format<'T> (value: 'T) =
+        if typeof<'T>.IsEnum then value |> Enum.name |> unbox else value
+
+module Object =
+    let inline invokeOrReturnParam param argFn =
+        match jsTypeof argFn with
+        | "function" -> (argFn |> box |> unbox) param |> unbox
+        | _ -> argFn
+
+    let inline invokeOrReturn argFn = invokeOrReturnParam () argFn
 
 module Internal =
     let private atomPathMap = Dictionary<string, string> ()
@@ -23,6 +34,7 @@ module Internal =
     [<RequireQualifiedAccess>]
     type AtomType =
         | Atom
+        | AtomWithSync
         | AtomWithStorage
         | AtomWithStorageSync
 
@@ -243,6 +255,7 @@ module PrimitivesMagic =
                         (selector param))
                 Object.compare
 
+
         let inline atomWithStorage storeRoot name defaultValue =
             let atomPath =
                 {
@@ -253,7 +266,10 @@ module PrimitivesMagic =
                 }
                 |> AtomKey.AtomPath
 
-            let internalAtom = jotaiUtils.atomWithStorage (atomPath |> AtomPath.Value) defaultValue
+
+            let defaultValueFormatted = defaultValue |> Enum.format
+
+            let internalAtom = jotaiUtils.atomWithStorage (atomPath |> AtomPath.Value) defaultValueFormatted
 
             let selectorWrapper =
                 selector
@@ -261,14 +277,10 @@ module PrimitivesMagic =
                     name
                     (fun getter -> value getter internalAtom)
                     (fun _ setter argFn ->
-                        let arg =
-                            match jsTypeof argFn with
-                            | "function" -> (argFn |> box |> unbox) () |> unbox
-                            | _ -> argFn
+                        let newValue = argFn |> Object.invokeOrReturn |> Enum.format
+                        set setter internalAtom newValue)
 
-                        set setter internalAtom arg)
-
-            selectorWrapper?init <- defaultValue
+            selectorWrapper?init <- defaultValueFormatted
 
             Internal.registerAtom Internal.AtomType.AtomWithStorage atomPath selectorWrapper
 

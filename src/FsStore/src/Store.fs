@@ -654,7 +654,7 @@ newValue={newValue} jsTypeof-newValue={jsTypeof newValue} lastValue={lastValue} 
         |> List.map (fun case -> case, (newMap |> Map.tryFind case))
         |> Map.ofList
 
-    let inline atomWithSync<'TKey, 'TValue> atomKey (defaultValue: 'TValue) =
+    let inline atomWithSync<'TValue> atomKey (defaultValue: 'TValue) =
         let mutable lastUserAtomId = None
 
         let syncEngine = SyncEngine None
@@ -851,17 +851,7 @@ atomPath={atomPath} """
                         setter
                         (adapterValueMapAtom (syncEngine.GetAlias ()))
                         (fun oldAdapterValueMap ->
-                            let newValue =
-                                match jsTypeof newValueFn with
-                                | "function" ->
-                                    eprintfn $"!!! sync atom change sync. function instead of value. {getDebugInfo ()}"
-
-                                    //                                    let lastSyncValueAtom =
-//                                        Store.value getter (lastSyncValueAtom (syncEngine.GetAlias ()))
-
-                                    //                                    (unbox newValueFn) lastSyncValueAtom |> unbox
-                                    (unbox newValueFn) (unbox null) |> unbox
-                                | _ -> newValueFn
+                            let newValue = newValueFn |> Object.invokeOrReturn
 
                             let newAdapterValueMap =
                                 oldAdapterValueMap
@@ -947,7 +937,7 @@ lastSyncValueByTypeAtom[alias]={(lastSyncValueByTypeAtom (syncEngine.GetAlias ()
 
         wrapper?init <- defaultValue
 
-        Internal.registerAtom Internal.AtomType.AtomWithStorage atomPath wrapper
+        Internal.registerAtom Internal.AtomType.AtomWithSync atomPath wrapper
 
         wrapper
 
@@ -1025,10 +1015,7 @@ internalAtom[alias]={internalAtom (syncEngine.GetAlias ())} """
                         userAtom
                         (unbox
                             (fun oldValue ->
-                                let newValue =
-                                    match jsTypeof newValueFn with
-                                    | "function" -> (unbox newValueFn) oldValue
-                                    | _ -> newValueFn
+                                let newValue = newValueFn |> Object.invokeOrReturnParam oldValue
 
                                 Logger.logTrace
                                     (fun () ->
@@ -1295,7 +1282,7 @@ internalAtom[alias]={internalAtom (syncEngine.GetAlias ())} """
         =
         jotaiUtils.atomFamily
             (fun param ->
-                atomWithSync<'TKey, 'TValue>
+                atomWithSync<'TValue>
                     {
                         StoreRoot = storeRoot
                         Collection = Some collection
@@ -1305,7 +1292,7 @@ internalAtom[alias]={internalAtom (syncEngine.GetAlias ())} """
                     (defaultValueFn param))
             Object.compare
 
-    let inline atomWithStorageSync<'TKey, 'TValue> storeRoot name defaultValue =
+    let inline atomWithStorageSync storeRoot name defaultValue =
         let atomKey =
             {
                 StoreRoot = storeRoot
@@ -1316,7 +1303,7 @@ internalAtom[alias]={internalAtom (syncEngine.GetAlias ())} """
 
         let storageAtom = Store.atomWithStorage storeRoot name defaultValue
 
-        let syncAtom = atomWithSync<'TKey, 'TValue> atomKey defaultValue
+        let syncAtom = atomWithSync atomKey defaultValue
 
         let mutable lastSetAtom: ('TValue option -> unit) option = None
         let mutable lastValue = None
