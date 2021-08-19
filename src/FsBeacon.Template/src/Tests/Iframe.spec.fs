@@ -87,9 +87,18 @@ module Iframe =
         "tests"
         (fun () ->
             let homeUrl = "https://localhost:9762"
-            before (fun () ->
-                Cy.wait 20000
-                Cy.visit homeUrl)
+
+            before
+                (fun () ->
+                    promise {
+                        printfn $"@@ before wait"
+                        Cy.wait 10000
+                        printfn $"@@ after wait 1"
+                        do! Promise.sleep 10000
+                        printfn $"@@ after wait 2"
+                        Cy.visit homeUrl
+                    }
+                    |> Promise.start)
 
             it
                 "login"
