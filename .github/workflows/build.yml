@@ -26,14 +26,14 @@ jobs:
 
       - run: sudo apt-get install libnss3-tools && echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p
 
-      - run: cd ./src/FsBeacon.Template && yarn install
+      - run: cd ./src/FsBeacon.Template && yarn install && rm -rf node_modules/gun/examples/iris
 
       - uses: cypress-io/github-action@v2
         env:
           GITHUB_READ_PACKAGES_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           working-directory: ./src/FsBeacon.Template
-          build: yarn build:fable && rm -rf node_modules/gun/examples/iris
+          build: yarn build:fable
           start: yarn cypress-serve
           command: yarn cypress-run
 

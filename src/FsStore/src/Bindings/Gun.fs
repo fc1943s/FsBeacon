@@ -268,7 +268,7 @@ module Gun =
             let! decrypted =
                 promise {
                     match keys with
-                    | { pub = Some pub } ->
+                    | { pub = Some pub } when data |> Option.ofObjUnbox |> Option.isSome ->
                         try
                             let! verified = sea.verify data pub
 
