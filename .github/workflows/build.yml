@@ -29,6 +29,8 @@ jobs:
       - run: cd ./src/FsBeacon.Template && yarn install
 
       - uses: cypress-io/github-action@v2
+        env:
+          GITHUB_READ_PACKAGES_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           working-directory: ./src/FsBeacon.Template
           build: yarn build:fable
