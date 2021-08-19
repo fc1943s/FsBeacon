@@ -10,13 +10,23 @@ if (cluster.isMaster) {
 }
 
 console.log('argv', process.argv);
+
 if (process.argv[2] !== "--root-path") {
   throw new Error('Invalid --root-path');
 }
 
-const rootPath = process.argv[3];
+const rootPath = process.argv[3] || process.env.ROOT_PATH;
 if (!rootPath || rootPath === "%ROOT_PATH%") {
   throw new Error('Invalid --root-path');
+}
+
+if (process.argv[4] !== "--domain") {
+  throw new Error('Invalid --domain');
+}
+
+const domain = process.argv[5] || process.env.FSBEACON_DOMAIN;
+if (!domain || rootPath === "%FSBEACON_DOMAIN%") {
+  throw new Error('Invalid --domain');
 }
 
 if (!fs.existsSync(rootPath)) {
@@ -28,9 +38,9 @@ const config = {
 };
 const Gun = require('gun');
 
-if (process.env.HTTPS && process.env.FSBEACON_DOMAIN) {
-  config.cert = fs.readFileSync('./ssl/' + process.env.FSBEACON_DOMAIN + '.pem');
-  config.key = fs.readFileSync('./ssl/' + process.env.FSBEACON_DOMAIN + '-key.pem');
+if (process.env.HTTPS && domain) {
+  config.cert = fs.readFileSync('./ssl/' + domain + '.pem');
+  config.key = fs.readFileSync('./ssl/' + domain + '-key.pem');
   config.server = require('https').createServer(config, Gun.serve(__dirname));
   // config.server.configure(function () {
   //   config.server.use(function(req, res, next) {
@@ -51,7 +61,7 @@ const gun = Gun({
   file: rootPath
 });
 console.log('Relay peer started on port ' + config.port + ' with /gun. ' +
-  ' FSBEACON_DOMAIN=' + process.env.FSBEACON_DOMAIN +
+  ' domain=' + domain +
   ' rootPath=' + rootPath +
   ' path.resolve(rootPath)=' + path.resolve(rootPath) +
   ' https: ' + Boolean(process.env.HTTPS));
