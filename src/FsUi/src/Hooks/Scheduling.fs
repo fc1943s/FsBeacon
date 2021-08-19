@@ -9,12 +9,13 @@ open FsStore.Model
 
 
 module Scheduling =
+    [<Erase>]
     type SchedulingType =
         | Timeout
         | Interval
 
-    let schedulingFn =
-        function
+    let inline schedulingFn schedulingType =
+        match schedulingType with
         | Timeout -> JS.setTimeout, JS.clearTimeout
         | Interval -> JS.setInterval, JS.clearInterval
 
@@ -31,25 +32,33 @@ module Scheduling =
             |]
         )
 
-        let mounted, setMounted = React.useState true
+        let isMountedRef = React.useIsMountedRef ()
 
         let fn =
             Store.useCallbackRef
-                (fun getter setter _ -> promise { if mounted then do! savedCallback.current (getter, setter) })
+                (fun getter setter _ ->
+                    promise {
+                        if isMountedRef.current then
+                            do! savedCallback.current (getter, setter)
+                    })
+
+        let setFn, clearFn =
+            React.useMemo (
+                (fun () -> schedulingFn schedulingType),
+                [|
+                    box schedulingType
+                |]
+            )
 
         React.useEffect (
             (fun () ->
-                let setFn, clearFn = schedulingFn schedulingType
                 let id = setFn (fn >> Promise.start) duration
-                setMounted true
-
-                Object.newDisposable
-                    (fun () ->
-                        setMounted false
-                        clearFn id)),
+                Object.newDisposable (fun () -> clearFn id)),
             [|
+                box clearFn
+                box setFn
                 box fn
-                box setMounted
+                box isMountedRef
                 box schedulingType
                 box savedCallback
                 box duration

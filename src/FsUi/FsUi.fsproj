@@ -14,9 +14,9 @@
         <Compile Include="src\Model.fs" />
         <Compile Include="src\State\Atoms\Ui.fs" />
         <Compile Include="src\State\Selectors\Ui.fs" />
+        <Compile Include="src\Hooks\React.fs" />
         <Compile Include="src\Hooks\Scheduling.fs" />
         <Compile Include="src\Hooks\Listener.fs" />
-        <Compile Include="src\Hooks\React.fs" />
         <Compile Include="src\Hooks\Hydrate.fs" />
         <Compile Include="src\Components\Accordion.fs" />
         <Compile Include="src\Components\Empty.fs" />

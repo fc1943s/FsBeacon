@@ -39,12 +39,12 @@ module Store =
         let b = useValue b
         a, b
 
-    let inline useTempAtom<'TValue7> (atom: InputAtom<'TValue7> option) (inputScope: InputScope<'TValue7> option) =
+    let inline useScopeState<'TValue7> (atom: InputAtom<'TValue7> option) (inputScope: InputScope<'TValue7> option) =
+        let logger = useValue Selectors.logger
+
         let currentAtomField, tempAtomField =
             React.useMemo (
-                (fun () ->
-                    let atomField = getAtomField atom (InputScope.AtomScope inputScope)
-                    atomField.Current, atomField.Temp),
+                (fun () -> getAtomField atom (InputScope.AtomScope inputScope)),
                 [|
                     box atom
                     box inputScope
@@ -53,7 +53,6 @@ module Store =
 
         let currentValue, setCurrentValue = useStateOption currentAtomField
         let tempValue, setTempValue = useStateOption tempAtomField
-        let logger = useValue Selectors.logger
 
         React.useMemo (
             (fun () ->
@@ -127,6 +126,17 @@ module Store =
                 box setTempValue
             |]
         )
+
+    let inline useTempState<'T> (atomReference: AtomReference<'T>) =
+        let inputAtom, inputScope =
+            React.useMemo (
+                (fun () -> Some (InputAtom atomReference), Some (InputScope.Temp Gun.defaultSerializer)),
+                [|
+                    box atomReference
+                |]
+            )
+
+        useScopeState<'T> inputAtom inputScope
 
     let inline useCallbackRef (fn: GetFn -> SetFn -> 'a -> JS.Promise<'c>) : ('a -> JS.Promise<'c>) =
         let fnCallback = React.useCallbackRef (fun (getter, setter, arg) -> fn getter setter arg)

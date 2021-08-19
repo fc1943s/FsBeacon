@@ -2,10 +2,10 @@ namespace FsUi.Components
 
 open Feliz
 open FsStore
+open FsStore.Hooks
 open FsStore.Bindings
 open FsUi.Bindings
 open FsUi.Hooks
-open FsStore.Hooks
 open Fable.React
 
 

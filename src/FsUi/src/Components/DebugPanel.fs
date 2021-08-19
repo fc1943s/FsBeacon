@@ -5,8 +5,8 @@ open Fable.React
 open Feliz
 open FsJs
 open FsStore
-open FsUi.Bindings
 open FsStore.Hooks
+open FsUi.Bindings
 open FsUi.Hooks
 
 

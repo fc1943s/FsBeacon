@@ -3,8 +3,8 @@ namespace FsUi.Hooks
 open Browser.Types
 open Feliz
 open FsStore
-open FsStore.Model
 open FsStore.Hooks
+open FsStore.Model
 open FsUi.Bindings
 open Fable.Core
 open Feliz.UseListener

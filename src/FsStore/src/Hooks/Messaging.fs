@@ -2,7 +2,6 @@ namespace FsStore.Hooks
 
 open FsJs
 open FsStore
-open FsStore.Hooks
 open FsStore.Model
 open FsCore
 open FsStore.Bindings

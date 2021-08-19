@@ -15,6 +15,7 @@ module Model =
     type GetFn = Jotai.GetFn
     type SetFn = Jotai.SetFn
 
+//    [<Erase; RequireQualifiedAccess>]
     [<RequireQualifiedAccess>]
     type InputScope<'TValue> =
         | Current
@@ -28,11 +29,7 @@ module Model =
 
     type InputAtom<'T> = InputAtom of atomPath: AtomReference<'T>
 
-    type AtomField<'TValue67> =
-        {
-            Current: Atom<'TValue67> option
-            Temp: Atom<string> option
-        }
+    type AtomField<'TValue67> = AtomField of Atom<'TValue67> option * Atom<string> option
 
     [<RequireQualifiedAccess>]
     type GunOptions =

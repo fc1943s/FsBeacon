@@ -1433,30 +1433,32 @@ internalAtom[alias]={internalAtom (syncEngine.GetAlias ())} """
         | [||] -> unbox emptyArrayAtom
         | _ -> jotaiUtils.waitForAll atoms
 
+    //    let atomScope =
 
     let inline getAtomField (atom: InputAtom<'TValue> option) (inputScope: AtomScope) =
         match atom with
         | Some (InputAtom atomPath) ->
-            {
-                Current =
-                    match atomPath with
-                    | AtomReference.Atom atom -> Some atom
-                    | _ -> Some (unbox emptyAtom)
-                Temp =
-                    //                    Dom.log
+            let current =
+                match atomPath with
+                | AtomReference.Atom atom -> Some atom
+                | _ -> Some (unbox emptyAtom)
+
+            let temp =
+                //                    Dom.log
 //                        (fun () -> $"getAtomField atomPath={atomPath} queryAtomPath atomPath={queryAtomPath atomPath}")
 
-                    match Internal.queryAtomPath atomPath, inputScope with
-                    | Some atomPath, AtomScope.Temp -> Some (Join.tempValue atomPath)
-                    | _ -> None
-            }
-        | _ -> { Current = None; Temp = None }
+                match Internal.queryAtomPath atomPath, inputScope with
+                | Some atomPath, AtomScope.Temp -> Some (Join.tempValue atomPath)
+                | _ -> None
+
+            current, temp
+        | _ -> None, None
 
 
     let inline setTempValue<'TValue9, 'TKey> (setter: SetFn) (atom: Atom<'TValue9>) (value: 'TValue9) =
-        let atomField = getAtomField (Some (InputAtom (AtomReference.Atom atom))) AtomScope.Temp
+        let _, tempAtom = getAtomField (Some (InputAtom (AtomReference.Atom atom))) AtomScope.Temp
 
-        match atomField.Temp with
+        match tempAtom with
         | Some atom -> Store.set setter atom (value |> Json.encode<'TValue9>)
         | _ -> ()
 
@@ -1470,18 +1472,18 @@ internalAtom[alias]={internalAtom (syncEngine.GetAlias ())} """
         | AtomScope.Temp -> setTempValue<'TValue10, 'TKey> setter (atom key) value
 
     let inline resetTempValue<'TValue8, 'TKey> (setter: SetFn) (atom: Atom<'TValue8>) =
-        let atomField = getAtomField (Some (InputAtom (AtomReference.Atom atom))) AtomScope.Temp
+        let _, tempAtom = getAtomField (Some (InputAtom (AtomReference.Atom atom))) AtomScope.Temp
 
-        match atomField.Temp with
+        match tempAtom with
         | Some atom -> Store.set setter atom null
         | _ -> ()
 
     let rec ___emptyTempAtom = nameof ___emptyTempAtom
 
     let inline getTempValue<'TValue11, 'TKey> getter (atom: Atom<'TValue11>) =
-        let atomField = getAtomField (Some (InputAtom (AtomReference.Atom atom))) AtomScope.Temp
+        let _, tempAtom = getAtomField (Some (InputAtom (AtomReference.Atom atom))) AtomScope.Temp
 
-        match atomField.Temp with
+        match tempAtom with
         | Some tempAtom ->
             let result = Store.value getter tempAtom
 

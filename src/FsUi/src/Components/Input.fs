@@ -71,7 +71,7 @@ module Input =
                 |]
             )
 
-        let tempAtom = Store.useTempAtom<'TValue> customProps.atom customProps.inputScope
+        let tempAtom = Store.useScopeState<'TValue> customProps.atom customProps.inputScope
 
         let mounted, setMounted = React.useState false
 
