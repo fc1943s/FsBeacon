@@ -654,7 +654,7 @@ newValue={newValue} jsTypeof-newValue={jsTypeof newValue} lastValue={lastValue} 
         |> List.map (fun case -> case, (newMap |> Map.tryFind case))
         |> Map.ofList
 
-    let inline atomWithSync<'TValue> atomKey (defaultValue: 'TValue) =
+    let inline atomWithSync<'TKey, 'TValue> atomKey (defaultValue: 'TValue) =
         let mutable lastUserAtomId = None
 
         let syncEngine = SyncEngine None
@@ -1282,7 +1282,7 @@ internalAtom[alias]={internalAtom (syncEngine.GetAlias ())} """
         =
         jotaiUtils.atomFamily
             (fun param ->
-                atomWithSync<'TValue>
+                atomWithSync<'TKey, 'TValue>
                     {
                         StoreRoot = storeRoot
                         Collection = Some collection
@@ -1292,7 +1292,7 @@ internalAtom[alias]={internalAtom (syncEngine.GetAlias ())} """
                     (defaultValueFn param))
             Object.compare
 
-    let inline atomWithStorageSync storeRoot name defaultValue =
+    let inline atomWithStorageSync<'TKey, 'TValue> storeRoot name defaultValue =
         let atomKey =
             {
                 StoreRoot = storeRoot
@@ -1303,7 +1303,7 @@ internalAtom[alias]={internalAtom (syncEngine.GetAlias ())} """
 
         let storageAtom = Store.atomWithStorage storeRoot name defaultValue
 
-        let syncAtom = atomWithSync atomKey defaultValue
+        let syncAtom = atomWithSync<'TKey, 'TValue> atomKey defaultValue
 
         let mutable lastSetAtom: ('TValue option -> unit) option = None
         let mutable lastValue = None
