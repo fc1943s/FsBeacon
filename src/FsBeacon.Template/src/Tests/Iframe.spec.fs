@@ -87,7 +87,9 @@ module Iframe =
         "tests"
         (fun () ->
             let homeUrl = "https://localhost:9762"
-            before (fun () -> Cy.visit homeUrl)
+            before (fun () ->
+                Cy.wait 20000
+                Cy.visit homeUrl)
 
             it
                 "login"

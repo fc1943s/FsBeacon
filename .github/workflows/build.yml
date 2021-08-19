@@ -33,7 +33,7 @@ jobs:
           GITHUB_READ_PACKAGES_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           working-directory: ./src/FsBeacon.Template
-          build: yarn build:fable
+          build: yarn build:fable && rm -rf node_modules/gun/examples/iris
           start: yarn cypress-serve
           command: yarn cypress-run
 
