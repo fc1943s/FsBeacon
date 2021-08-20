@@ -96,8 +96,7 @@ module Component =
 
     [<ReactComponent>]
     let HydrateCoreContainer () =
-        let logger = Store.useValue Selectors.logger
-        logger.Info (fun () -> "HydrateCoreContainer.render")
+        printfn "HydrateCoreContainer.render"
 
         Jotai.jotaiUtils.useHydrateAtoms [|
             unbox Atoms.showDebug, unbox true
@@ -108,8 +107,7 @@ module Component =
 
     [<ReactComponent>]
     let HydrateSyncContainer () =
-        let logger = Store.useValue Selectors.logger
-        logger.Info (fun () -> "HydrateSyncContainer.render")
+        printfn "HydrateSyncContainer.render"
 
         Jotai.jotaiUtils.useHydrateAtoms [|
             unbox Atoms.gunOptions,
@@ -297,56 +295,17 @@ module Component =
                 str $"async alias: {asyncAlias}"
             ]
 
+
     [<ReactComponent>]
     let SettingsIndicator () =
         let logger = Store.useValue Selectors.logger
         logger.Info (fun () -> "SettingsIndicator.render")
 
-        let deviceInfo = Store.useValue Selectors.deviceInfo
-        let gunOptions = Store.useValue Atoms.gunOptions
-        let gunPeers = Store.useValue Selectors.Gun.gunPeers
-        let hubUrl = Store.useValue Atoms.hubUrl
-        let uiState = Store.useValue Selectors.Ui.uiState
-        let sessionRestored = Store.useValue Atoms.sessionRestored
-        let showDebug = Store.useValue Atoms.showDebug
-        let alias = Store.useValue Selectors.Gun.alias
-        let privateKeys = Store.useValue Selectors.Gun.privateKeys
-
-        let text =
-            React.useMemo (
-                (fun () ->
-                    $" {Json.encodeWithNullFormatted
-                            {|
-                                DeviceInfo = deviceInfo
-                                GunOptions = gunOptions
-                                GunPeers = gunPeers
-                                HubUrl = hubUrl
-                                UiState = uiState
-                                SessionRestored = sessionRestored
-                                ShowDebug = showDebug
-                                Alias = alias
-                                PrivateKeys = privateKeys
-                            |}}"),
-                [|
-                    box deviceInfo
-                    box gunOptions
-                    box gunPeers
-                    box hubUrl
-                    box uiState
-                    box sessionRestored
-                    box showDebug
-                    box alias
-                    box privateKeys
-                |]
-            )
-
-        Ui.flex
+        Ui.box
             (fun x ->
                 x.flex <- "1"
                 x.whiteSpace <- "pre-wrap")
-            [
-                str text
-            ]
+            []
 
     [<ReactComponent>]
     let InnerComponent () =
@@ -394,7 +353,7 @@ module Component =
 
                 Files ()
 
-                SettingsIndicator ()
+//                SettingsIndicator ()
 
                 DebugPanel.DebugPanel DebugPanel.DebugPanelDisplay.Inline
             ]
@@ -436,10 +395,12 @@ module Component =
     [<ReactComponent>]
     let HydrateContainer () =
         let syncHydrateStarted = Store.useValue Atoms.syncHydrateStarted
+        let syncHydrateCompleted = Store.useValue Atoms.syncHydrateCompleted
 
         React.fragment [
-            HydrateCoreContainer ()
-            if syncHydrateStarted then HydrateSyncContainer ()
+            if not syncHydrateCompleted then
+                HydrateCoreContainer ()
+                if syncHydrateStarted then HydrateSyncContainer ()
         ]
 
     [<ReactComponent>]

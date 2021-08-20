@@ -1,4 +1,4 @@
-namespace FsStore.Hooks
+namespace FsStore
 
 open FsCore
 open FsCore.BaseModel

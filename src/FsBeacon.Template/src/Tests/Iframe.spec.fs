@@ -11,15 +11,15 @@ open FsStore
 
 
 module Iframe =
-    let inline waitForElSelectorObjectKey<'T> (elFn: unit -> Cy.Chainable2<obj>) selector key nextKey =
-        Cy2.waitForEl (elFn ()) $"\"{key}\": {{"
+    let inline waitForElSelectorValueIndicator<'T> (elFn: unit -> Cy.Chainable2<obj>) selector key =
+        Cy2.waitForEl (elFn ()) $"[{key}={{"
         let el2 = (elFn ()).find selector
         let textPromise = el2.invoke "text"
 
         textPromise
         |> Promise.map
             (fun text ->
-                let regex = JSe.RegExp @$"\""{key}\"": *(.*?), *\""{nextKey}\"""
+                let regex = JSe.RegExp $"\[{key}=(.*?)\]\["
 
                 let textFmt =
                     text
@@ -90,12 +90,12 @@ module Iframe =
 
             before
                 (fun () ->
+                    let timeout = 3000
+
+                    Cy.wait timeout
+
                     promise {
-                        printfn $"@@ before wait"
-                        Cy.wait 10000
-                        printfn $"@@ after wait 1"
-                        do! Promise.sleep 10000
-                        printfn $"@@ after wait 2"
+                        do! Promise.sleep timeout
                         Cy.visit homeUrl
                     }
                     |> Promise.start)
@@ -121,7 +121,7 @@ module Iframe =
                     ]
                     |> someFn Cy2.clickTextEl "sign in"
 
-                    waitForElSelectorObjectKey<Gun.GunKeys> get2 "#component" "PrivateKeys" "SessionRestored"
+                    waitForElSelectorValueIndicator<Gun.GunKeys> get2 "#component" "privateKeys"
                     |> Promise.bind
                         (fun privateKeys ->
                             promise {

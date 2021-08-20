@@ -2,6 +2,7 @@ namespace FsStore.State.Atoms
 
 open FsCore.BaseModel
 open FsStore
+open FsStore.Store
 
 
 module rec Device =

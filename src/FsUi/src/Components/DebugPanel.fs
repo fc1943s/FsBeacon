@@ -1,5 +1,6 @@
 namespace FsUi.Components
 
+open System
 open Fable.Core.JsInterop
 open Fable.React
 open Feliz
@@ -8,6 +9,9 @@ open FsStore
 open FsStore.Hooks
 open FsUi.Bindings
 open FsUi.Hooks
+open FsCore
+open FsStore.State
+open FsUi.State
 
 
 module DebugPanel =
@@ -23,13 +27,53 @@ module DebugPanel =
         |> Seq.indexed
         |> Seq.map (fun (i, KeyValue (k, v)) -> $"<{i}> {k}", v |> string |> box)
 
+    let inline ValueIndicator name atom =
+        let value = Store.useValue atom
+
+        Ui.box
+            (fun _ -> ())
+            [
+                str $"[{name}=%A{Json.encodeWithNullFormatted value}]"
+            ]
+
+    [<ReactComponent>]
+    let GunOptionsIndicator () =
+        ValueIndicator (nameof Atoms.gunOptions) Atoms.gunOptions
+
+    [<ReactComponent>]
+    let GunPeersIndicator () =
+        ValueIndicator (nameof Selectors.Gun.gunPeers) Selectors.Gun.gunPeers
+
+    [<ReactComponent>]
+    let HubUrlIndicator () =
+        ValueIndicator (nameof Atoms.hubUrl) Atoms.hubUrl
+
+    [<ReactComponent>]
+    let UiStateIndicator () =
+        ValueIndicator (nameof Selectors.Ui.uiState) Selectors.Ui.uiState
+
+    [<ReactComponent>]
+    let SessionRestoredIndicator () =
+        ValueIndicator (nameof Atoms.sessionRestored) Atoms.sessionRestored
+
+    [<ReactComponent>]
+    let ShowDebugIndicator () =
+        ValueIndicator (nameof Atoms.showDebug) Atoms.showDebug
+
+    [<ReactComponent>]
+    let AliasIndicator () =
+        ValueIndicator (nameof Selectors.Gun.alias) Selectors.Gun.alias
+
+    [<ReactComponent>]
+    let PrivateKeysIndicator () =
+        ValueIndicator (nameof Selectors.Gun.privateKeys) Selectors.Gun.privateKeys
+
     [<ReactComponent>]
     let DebugPanel display =
         let text, setText = React.useState ""
         let oldJson, setOldJson = React.useState ""
         let showDebug = Store.useValue Atoms.showDebug
 
-        let deviceInfo = Store.useValue Selectors.deviceInfo
         let logger = Store.useValue Selectors.logger
 
         logger.Info (fun () -> $"DebugPanel.render. showDebug={showDebug}")
@@ -43,23 +87,31 @@ module DebugPanel =
                         ()
                     else
                         let json =
-                            Json.encodeWithNullFormatted
-                                {|
-                                    DeviceInfo = deviceInfo
-                                    SortedCallCount =
-                                        Profiling.profilingState.CallCount
-                                        |> mapDict
-                                        |> Seq.sortBy fst
-                                        |> createObj
-                                    CallCount =
-                                        Profiling.profilingState.CallCount
-                                        |> mapDict
-                                        |> createObj
-                                    Timestamps =
-                                        Profiling.profilingState.Timestamps
-                                        |> Seq.map (fun (k, v) -> $"{k} = {v}")
-                                        |> Seq.toArray
-                                |}
+                            [
+                                Json.encodeWithNullFormatted
+                                    {|
+                                        TimestampMap =
+                                            Profiling.profilingState.TimestampMap
+                                            |> Seq.map (fun (k, v) -> $"{k} = {v}")
+                                            |> Seq.toArray
+                                    |}
+                                Json.encodeWithNullFormatted
+                                    {|
+                                        CountMap =
+                                            Profiling.profilingState.CountMap
+                                            |> mapDict
+                                            |> createObj
+                                    |}
+                                Json.encodeWithNullFormatted
+                                    {|
+                                        SortedCountMap =
+                                            Profiling.profilingState.CountMap
+                                            |> mapDict
+                                            |> Seq.sortByDescending (snd >> string)
+                                            |> createObj
+                                    |}
+                            ]
+                            |> String.concat Environment.NewLine
 
                         if json = oldJson then
                             ()
@@ -98,18 +150,28 @@ module DebugPanel =
                     | _ -> ()
 
                     x.flex <- "1"
-                    x.fontSize <- "9px"
                     x.backgroundColor <- "#44444455")
                 [
                     if showDebug then
-                        Ui.flex
+                        Ui.box
                             (fun x ->
                                 x.flex <- "1"
                                 x.id <- "debug"
+                                x.fontSize <- "9px"
+                                x.lineHeight <- "11px"
                                 x.whiteSpace <- "pre"
                                 x.fontFamily <- "Roboto Condensed Light, system-ui, sans-serif")
                             [
+                                AliasIndicator ()
+                                PrivateKeysIndicator ()
+                                SessionRestoredIndicator ()
+                                ShowDebugIndicator ()
+                                HubUrlIndicator ()
+                                GunOptionsIndicator ()
+                                GunPeersIndicator ()
+                                UiStateIndicator ()
                                 str text
+                                ValueIndicator (nameof Selectors.deviceInfo) Selectors.deviceInfo
                             ]
                 ]
         ]

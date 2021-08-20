@@ -22,7 +22,7 @@ module Store =
                 (fun () ->
                     match atom with
                     | Some atom -> atom
-                    | None -> emptyAtom :?> Atom<'TValue5>),
+                    | None -> Store.emptyAtom :?> Atom<'TValue5>),
                 [|
                     box atom
                 |]
@@ -44,7 +44,7 @@ module Store =
 
         let currentAtomField, tempAtomField =
             React.useMemo (
-                (fun () -> getAtomField atom (InputScope.AtomScope inputScope)),
+                (fun () -> Store.getAtomField atom (InputScope.AtomScope inputScope)),
                 [|
                     box atom
                     box inputScope
@@ -60,7 +60,7 @@ module Store =
 
                 let newTempValue =
                     match inputScope, tempValue |> Option.defaultValue null with
-                    | _, tempValue when tempValue = ___emptyTempAtom -> unbox null
+                    | _, tempValue when tempValue = Store.___emptyTempAtom -> unbox null
                     | _, null -> currentValue |> Option.defaultValue (unbox null)
                     | Some (InputScope.Temp (_, jsonDecode)), tempValue ->
                         try
@@ -87,7 +87,7 @@ module Store =
                         (fun newValue ->
                             setTempValue (
                                 match box newValue with
-                                | null -> ___emptyTempAtom
+                                | null -> Store.___emptyTempAtom
                                 | _ ->
                                     match inputScope with
                                     | Some (InputScope.Temp (jsonEncode, _)) -> jsonEncode newValue

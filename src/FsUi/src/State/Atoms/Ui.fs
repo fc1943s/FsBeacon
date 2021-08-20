@@ -1,6 +1,7 @@
 namespace FsUi.State.Atoms
 
 open FsStore
+open FsStore.Store
 open FsUi.Model
 open FsUi
 

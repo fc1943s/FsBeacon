@@ -1,6 +1,6 @@
 namespace FsBeacon.Template
 
-
+open FsStore.Store
 open System
 open FsCore
 open FsCore.BaseModel
