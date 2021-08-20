@@ -38,9 +38,8 @@ module SelectAtomSyncKeys =
             let atomPath = atomKey |> AtomKey.AtomPath
             let referenceAtom = atomFamily key
 
-            let syncEngine = Store.SyncEngine (Some (fun (key, node) -> key, node.back().back ()))
+            let syncEngine = Store.SyncEngine ([||], Some (fun (key, node) -> key, node.back().back ()))
 
-            let internalAtom = jotaiUtils.atomFamily (fun _alias -> jotai.atom [||]) Object.compare
 
             let getDebugInfo () =
                 $"""
@@ -48,8 +47,7 @@ module SelectAtomSyncKeys =
     syncEngine={Json.encodeWithNull syncEngine}
     atomKey={Json.encodeWithNull atomKey}
     referenceAtom={referenceAtom}
-    atomPath={atomPath}
-    internalAtom[alias]={internalAtom (syncEngine.GetAlias ())} """
+    atomPath={atomPath} """
 
             let mutable lastValue: Set<'TKey> option = None
 
@@ -58,11 +56,10 @@ module SelectAtomSyncKeys =
                     atomKey
                     (fun getter ->
                         syncEngine.SetProviders getter referenceAtom
-                        let userAtom = internalAtom (syncEngine.GetAlias ())
 
                         let result =
                             if not Js.jestWorkerId then
-                                Store.value getter userAtom
+                                Store.value getter (syncEngine.GetUserAtom ())
                             else
                                 match syncEngine.GetAtomPath () with
                                 | Some atomPath ->
@@ -76,23 +73,23 @@ module SelectAtomSyncKeys =
 
                         Logger.logTrace
                             (fun () ->
-                                $"Store.selectAtomSyncKeys wrapper.get() wrapper={wrapper} userAtom={userAtom} result={result} {getDebugInfo ()} ")
+                                $"Store.selectAtomSyncKeys wrapper.get() wrapper={wrapper} result={result} {getDebugInfo ()} ")
 
                         result)
                     (fun getter setter newValueFn ->
                         syncEngine.SetProviders getter referenceAtom
-                        let userAtom = internalAtom (syncEngine.GetAlias ())
 
                         Store.set
                             setter
-                            userAtom
+                            (syncEngine.GetUserAtom ())
                             (unbox
                                 (fun oldValue ->
                                     let newValue = newValueFn |> Object.invokeOrReturnParam oldValue
 
                                     Logger.logTrace
                                         (fun () ->
-                                            $"Store.selectAtomSyncKeys wrapper.set() newValue={newValue} newValueFn={newValueFn} wrapper={wrapper} userAtom={userAtom} {getDebugInfo ()} ")
+                                            $"Store.selectAtomSyncKeys wrapper.set() oldValue={oldValue} newValue={newValue}
+                                            newValueFn={newValueFn} wrapper={wrapper} {getDebugInfo ()} ")
 
                                     newValue)))
 
@@ -138,7 +135,7 @@ module SelectAtomSyncKeys =
                     setAtom
                     data
 
-            let subscribe (setAtom: 'TKey [] -> unit) =
+            let subscribe callback _subscriptionId =
                 promise {
                     match syncEngine.GetGunAtomNode (), lastSubscription with
                     | _, Some _ ->
@@ -153,7 +150,7 @@ module SelectAtomSyncKeys =
                         let batchKeysAtom (ticks, value) kind =
                             batchKeys
                                 (fun value ->
-                                    setAtom value
+                                    callback value
                                     newHashedDisposable ticks)
                                 (ticks, value)
                                 kind
@@ -274,10 +271,9 @@ module SelectAtomSyncKeys =
                                                                 (fun () ->
                                                                     $"Store.selectAtomSyncKeys [wrapper.on() HUB KEYS subscribe] atomPath={atomPath} items={JS.JSON.stringify items} {getDebugInfo ()} ")
                                                         | response ->
-                                                            Logger.consoleError (
-                                                                "Store.selectAtomSyncKeys Gun.batchHubSubscribe invalid response:",
-                                                                response
-                                                            )
+                                                            Logger.logError
+                                                                (fun () ->
+                                                                    $"Store.selectAtomSyncKeys Gun.batchHubSubscribe invalid response={response}")
 
                                                         return! newHashedDisposable ticks
                                                     })
@@ -285,10 +281,13 @@ module SelectAtomSyncKeys =
                                                     Selectors.Hub.hubSubscriptionMap.Remove collectionPath
                                                     |> ignore)
                                     | _ ->
-                                        Logger.consoleError
-                                            $"Store.selectAtomSyncKeys #123561 invalid atom path atomPath={atomPath}"
+                                        Logger.logError
+                                            (fun () ->
+                                                $"Store.selectAtomSyncKeys #123561 invalid atom path atomPath={atomPath}")
                                 with
-                                | ex -> Logger.consoleError $"Store.selectAtomSyncKeys hub.filter, error={ex.Message}"
+                                | ex ->
+                                    Logger.logError
+                                        (fun () -> $"Store.selectAtomSyncKeys hub.filter, error={ex.Message}")
                             }
                             |> Promise.start
 
@@ -309,56 +308,31 @@ module SelectAtomSyncKeys =
                         Logger.logTrace
                             (fun () ->
                                 $"Store.selectAtomSyncKeys [atomKeys gun.on() subscribing] skipping subscribe, no gun atom node. {getDebugInfo ()}")
+
+                    return None
                 }
 
-            let debouncedSubscribe = Js.debounce (subscribe >> Promise.start) 100
+            let unsubscribe _subscriptionId =
+                match syncEngine.GetGunAtomNode () with
+                | Some (key, _gunAtomNode) ->
 
-            let unsubscribe () =
-                match lastSubscription with
-                | Some ticks when DateTime.ticksDiff ticks < 1000. ->
                     Logger.logTrace
                         (fun () ->
-                            $"Store.selectAtomSyncKeys [atomKeys gun.off()] skipping unsubscribe. jotai resubscribe glitch. {getDebugInfo ()}")
-                | Some _ ->
-                    match syncEngine.GetGunAtomNode () with
-                    | Some (key, _gunAtomNode) ->
+                            $"Store.selectAtomSyncKeys. gunAtomNode found. calling off(). (actually skipped) key={key} subscriptionId={_subscriptionId} {getDebugInfo ()} ")
 
-                        Logger.logTrace
-                            (fun () ->
-                                $"Store.selectAtomSyncKeys [atomFamily.unsubscribe()] ############ (actually skipped) {key} {getDebugInfo ()} ")
-
-                    //                    gunAtomNode.off () |> ignore
-                    //                    lastSubscription <- None
-                    | None ->
-                        Logger.logTrace
-                            (fun () ->
-                                $"Store.selectAtomSyncKeys [atomKeys gun.off()] skipping unsubscribe, no gun atom node. {getDebugInfo ()} ")
+                //                    gunAtomNode.off () |> ignore
+                //                    lastSubscription <- None
                 | None ->
                     Logger.logTrace
                         (fun () ->
-                            $"Store.selectAtomSyncKeys [atomKeys gun.off()] skipping unsubscribe. no last subscription found. {getDebugInfo ()} ")
+                            $"Store.selectAtomSyncKeys [atomKeys gun.off()] skipping unsubscribe, no gun atom node. subscriptionId={_subscriptionId} {getDebugInfo ()} ")
 
-            let mutable lastSetAtom = None
+
+
 
             wrapper?onMount <- fun (setAtom: 'TKey [] -> unit) ->
-                                   lastSetAtom <- Some setAtom
-
-                                   Profiling.addCount $"@{syncEngine.GetAtomPath ()}"
-                                   syncEngine.AddSubscriptionCount ()
-
-                                   Logger.logTrace (fun () -> $"Store.selectAtomSyncKeys. onMount {getDebugInfo ()} ")
-
-                                   //                               debouncedSubscribe setAtom
-
-                                   fun _ ->
-                                       Profiling.removeCount $"@{syncEngine.GetAtomPath ()}"
-                                       syncEngine.RemoveSubscriptionCount ()
-
-                                       Logger.logTrace
-                                           (fun () -> $"Store.selectAtomSyncKeys. onUnmount {getDebugInfo ()} ")
-
-            //                                   unsubscribe ()
-
+                                   syncEngine.Subscribe (subscribe, setAtom)
+                                   fun _ -> syncEngine.Unsubscribe unsubscribe
 
             Logger.logTrace
                 (fun () ->

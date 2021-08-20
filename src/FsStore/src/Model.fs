@@ -1,6 +1,5 @@
 namespace FsStore
 
-open System
 open Fable.Core
 open FsCore
 open FsCore.BaseModel
@@ -15,7 +14,7 @@ module Model =
     type GetFn = Jotai.GetFn
     type SetFn = Jotai.SetFn
 
-//    [<Erase; RequireQualifiedAccess>]
+    //    [<Erase; RequireQualifiedAccess>]
     [<RequireQualifiedAccess>]
     type InputScope<'TValue> =
         | Current
@@ -111,8 +110,16 @@ module Model =
         | KeySignIn of keys: Gun.GunKeys
         | Set of key: string * value: string
 
-    type MessageId = MessageId of Guid
+
+    type MessageId = MessageId of TicksGuid
 
     type MessageId with
         static member inline NewId () = MessageId (Guid.newTicksGuid ())
         static member inline Value (MessageId guid) = guid
+
+
+    type SubscriptionId = SubscriptionId of TicksGuid
+
+    type SubscriptionId with
+        static member inline NewId () = SubscriptionId (Guid.newTicksGuid ())
+        static member inline Value (SubscriptionId guid) = guid

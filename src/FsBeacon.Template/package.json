@@ -13,7 +13,7 @@
     "build:fable": "dotnet tool restore && dotnet paket restore && dotnet fable",
     "build:react": "rm -rf build && cross-env CI= INLINE_RUNTIME_CHUNK=false GENERATE_SOURCEMAP=false EXTEND_ESLINT=true SKIP_PREFLIGHT_CHECK=true react-app-rewired build && rm -rf cra_output && mv build cra_output",
     "parcel-build:react": "parcel build static/index.html --detailed-report && cp -r static/manifest.json static/404.html static/sounds static/icons parcel_output",
-    "watch:frontend-build": "dotnet fable watch",
+    "watch:fable-build": "dotnet fable watch",
     "watch:frontend": "cross-env HTTPS=true EXTEND_ESLINT=true BROWSER=none FAST_REFRESH=true PORT=9762 SKIP_PREFLIGHT_CHECK=true react-app-rewired start",
     "watch": "concurrently \"npm:watch:*\"",
     "analyze": "npx source-map-explorer 'cra_output/**/*.js'",
@@ -23,6 +23,8 @@
     "test-parallel": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --rootDir . --ci --watchAll=false --forceExit --testNamePattern=",
     "test-sequential": "yarn test-parallel --runInBand --detectOpenHandles",
     "test": "yarn test-sequential",
+    "test-watch": "yarn test --watchAll",
+    "test-build-watch": "concurrently \"npm:watch:fable-build\" \"npm:test-watch\"",
     "cypress-install": "cypress install --force",
     "cypress": "cypress open",
 
@@ -37,8 +39,6 @@
 
     "serve": "concurrently \"yarn:frontend-serve\" \"echo #1 yarn serve\"",
     "frontend-serve": "cross-env PORT=9762 NODE_ENV=production serve cra_output",
-    "test-watch": "yarn test --watchAll",
-    "test-build-watch": "concurrently \"npm:watch:frontend-build\" \"npm:test-watch\"",
     "postinstall": "patch-package"
   },
   "dependencies": {

@@ -38,7 +38,7 @@ module Selectors =
 lastValue={lastValue}
 "
 
-        Logger.logTrace (fun () -> $"atomAccessors.constructor {getDebugInfo ()}")
+        Logger.logTrace (fun () -> $"Selectors.atomAccessors constructor {getDebugInfo ()}")
 
         let rec valueWrapper =
             Store.selector
@@ -47,12 +47,12 @@ lastValue={lastValue}
                 (fun getter ->
                     let logger = Store.value getter logger
                     let result = Store.value getter valueAtom
-                    logger.Trace (fun () -> $"atomAccessors.valueWrapper.get() result={result} {getDebugInfo ()}")
+                    logger.Trace (fun () -> $"Selectors.atomAccessors valueWrapper.get() result={result} {getDebugInfo ()}")
 
                     result)
                 (fun getter setter newValue ->
                     let logger = Store.value getter logger
-                    logger.Trace (fun () -> $"atomAccessors.valueWrapper.set() newValue={newValue} {getDebugInfo ()}")
+                    logger.Trace (fun () -> $"Selectors.atomAccessors  valueWrapper.set() newValue={newValue} {getDebugInfo ()}")
 
                     Store.set setter accessorsAtom (Some (getter, setter))
                     Store.set setter valueAtom newValue)
@@ -60,14 +60,14 @@ lastValue={lastValue}
         valueWrapper.onMount <-
             fun setAtom ->
                 Logger.logTrace
-                    (fun () -> $"atomAccessors.valueWrapper.onMount() lastValue={lastValue} {getDebugInfo ()}")
+                    (fun () -> $"Selectors.atomAccessors valueWrapper.onMount() lastValue={lastValue} {getDebugInfo ()}")
 
                 lastValue <- lastValue + 1
                 setAtom lastValue
 
                 fun () ->
                     Logger.logTrace
-                        (fun () -> $"atomAccessors.valueWrapper.onUnmount() lastValue={lastValue} {getDebugInfo ()}")
+                        (fun () -> $"Selectors.atomAccessors valueWrapper.onUnmount() lastValue={lastValue} {getDebugInfo ()}")
 
                     ()
 
@@ -81,7 +81,7 @@ lastValue={lastValue}
 
                 logger.Trace
                     (fun () ->
-                        $"atomAccessors.selfWrapper.get() value={value} accessors={accessors.IsSome} {getDebugInfo ()}")
+                        $"Selectors.atomAccessors selfWrapper.get() value={value} accessors={accessors.IsSome} {getDebugInfo ()}")
 
                 accessors)
 

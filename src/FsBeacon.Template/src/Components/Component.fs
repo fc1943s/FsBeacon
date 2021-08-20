@@ -275,6 +275,24 @@ module Component =
             |}
 
     [<ReactComponent>]
+    let MountButton () =
+        let logger = Store.useValue Selectors.logger
+        logger.Info (fun () -> "MountButton.render")
+
+        let mounted, setMounted = Store.useState State.Atoms.mounted
+
+        Button.Button
+            {|
+                Hint = None
+                Icon = Some (Icons.io5.IoRefreshCircle |> Icons.render, Button.IconPosition.Left)
+                Props = fun x -> x.onClick <- (fun _ -> promise { setMounted (not mounted) })
+                Children =
+                    [
+                        str (if mounted then "unmount" else "mount")
+                    ]
+            |}
+
+    [<ReactComponent>]
     let HrefIndicator () =
         let logger = Store.useValue Selectors.logger
         logger.Info (fun () -> "HrefIndicator.render")
@@ -336,11 +354,16 @@ module Component =
                 x.padding <- "15px"
                 x.flex <- "1")
             [
-                HydrateButton ()
+                Ui.stack
+                    (fun _ -> ())
+                    [
+                        HydrateButton ()
 
-                SignInButton ()
+                        SignInButton ()
 
-                AddFileButton ()
+                        AddFileButton ()
+
+                    ]
 
                 HrefIndicator ()
 
@@ -353,7 +376,7 @@ module Component =
 
                 Files ()
 
-//                SettingsIndicator ()
+                //                SettingsIndicator ()
 
                 DebugPanel.DebugPanel DebugPanel.DebugPanelDisplay.Inline
             ]
@@ -409,9 +432,13 @@ module Component =
         logger.Trace (fun () -> "Component.render")
         let signInStarted = Store.useValue Atoms.signInStarted
 
+        let mounted = Store.useValue State.Atoms.mounted
+
         React.fragment [
-            HydrateContainer ()
-            MessagesListener ()
-            if signInStarted then SignInContainer ()
-            InnerComponent ()
+            MountButton ()
+            if mounted then
+                HydrateContainer ()
+                MessagesListener ()
+                if signInStarted then SignInContainer ()
+                InnerComponent ()
         ]

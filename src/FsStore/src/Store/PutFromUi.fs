@@ -15,14 +15,16 @@ module PutFromUi =
     module Store =
         let inline putFromUi<'TValue>
             (getDebugInfo: unit -> string)
-            (syncEngine: Store.SyncEngine)
+            (syncEngine: Store.SyncEngine<'TValue>)
             (syncTrigger: TicksGuid * AdapterValue<'TValue> option -> unit)
             (ticks, newValue)
             =
             promise {
                 let syncState = SyncState<'TValue> ()
 
-                Logger.logTrace (fun () -> $"atomFamily.wrapper.set() debounceGunPut promise. #1 newValue={newValue}")
+                Logger.logTrace
+                    (fun () ->
+                        $"Store.putFromUi. atomFamily.wrapper.set() debounceGunPut promise. #1 newValue={newValue}")
 
                 try
                     match syncEngine.GetGunAtomNode () with
@@ -34,7 +36,7 @@ module PutFromUi =
                         | Some keys ->
                             Logger.logTrace
                                 (fun () ->
-                                    $"atomFamily.wrapper.set() debounceGunPut promise. #2 before encode {key} newValue={newValue}")
+                                    $"Store.putFromUi. atomFamily.wrapper.set() debounceGunPut promise. #2 before encode {key} newValue={newValue}")
 
                             let! newValueJson =
                                 promise {
@@ -49,7 +51,7 @@ module PutFromUi =
 
                             Logger.logTrace
                                 (fun () ->
-                                    $"atomFamily.wrapper.set() debounceGunPut promise. #3.
+                                    $"Store.putFromUi. atomFamily.wrapper.set() debounceGunPut promise. #3.
         before put {key} newValue={newValue} {getDebugInfo ()}")
 
                             let hubValue =
@@ -66,7 +68,7 @@ module PutFromUi =
                                 ->
                                 Logger.logTrace
                                     (fun () ->
-                                        $"debouncedPut() HUB SKIPPED
+                                        $"Store.putFromUi. debouncedPut() HUB SKIPPED
         newValue={newValue} jsTypeof-newValue={jsTypeof newValue} {getDebugInfo ()}")
                             | _ ->
                                 match syncEngine.GetAtomPath (), syncEngine.GetHub (), syncEngine.GetAlias () with
@@ -79,18 +81,22 @@ module PutFromUi =
                                             match response with
                                             | Sync.Response.SetResult result ->
                                                 if not result then
-                                                    Logger.consoleError "HUB PUT ERROR (backend console)"
+                                                    Logger.logError
+                                                        (fun () -> "Store.putFromUi. HUB PUT ERROR (backend console)")
                                                 else
                                                     syncTrigger (ticks, Some (AdapterValue.Hub newValue))
-                                            | response -> Logger.consoleError ("#90592 response:", response)
+                                            | response ->
+                                                Logger.logError
+                                                    (fun () -> $"Store.putFromUi. #90592 response={response}")
                                         with
-                                        | ex -> Logger.consoleError $"hub.set, error={ex.Message}"
+                                        | ex ->
+                                            Logger.logError (fun () -> $"Store.putFromUi. hub.set, error={ex.Message}")
                                     }
                                     |> Promise.start
                                 | _ ->
                                     Logger.logTrace
                                         (fun () ->
-                                            $"[wrapper.on() HUB put]. skipping. newValue={newValue} {getDebugInfo ()} ")
+                                            $"Store.putFromUi. [wrapper.on() HUB put]. skipping. newValue={newValue} {getDebugInfo ()} ")
 
                             let gunValue =
                                 match syncState.AdapterValueMapByType with
@@ -115,29 +121,30 @@ module PutFromUi =
 
                                         Logger.logTrace
                                             (fun () ->
-                                                $"atomFamily.wrapper.set() debounceGunPut promise result. newValue={newValue} {key} {getDebugInfo ()} ")
+                                                $"Store.putFromUi. atomFamily.wrapper.set() debounceGunPut promise result. newValue={newValue} {key} {getDebugInfo ()} ")
                                     else
                                         Browser.Dom.window?lastPutResult <- putResult
 
                                         match Dom.window () with
                                         | Some window ->
                                             if window?Cypress = null then
-                                                Logger.consoleError
-                                                    $"atomFamily.wrapper.set() debounceGunPut promise put error. newValue={newValue} putResult={putResult} {key} {getDebugInfo ()}"
+                                                Logger.logError
+                                                    (fun () ->
+                                                        $"Store.putFromUi. atomFamily.wrapper.set() debounceGunPut promise put error. newValue={newValue} putResult={putResult} {key} {getDebugInfo ()}")
                                         | None -> ()
                             | _ ->
                                 Logger.logTrace
                                     (fun () ->
-                                        $"debouncedPut() SKIPPED newValue={newValue} jsTypeof-newValue={jsTypeof newValue} {getDebugInfo ()}")
+                                        $"Store.putFromUi. debouncedPut() SKIPPED newValue={newValue} jsTypeof-newValue={jsTypeof newValue} {getDebugInfo ()}")
                         | None -> Logger.logTrace (fun () -> $"atomFamily.wrapper.set(). skipped ...")
 
 
                     | None ->
                         Logger.logTrace
                             (fun () ->
-                                $"<filter> [gunEffect.debounceGunPut promise] skipping gun put. no gun atom node. newValue={newValue} {getDebugInfo ()}")
+                                $"<filter> Store.putFromUi. [gunEffect.debounceGunPut promise] skipping gun put. no gun atom node. newValue={newValue} {getDebugInfo ()}")
                 with
-                | ex -> Logger.consoleError ("[exception2]", ex, newValue)
+                | ex -> Logger.logError (fun () -> $"Store.putFromUi. ex={ex} newValue={newValue}")
 
                 syncState.SyncPaused <- false
 

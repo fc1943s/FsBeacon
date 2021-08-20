@@ -16,7 +16,7 @@ module SyncSubscribe =
     module Store =
         let inline syncSubscribe
             getDebugInfo
-            (syncEngine: Store.SyncEngine)
+            (syncEngine: Store.SyncEngine<_>)
             (syncState: SyncState<'TValue>)
             (trigger: TicksGuid * AdapterValue<'TValue> option -> unit)
             onError
@@ -26,7 +26,8 @@ module SyncSubscribe =
                 match syncEngine.GetGunAtomNode (), syncState.GunSubscription with
                 | _, Some _ ->
                     Logger.logTrace
-                        (fun () -> $"[syncSubscribe] skipping subscribe, lastSubscription is set. {getDebugInfo ()} ")
+                        (fun () ->
+                            $"Store.syncSubscribe. skipping subscribe, lastSubscription is set. {getDebugInfo ()} ")
                 | Some (key, gunAtomNode), None ->
                     let gunKeys =
                         let user = gunAtomNode.user ()
@@ -34,7 +35,7 @@ module SyncSubscribe =
 
                     Profiling.addCount $"{key} subscribe"
 
-                    Logger.logTrace (fun () -> $"[syncSubscribe] batch subscribing. key={key} {getDebugInfo ()} ")
+                    Logger.logTrace (fun () -> $"Store.syncSubscribe. batch subscribing. key={key} {getDebugInfo ()} ")
 
                     //                    gunAtomNode.off () |> ignore
 
@@ -45,8 +46,11 @@ module SyncSubscribe =
                             promise {
                                 try
                                     match syncState.HubSubscription, syncEngine.GetAlias () with
-                                    | Some _, _ -> Logger.logError (fun () -> $"sub already present key={key}")
-                                    | None, None -> Logger.consoleError "alias is none (subscription)"
+                                    | Some _, _ ->
+                                        Logger.logError
+                                            (fun () -> $"Store.syncSubscribe. sub already present key={key}")
+                                    | None, None ->
+                                        Logger.logError (fun () -> "Store.syncSubscribe. alias is none (subscription)")
                                     | None, Some (Gun.Alias alias) ->
 
                                         let subscription =
@@ -57,14 +61,14 @@ module SyncSubscribe =
                                                 (fun (ticks, msg: Sync.Response) ->
                                                     Logger.logTrace
                                                         (fun () ->
-                                                            $"[syncSubscribe] wrapper.next() HUB stream subscribe] msg={msg} {getDebugInfo ()} ")
+                                                            $"Store.syncSubscribe. wrapper.next() HUB stream subscribe] msg={msg} {getDebugInfo ()} ")
 
                                                     promise {
                                                         match msg with
                                                         | Sync.Response.GetResult result ->
                                                             Logger.logTrace
                                                                 (fun () ->
-                                                                    $"[syncSubscribe] Sync.Response.GetResult key={key} atomPath={atomPath} {getDebugInfo ()} ")
+                                                                    $"Store.syncSubscribe. Sync.Response.GetResult key={key} atomPath={atomPath} {getDebugInfo ()} ")
 
                                                             let! newValue =
                                                                 match result |> Option.defaultValue null with
@@ -82,16 +86,19 @@ module SyncSubscribe =
                                                 (fun ex ->
                                                     Logger.logError
                                                         (fun () ->
-                                                            $"[syncSubscribe] onError... ex={ex} {getDebugInfo ()} ")
+                                                            $"Store.syncSubscribe. onError... ex={ex} {getDebugInfo ()} ")
 
                                                     onError ())
 
                                         syncState.HubSubscription <- Some subscription
                                 with
-                                | ex -> Logger.consoleError $"hub.get, setInternalFromGun, error={ex.Message}"
+                                | ex ->
+                                    Logger.logError
+                                        (fun () ->
+                                            $"Store.syncSubscribe. hub.get, setInternalFromGun, ex.Message={ex.Message} ex={ex}")
                             }
                             |> Promise.start
-                        | None -> Logger.logTrace (fun () -> $"[syncSubscribe] skipping...{getDebugInfo ()} ")
+                        | None -> Logger.logTrace (fun () -> $"Store.syncSubscribe. skipping...{getDebugInfo ()} ")
 
                         match syncEngine.GetGunOptions (), syncEngine.GetAtomPath () with
                         | Some (GunOptions.Sync _), Some (AtomPath _atomPath) ->
@@ -126,7 +133,7 @@ module SyncSubscribe =
                                            || hubValue |> Object.compare newValue then
                                             Logger.logTrace
                                                 (fun () ->
-                                                    $"debouncedPut() HUB (update from gun) SKIPPED
+                                                    $"Store.syncSubscribe. debouncedPut() HUB (update from gun) SKIPPED
                                                     newValue={newValue} jsTypeof-newValue={jsTypeof newValue} {getDebugInfo ()}")
                                         else
                                             match syncEngine.GetAtomPath (),
@@ -143,39 +150,47 @@ module SyncSubscribe =
                                                         match response with
                                                         | Sync.Response.SetResult result ->
                                                             if not result then
-                                                                Logger.consoleError
-                                                                    "$$$$ HUB PUT ERROR (backend console)"
+                                                                Logger.logError
+                                                                    (fun () ->
+                                                                        "Store.syncSubscribe. $$$$ HUB PUT ERROR (backend console)")
                                                             else
                                                                 Logger.logTrace
                                                                     (fun () ->
-                                                                        $"subscribe() hub set from gun
+                                                                        $"Store.syncSubscribe. subscribe() hub set from gun
                                         newValue={newValue} jsTypeof-newValue={jsTypeof newValue} {getDebugInfo ()}")
 
                                                                 trigger (
                                                                     ticks,
                                                                     (newValue |> Option.map AdapterValue.Hub)
                                                                 )
-                                                        | response -> Logger.consoleError ("#00002 response:", response)
+                                                        | response ->
+                                                            Logger.logError
+                                                                (fun () ->
+                                                                    $"Store.syncSubscribe. #00002 response{response}")
                                                     with
-                                                    | ex -> Logger.consoleError $"$$$$ hub.set, error={ex.Message}"
+                                                    | ex ->
+                                                        Logger.logError
+                                                            (fun () ->
+                                                                $"Store.syncSubscribe. hub.set, error={ex.Message}")
                                                 }
                                                 |> Promise.start
                                             | _ ->
                                                 Logger.logTrace
                                                     (fun () ->
-                                                        $"[$$$$ wrapper.on() HUB put] skipping. newValue={newValue}. {getDebugInfo ()} ")
+                                                        $"Store.syncSubscribe. [$$$$ wrapper.on() HUB put] skipping. newValue={newValue}. {getDebugInfo ()} ")
 
                                         return! newHashedDisposable ticks
                                     })
 
                             syncState.GunSubscription <- Some DateTime.Now.Ticks
-                        | _ -> Logger.logTrace (fun () -> $"[syncSubscribe] skipping. {getDebugInfo ()} ")
-                    | _ -> Logger.logTrace (fun () -> $"[syncSubscribe] skipping. gun keys empty {getDebugInfo ()} ")
+                        | _ -> Logger.logTrace (fun () -> $"Store.syncSubscribe. skipping. {getDebugInfo ()} ")
+                    | _ ->
+                        Logger.logTrace (fun () -> $"Store.syncSubscribe. skipping. gun keys empty {getDebugInfo ()} ")
 
 
 
                 | None, _ ->
                     Logger.logTrace
                         (fun () ->
-                            $"[syncSubscribe] skipping subscribe, no gun atom node. (maybe no alias) {getDebugInfo ()} ")
+                            $"Store.syncSubscribe. skipping subscribe, no gun atom node. (maybe no alias) {getDebugInfo ()} ")
             }

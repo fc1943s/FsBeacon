@@ -36,6 +36,8 @@ module State =
         let rec syncHydrateStarted = Store.atom FsBeacon.root (nameof syncHydrateStarted) false
         let rec syncHydrateCompleted = Store.atom FsBeacon.root (nameof syncHydrateCompleted) false
         let rec signInStarted = Store.atom FsBeacon.root (nameof signInStarted) false
+        let rec mounted = Store.atom FsBeacon.root (nameof mounted) false
+
 
         module File =
             let rec pub =

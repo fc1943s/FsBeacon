@@ -21,8 +21,6 @@ nuget Farmer ~> 1.6
 
 // FsStore
 nuget Fable.SignalR ~> 0.11
-nuget Fable.Jester ~> 0.33
-nuget Fable.ReactTestingLibrary ~> 0.33
 
 // FsUi
 nuget Feliz.Router ~> 3.8

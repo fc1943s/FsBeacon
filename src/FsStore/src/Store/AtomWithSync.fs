@@ -21,7 +21,7 @@ module AtomWithSync =
         let inline atomWithSync<'TKey, 'TValue> atomKey (defaultValue: 'TValue) =
             let mutable lastUserAtomId = None
 
-            let syncEngine = Store.SyncEngine None
+            let syncEngine = Store.SyncEngine (defaultValue, None)
             let syncState = SyncState<'TValue> ()
             let atomPath = atomKey |> AtomKey.AtomPath
 
@@ -78,7 +78,7 @@ module AtomWithSync =
                         (fun oldAdapterValueMap ->
                             Logger.logDebug
                                 (fun () ->
-                                    $"Store.atomWithSync.syncTrigger. setter. oldAdapterValueMap={oldAdapterValueMap} newValue={newValue}. {getDebugInfo ()}")
+                                    $"Store.atomWithSync. syncTrigger. setter. oldAdapterValueMap={oldAdapterValueMap} newValue={newValue}. {getDebugInfo ()}")
 
                             oldAdapterValueMap
                             |> (match newValue with
@@ -86,62 +86,66 @@ module AtomWithSync =
                                 | None -> Map.remove ticks))
                 | None ->
                     Logger.logDebug
-                        (fun () -> $"Store.atomWithSync.syncTrigger. skipped. no accessors. {getDebugInfo ()}")
+                        (fun () -> $"Store.atomWithSync .syncTrigger. skipped. no accessors. {getDebugInfo ()}")
 
-            let debouncedSubscribe =
-                Js.debounce
-                    (fun () ->
-                        let trigger (ticks, adapterValue: AdapterValue<'TValue> option) =
-                            match syncState.AdapterValueMapByType with
-                            | Some adapterValueMapByType ->
-                                let trigger (ticks, newValue) =
-                                    syncTrigger (ticks, newValue)
-                                    newHashedDisposable ticks
+            let subscribe (callback: 'TValue -> unit) (_subscriptionId: SubscriptionId) =
+                promise {
+                    let trigger (ticks, adapterValue: AdapterValue<'TValue> option) =
+                        match syncState.AdapterValueMapByType with
+                        | Some adapterValueMapByType ->
+                            let trigger (ticks, newValue) =
+                                syncTrigger (ticks, newValue)
+                                newHashedDisposable ticks
 
-                                let lastValue =
-                                    match adapterValue with
-                                    | Some (AdapterValue.Internal _) ->
-                                        adapterValueMapByType
-                                        |> Map.tryFind AdapterType.Internal
-                                        |> Option.bind id
-                                    | Some (AdapterValue.Gun _) ->
-                                        adapterValueMapByType
-                                        |> Map.tryFind AdapterType.Gun
-                                        |> Option.bind id
-                                    | Some (AdapterValue.Hub _) ->
-                                        adapterValueMapByType
-                                        |> Map.tryFind AdapterType.Hub
-                                        |> Option.bind id
-                                    | None -> None
+                            let lastValue =
+                                match adapterValue with
+                                | Some (AdapterValue.Internal _) ->
+                                    adapterValueMapByType
+                                    |> Map.tryFind AdapterType.Internal
+                                    |> Option.bind id
+                                | Some (AdapterValue.Gun _) ->
+                                    adapterValueMapByType
+                                    |> Map.tryFind AdapterType.Gun
+                                    |> Option.bind id
+                                | Some (AdapterValue.Hub _) ->
+                                    adapterValueMapByType
+                                    |> Map.tryFind AdapterType.Hub
+                                    |> Option.bind id
+                                | None -> None
 
-                                let onError () =
-                                    match adapterValue with
-                                    | Some (AdapterValue.Gun _) -> syncState.GunSubscription <- None
-                                    | Some (AdapterValue.Hub _) -> syncState.HubSubscription <- None
-                                    | _ -> ()
+                            let onError () =
+                                match adapterValue with
+                                | Some (AdapterValue.Gun _) -> syncState.GunSubscription <- None
+                                | Some (AdapterValue.Hub _) -> syncState.HubSubscription <- None
+                                | _ -> ()
 
-                                Store.setInternalFromSync
-                                    getDebugInfo
-                                    trigger
-                                    syncState.SyncPaused
-                                    lastValue
-                                    onError
-                                    (ticks, adapterValue)
-                            | None -> ()
+                            callback (
+                                lastValue
+                                |> Option.map snd
+                                |> Option.defaultValue defaultValue
+                            )
+                        //                            Store.setInternalFromSync
+//                                getDebugInfo
+//                                trigger
+//                                syncState.SyncPaused
+//                                lastValue
+//                                onError
+//                                (ticks, adapterValue)
+                        | None -> ()
 
-                        let rec onError () =
-                            syncState.HubSubscription <- None
+                    let rec onError () =
+                        syncState.HubSubscription <- None
 
-                            JS.setTimeout
-                                (fun () ->
-                                    Store.syncSubscribe getDebugInfo syncEngine syncState trigger onError atomPath
-                                    |> Promise.start)
-                                1000
-                            |> ignore
+                        JS.setTimeout
+                            (fun () ->
+                                Store.syncSubscribe getDebugInfo syncEngine syncState trigger onError atomPath
+                                |> Promise.start)
+                            1000
+                        |> ignore
 
-                        Store.syncSubscribe getDebugInfo syncEngine syncState trigger onError atomPath
-                        |> Promise.start)
-                    100
+                    do! Store.syncSubscribe getDebugInfo syncEngine syncState trigger onError atomPath
+                    return None
+                }
 
             let batchPutFromUi (ticks, newValue) =
                 Batcher.batch (
@@ -183,7 +187,7 @@ module AtomWithSync =
                                     .StartsWith "Ping " then
                                     null
                                 else
-                                    $"atomFamily.wrapper.get() wrapper={wrapper} userAtom={userAtom} result={result} {getDebugInfo ()}               ")
+                                    $"Store.atomWithSync. atomFamily.wrapper.get() wrapper={wrapper} userAtom={userAtom} result={result} {getDebugInfo ()}               ")
 
                         Logger.logTrace
                             (fun () ->
@@ -193,7 +197,7 @@ module AtomWithSync =
                                     .StartsWith "Ping " then
                                     null
                                 else
-                                    $"atomFamily.wrapper.get() wrapper={wrapper} userAtom={userAtom} result={result} {getDebugInfo ()}               ")
+                                    $"Store.atomWithSync. atomFamily.wrapper.get() wrapper={wrapper} userAtom={userAtom} result={result} {getDebugInfo ()}               ")
 
                         let userAtomId = Some (userAtom.toString ())
 
@@ -204,13 +208,13 @@ module AtomWithSync =
                             | None ->
                                 Logger.logTrace
                                     (fun () ->
-                                        $"atomFamily.wrapper.get() subscribing wrapper={wrapper} userAtom={userAtom} {getDebugInfo ()}                       ")
+                                        $"Store.atomWithSync. atomFamily.wrapper.get() subscribing wrapper={wrapper} userAtom={userAtom} {getDebugInfo ()}                       ")
 
-                                debouncedSubscribe ()
+                            //                                debouncedSubscribe ()
                             | _ ->
                                 Logger.logTrace
                                     (fun () ->
-                                        $"atomFamily.wrapper.get() skipping subscribe wrapper={wrapper} userAtom={userAtom} {getDebugInfo ()}                           ")
+                                        $"Store.atomWithSync. atomFamily.wrapper.get() skipping subscribe wrapper={wrapper} userAtom={userAtom} {getDebugInfo ()}                           ")
 
                         result)
                     (fun getter setter newValueFn ->
@@ -252,7 +256,7 @@ module AtomWithSync =
 
                                 Logger.logTrace
                                     (fun () ->
-                                        $"<filter> atomFamily.wrapper.set()
+                                        $"<filter> Store.atomWithSync.  atomFamily.wrapper.set()
     wrapper={wrapper} oldAdapterValueMap={oldAdapterValueMap} newValue={newValue} jsTypeof-newValue={jsTypeof newValue}
     adapterValueMapByType={adapterValueMapByType} __x={(newValueOption, gunValue, hubValue)}
     y={unbox newValueOption = unbox gunValue
@@ -267,7 +271,7 @@ module AtomWithSync =
                                    && box gunValue = box hubValue then
                                     Logger.logTrace
                                         (fun () ->
-                                            $"<filter> atomFamily.wrapper.set(). skipped debouncedPut
+                                            $"<filter> Store.atomWithSync. atomFamily.wrapper.set(). skipped debouncedPut
     wrapper={wrapper} oldAdapterValueMap={oldAdapterValueMap} newValue={newValue} jsTypeof-newValue={jsTypeof newValue} {getDebugInfo ()} ")
                                 else
 
@@ -293,17 +297,42 @@ module AtomWithSync =
     adapterValueMapAtom[alias]={(adapterValueMapAtom (syncEngine.GetAlias ()))}
     lastSyncValueByTypeAtom[alias]={(lastSyncValueByTypeAtom (syncEngine.GetAlias ()))} wrapper={wrapper} {getDebugInfo ()}")
 
+            //            if atomKey.Keys
+//               <> (string Guid.Empty |> List.singleton) then
+//                wrapper?onMount <- fun (_setAtom: 'TValue option -> unit) ->
+//                                       debouncedSubscribe ()
+//
+//                                       fun () ->
+//                                           Store.syncUnsubscribe
+//                                               getDebugInfo
+//                                               (syncEngine.GetGunAtomNode ())
+//                                               syncState.GunSubscription
+//                                               (fun () -> syncState.GunSubscription <- None)
+
+            let unsubscribe _subscriptionId =
+                match syncEngine.GetGunAtomNode () with
+                | Some (key, _gunAtomNode) ->
+
+                    Logger.logTrace
+                        (fun () ->
+                            $"Store.atomWithSync. gunAtomNode found. calling off(). (actually skipped) key={key} subscriptionId={_subscriptionId} {getDebugInfo ()} ")
+
+                //                    gunAtomNode.off () |> ignore
+                //                    lastSubscription <- None
+                | None ->
+                    Logger.logTrace
+                        (fun () ->
+                            $"Store.atomWithSync. skipping unsubscribe, no gun atom node. subscriptionId={_subscriptionId} {getDebugInfo ()} ")
+
+
+
+
             if atomKey.Keys
                <> (string Guid.Empty |> List.singleton) then
-                wrapper?onMount <- fun (_setAtom: 'TValue option -> unit) ->
-                                       debouncedSubscribe ()
+                wrapper?onMount <- fun (setAtom: 'TValue -> unit) ->
+                                       syncEngine.Subscribe (subscribe, setAtom)
+                                       fun _ -> syncEngine.Unsubscribe unsubscribe
 
-                                       fun () ->
-                                           Store.syncUnsubscribe
-                                               getDebugInfo
-                                               (syncEngine.GetGunAtomNode ())
-                                               syncState.GunSubscription
-                                               (fun () -> syncState.GunSubscription <- None)
 
             wrapper?init <- defaultValue
 

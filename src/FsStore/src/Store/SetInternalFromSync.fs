@@ -15,14 +15,14 @@ module SetInternalFromSync =
             try
                 Logger.logTrace
                     (fun () ->
-                        $"gun.on() value. start.
+                        $"Store.setInternalFromSync. gun.on() value. start.
     newValue={newValue} jsTypeof-newValue={jsTypeof newValue} lastValue={lastValue} ticks={ticks} {getDebugInfo ()}")
 
                 match syncPaused, lastValue with
                 | true, _ ->
                     Logger.logTrace
                         (fun () ->
-                            $"gun.on() value. skipping. Sync paused.
+                            $"Store.setInternalFromSync. gun.on() value. skipping. Sync paused.
     newValue={newValue} jsTypeof-newValue={jsTypeof newValue} lastValue={lastValue} ticks={ticks} {getDebugInfo ()}")
                 | _, Some (lastValueTicks, lastValue) when
                     match lastValue |> Option.ofObjUnbox, newValue |> Option.ofObjUnbox with
@@ -35,13 +35,13 @@ module SetInternalFromSync =
 
                     Logger.logTrace
                         (fun () ->
-                            $"gun.on() value. skipping.
+                            $"Store.setInternalFromSync. gun.on() value. skipping.
     newValue={newValue} jsTypeof-newValue={jsTypeof newValue} lastValue={lastValue} ticks={ticks} {getDebugInfo ()} ")
                 | _ ->
                     if unbox newValue = JS.undefined then
                         Logger.logTrace
                             (fun () ->
-                                $"gun.on() value. skipping. newValue=undefined
+                                $"Store.setInternalFromSync. gun.on() value. skipping. newValue=undefined
     newValue={newValue} jsTypeof-newValue={jsTypeof newValue} lastValue={lastValue} ticks={ticks} {getDebugInfo ()}")
                     else
                         try
@@ -53,11 +53,12 @@ module SetInternalFromSync =
                                         | _ -> null
 
                                     if string _lastValue = string newValue then
-                                        (Logger.consoleError
-                                            $"should have skipped assign
-            lastValue={lastValue} typeof _lastValue={jsTypeof _lastValue} newValue={newValue} typeof newValue={jsTypeof newValue} ticks={ticks} {getDebugInfo ()}")
+                                        (Logger.logError
+                                            (fun () ->
+                                                $"Store.setInternalFromSync. should have skipped assign
+            lastValue={lastValue} typeof _lastValue={jsTypeof _lastValue} newValue={newValue} typeof newValue={jsTypeof newValue} ticks={ticks} {getDebugInfo ()}"))
 
-                                    $"gun.on() value. triggering. ##
+                                    $"Store.setInternalFromSync. gun.on() value. triggering. ##
             lastValue={lastValue} typeof _lastValue={jsTypeof _lastValue} newValue={newValue} typeof newValue={jsTypeof newValue} ticks={ticks} {getDebugInfo ()}")
 
                             //                        Browser.Dom.window?atomPath <- atomPath
@@ -70,9 +71,9 @@ module SetInternalFromSync =
                             Gun.batchData setAtom (ticks, newValue)
                         with
                         | ex ->
-                            Logger.consoleError ("[exception8]", ex, newValue)
+                            Logger.logError (fun () -> $"Store.setInternalFromSync. ex-inner={ex} newValue={newValue}")
                             raise ex
             with
             | ex ->
-                Logger.consoleError ("[exception1]", ex, newValue)
+                Logger.logError (fun () -> $"Store.setInternalFromSync. ex-outer={ex} newValue={newValue}")
                 onError ()

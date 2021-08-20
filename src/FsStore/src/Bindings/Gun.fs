@@ -279,7 +279,7 @@ module Gun =
                             | None -> return None
                         with
                         | ex ->
-                            Logger.consoleError ("userDecode decrypt exception", ex, data)
+                            Logger.logError (fun () -> $"userDecode decrypt exception. data={data} ex={ex}")
                             return None
                     | _ -> return None
                 }
@@ -294,7 +294,7 @@ module Gun =
                         JS.undefined
                 with
                 | ex ->
-                    Logger.consoleError ("userDecode decode error. ex=", ex, "data=", data, "decrypted=", decrypted)
+                    Logger.logError (fun () -> $"userDecode decode error. ex={ex} data={data} decrypted={decrypted}")
                     None
 
             return decoded
@@ -317,7 +317,9 @@ module Gun =
                 return signed
             with
             | ex ->
-                Logger.consoleError ("[exception4]", ex, value)
+                Logger.logError
+                    (fun () -> $"userEncode exception. raising to caller inside promise... ex={ex} value={value}")
+
                 return raise ex
         }
 
@@ -340,8 +342,8 @@ module Gun =
                             match Dom.window () with
                             | Some window ->
                                 if window?Cypress = null then
-                                    Logger.consoleError
-                                        $"Gun.put error. newValue={newValue} ack={JS.JSON.stringify ack} "
+                                    Logger.logError
+                                        (fun () -> $"Gun.put error. newValue={newValue} ack={JS.JSON.stringify ack} ")
                             | None -> ()
 
                             res false)

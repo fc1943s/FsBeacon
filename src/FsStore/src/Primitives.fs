@@ -39,9 +39,7 @@ module Internal =
         | AtomWithStorageSync
 
     let rec registerAtom (atomType: AtomType) (AtomPath atomPath) (atom: Atom<_>) =
-        Profiling.addCount $"{nameof registerAtom}() {atomPath} {atom} {atomType}"
-
-        Logger.logTrace (fun () -> $"registerAtom atomPath={atomPath} atom={atom} atomType={atomType}")
+        Profiling.addCount $"#Primitives.{nameof registerAtom} {atomPath} {atom} {atomType}"
 
         atomPathMap.[atomPath] <- atom.toString ()
         atomIdMap.[atom.toString ()] <- atomPath
@@ -58,7 +56,7 @@ module Internal =
                 | true, value -> Some (AtomPath value)
                 | _ -> None
 
-        Logger.logDebug (fun () -> $"queryAtomPath atomReference={atomReference} result={result}")
+        Logger.logTrace (fun () -> $"Internal.queryAtomPath atomReference={atomReference} result={result}")
 
         result
 
@@ -70,7 +68,8 @@ module Primitives =
         let atom =
             jotai.atom (
                 (fun () ->
-                    Profiling.addCount $"atom.defaultValue() {atomPath} { (*Json.encodeWithNull*) defaultValue}"
+                    Profiling.addCount
+                        $"#Primitives.atom defaultValue getter {atomPath} { (*Json.encodeWithNull*) defaultValue}"
 
                     defaultValue)
                     ()
@@ -84,12 +83,12 @@ module Primitives =
 
         jotai.atom (
             (fun getter ->
-                Profiling.addCount $"selector atomPath={atomPath}"
+                Profiling.addCount $"#Primitives.selector get {atomPath}"
 
                 getFn getter),
             Some
                 (fun getter setter value ->
-                    Profiling.addCount $"selector set atomPath={atomPath}"
+                    Profiling.addCount $"#Primitives.selector set {atomPath}"
 
                     let newValue = value
                     //                        match jsTypeof value with
@@ -112,7 +111,7 @@ module Primitives =
         jotaiUtils.selectAtom
             atom
             (fun value ->
-                Profiling.addCount $"selectAtom atomPath={atomPath}"
+                Profiling.addCount $"#Primitives.selectAtom {atomPath}"
                 selector value)
             JS.undefined
 
@@ -126,13 +125,13 @@ module Primitives =
         jotai.atom (
             (fun getter ->
                 promise {
-                    Profiling.addCount $"asyncSelector atomPath={atomPath}"
+                    Profiling.addCount $"#Primitives.asyncSelector get {atomPath}"
                     return! getFn getter
                 }),
             Some
                 (fun getter setter newValue ->
                     promise {
-                        Profiling.addCount $"asyncSelector set atomPath={atomPath}"
+                        Profiling.addCount $"#Primitives.asyncSelector set {atomPath}"
                         do! setFn getter setter newValue
                     })
         )
@@ -187,7 +186,11 @@ module PrimitivesMagic =
                 setFn
 
         let inline readSelector<'TValue> storeRoot name (getFn: GetFn -> 'TValue) =
-            selector storeRoot name getFn (fun _ _ _ -> failwith $"readSelector {storeRoot}/{name} is read only.")
+            selector
+                storeRoot
+                name
+                getFn
+                (fun _ _ _ -> failwith $"Primitives.readSelector {storeRoot}/{name} is read only.")
 
         let inline selectorFamily<'TKey, 'TValue>
             storeRoot
@@ -220,7 +223,7 @@ module PrimitivesMagic =
                 None
                 name
                 getFn
-                (fun _ _ _ -> failwith $"readSelectorFamily {storeRoot}/{name} is read only.")
+                (fun _ _ _ -> failwith $"Primitives.readSelectorFamily {storeRoot}/{name} is read only.")
 
         let inline value<'TValue> (getter: GetFn) (atom: Atom<'TValue>) : 'TValue = (getter (unbox atom)) :?> 'TValue
 
@@ -308,7 +311,8 @@ module PrimitivesMagic =
                 storeRoot
                 name
                 getFn
-                (fun _ _ _newValue -> promise { failwith $"asyncReadSelector {storeRoot}/{name} is read only." })
+                (fun _ _ _newValue ->
+                    promise { failwith $"Primitives.asyncReadSelector {storeRoot}/{name} is read only." })
 
 
         let inline asyncSelectorFamily<'TKey, 'TValue>
@@ -346,4 +350,5 @@ module PrimitivesMagic =
                 keyIdentifier
                 getFn
                 (fun _key _ _ _newValue ->
-                    promise { failwith $"asyncReadSelectorFamily {storeRoot}/{collection}/{name} is read only." })
+                    promise {
+                        failwith $"Primitives.asyncReadSelectorFamily {storeRoot}/{collection}/{name} is read only." })

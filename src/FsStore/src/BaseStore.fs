@@ -43,11 +43,11 @@ module BaseStore =
 
         let inline newHashedDisposable (ticks: TicksGuid) =
             promise {
-                Logger.logDebug (fun () -> $"emptyDisposableFromTrigger() ticks={ticks}")
+                Logger.logDebug (fun () -> $"BaseStore.newHashedDisposable constructor ticks={ticks}")
 
                 return
                     Object.newDisposable
-                        (fun () -> Logger.logDebug (fun () -> $"emptyDisposableFromTrigger Dispose. ticks={ticks}"))
+                        (fun () -> Logger.logDebug (fun () -> $"BaseStore.newHashedDisposable disposing... ticks={ticks}"))
             }
 
         let inline splitAtom atom = jotaiUtils.splitAtom atom
@@ -117,10 +117,6 @@ module BaseStore =
             member this.SyncPaused
                 with get () = syncPaused
                 and set value = syncPaused <- value
-
-
-
-
 
 
         let inline groupAdapterValueMapByType adapterValueMap =

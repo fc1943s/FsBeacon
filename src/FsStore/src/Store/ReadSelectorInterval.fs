@@ -44,17 +44,17 @@ module ReadSelectorInterval =
 
                         Logger.logTrace
                             (fun () ->
-                                $"readSelectorInterval.wrapper.get() cache={cache |> Option.ofObjUnbox |> Option.isSome} {getDebugInfo ()}")
+                                $"Store.readSelectorInterval. wrapper.get() cache={cache |> Option.ofObjUnbox |> Option.isSome} {getDebugInfo ()}")
 
                         cache)
 
             let mutable lastValue = None
 
             let subscribe () =
-                Logger.logTrace (fun () -> $"readSelectorInterval.onMount() {getDebugInfo ()}")
+                Logger.logTrace (fun () -> $"Store.readSelectorInterval. onMount() {getDebugInfo ()}")
 
                 let fn () =
-                    Logger.logTrace (fun () -> $"#1 readSelectorInterval.timeout {getDebugInfo ()}")
+                    Logger.logTrace (fun () -> $"Store.readSelectorInterval. #1 timeout {getDebugInfo ()}")
 
                     match lastAccessors with
                     | Some (getter, setter) when timeout >= 0 ->
@@ -65,9 +65,9 @@ module ReadSelectorInterval =
                            |> not then
                             Logger.logTrace
                                 (fun () ->
-                                    $"#2 readSelectorInterval.timeout selectorValue={selectorValue
-                                                                                     |> Option.ofObjUnbox
-                                                                                     |> Option.isSome} {getDebugInfo ()}")
+                                    $"Store.readSelectorInterval. #2 timeout selectorValue={selectorValue
+                                                                                            |> Option.ofObjUnbox
+                                                                                            |> Option.isSome} {getDebugInfo ()}")
 
                             Store.set setter cache selectorValue
                             lastValue <- Some selectorValue
@@ -77,7 +77,7 @@ module ReadSelectorInterval =
                 timeout <- JS.setInterval fn interval
 
             let unsubscribe () =
-                Logger.logTrace (fun () -> $"readSelectorInterval.onUnmount() {getDebugInfo ()}")
+                Logger.logTrace (fun () -> $"Store.readSelectorInterval. onUnmount() {getDebugInfo ()}")
 
                 if timeout >= 0 then JS.clearTimeout timeout
                 timeout <- -1

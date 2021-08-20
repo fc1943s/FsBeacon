@@ -17,7 +17,9 @@ module Content =
         React.suspense (
             [
                 Ui.flex
-                    (fun x -> x.flex <- "1")
+                    (fun x ->
+                        x.flex <- "1"
+                        x.flexDirection <- "column")
                     [
                         if Browser.Dom.window.location.port = "9762" then
                             HostComponent.HostComponent ()
