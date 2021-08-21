@@ -11,59 +11,55 @@ if (cluster.isMaster) {
 
 console.log('argv', process.argv);
 
-if (process.argv[2] !== "--root-path") {
+const config = (() => {
+  const port = process.env.PORT || "8765";
+  const rootPath = process.argv[3] || process.env.ROOT_PATH;
+  const domain = process.argv[5] || process.env.FSBEACON_DOMAIN;
+  const https = Boolean(process.env.HTTPS && domain);
+  return { port, rootPath, domain, https }
+})();
+
+console.log("config", JSON.stringify(config, null, 4));
+
+if (!config.rootPath || config.rootPath === "%ROOT_PATH%") {
   throw new Error('Invalid --root-path');
 }
-
-const rootPath = process.argv[3] || process.env.ROOT_PATH;
-if (!rootPath || rootPath === "%ROOT_PATH%") {
-  throw new Error('Invalid --root-path');
-}
-
-if (process.argv[4] !== "--domain") {
+if (!config.domain || config.domain === "%FSBEACON_DOMAIN%") {
   throw new Error('Invalid --domain');
 }
-
-const domain = process.argv[5] || process.env.FSBEACON_DOMAIN;
-if (!domain || domain === "%FSBEACON_DOMAIN%") {
-  throw new Error('Invalid --domain');
+if (!fs.existsSync(config.rootPath)) {
+  fs.mkdirSync(config.rootPath);
 }
 
-if (!fs.existsSync(rootPath)) {
-  fs.mkdirSync(rootPath);
-}
-
-const config = {
-  port: process.env.PORT || "8765"
-};
 const Gun = require('gun');
 
-if (process.env.HTTPS && domain) {
-  config.cert = fs.readFileSync('./ssl/' + domain + '.pem');
-  config.key = fs.readFileSync('./ssl/' + domain + '-key.pem');
-  config.server = require('https').createServer(config, Gun.serve(__dirname));
-  // config.server.configure(function () {
-  //   config.server.use(function(req, res, next) {
-  //     res.header("Access-Control-Allow-Origin", "https://localhost/49212");
-  //     res.header("Access-Control-Allow-Origin", "https://localhost/49222");
-  //     res.header("Access-Control-Allow-Headers", "X-Requested-With");
-  //     next();
-  //   });
-  // });
-} else {
-  config.server = require('http').createServer(Gun.serve(__dirname));
-}
+const server = config.https
+  ? require('https').createServer(
+    {
+      cert: fs.readFileSync(`./ssl/${config.domain}.pem`),
+      key: fs.readFileSync(`./ssl/${config.domain}-key.pem`),
+    },
+    Gun.serve(__dirname)
+  )
+  : require('http').createServer(Gun.serve(__dirname))
+
+// config.server.configure(function () {
+//   config.server.use(function(req, res, next) {
+//     res.header("Access-Control-Allow-Origin", "https://localhost/49212");
+//     res.header("Access-Control-Allow-Origin", "https://localhost/49222");
+//     res.header("Access-Control-Allow-Headers", "X-Requested-With");
+//     next();
+//   });
+// });
 
 
 const gun = Gun({
-  web: config.server.listen(config.port),
+  web: server.listen(config.port),
   // stats: false,
-  file: rootPath
+  file: config.rootPath
 });
-console.log('Relay peer started on port ' + config.port + ' with /gun. ' +
-  ' domain=' + domain +
-  ' rootPath=' + rootPath +
-  ' path.resolve(rootPath)=' + path.resolve(rootPath) +
-  ' https: ' + Boolean(process.env.HTTPS));
+
+console.log(`Relay peer started. URL=/gun
+path.resolve(rootPath)=${path.resolve(config.rootPath)} `);
 
 module.exports = gun;

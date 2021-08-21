@@ -6,12 +6,12 @@
   "author": "fc1943s",
   "private": true,
   "scripts": {
-    "ssl": "([ -d ssl ] || mkdir ssl) && echo 1-2 && mkcert -install && echo 1-3 && mkcert --cert-file=./ssl/%FSBEACON_DOMAIN%.pem --key-file=./ssl/%FSBEACON_DOMAIN%-key.pem %FSBEACON_DOMAIN% && echo 1-4",
-    "start": "echo 0-1 && yarn install && echo 0-2 && yarn ssl && echo 0-3 && node server.js --root-path %ROOT_PATH% --domain %FSBEACON_DOMAIN%",
-    "start-ci": "cross-env HTTPS=true yarn start",
-    "start-prod": "cross-env HTTPS=true FSBEACON_DOMAIN=%FSBEACON_GUN_PEER_CONTAINER_ID_1%.eastus.azurecontainer.io yarn start",
-    "start-dev": "cross-env HTTPS=true FSBEACON_DOMAIN=localhost ROOT_PATH=%ROOT_PATH% echo 0- && yarn start",
-    "start-dev-local": "cross-env ROOT_PATH=./radata yarn start-dev"
+    "ssl": "([ -d ssl ] || mkdir ssl) && mkcert -install && mkcert --cert-file=./ssl/%FSBEACON_DOMAIN%.pem --key-file=./ssl/%FSBEACON_DOMAIN%-key.pem %FSBEACON_DOMAIN%",
+    "start": "cross-env-shell \"yarn install && yarn ssl && node server.js",
+    "start-ci": "cross-env-shell HTTPS=true \"yarn start\"",
+    "start-prod": "cross-env-shell HTTPS=true FSBEACON_DOMAIN=$FSBEACON_GUN_PEER_CONTAINER_ID_1.eastus.azurecontainer.io \"yarn start\"",
+    "start-dev": "cross-env-shell HTTPS=true FSBEACON_DOMAIN=localhost ROOT_PATH=$ROOT_PATH \"yarn start\"",
+    "start-dev-local": "cross-env-shell ROOT_PATH=./radata \"yarn start-dev\""
   },
   "dependencies": {
     "gun": "amark/gun.git#master"

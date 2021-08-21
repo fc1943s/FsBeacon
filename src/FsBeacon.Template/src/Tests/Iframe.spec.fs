@@ -88,17 +88,7 @@ module Iframe =
         (fun () ->
             let homeUrl = "https://localhost:9762"
 
-            before
-                (fun () ->
-                    let timeout = 3000
-
-                    Cy.wait timeout
-
-                    promise {
-                        do! Promise.sleep timeout
-                        Cy.visit homeUrl
-                    }
-                    |> Promise.start)
+            before (fun () -> Cy.visit homeUrl)
 
             it
                 "all"
