@@ -82,7 +82,7 @@ module BaseStore =
             | AdapterUnsubscribe
             | AdapterDisable
 
-        type AdapterValueMap2<'T> = Map<TicksGuid, AdapterValue<'T>>
+        let adapterValueMap = Map<TicksGuid, AdapterValue<'T>>
         type Z = Map<AdapterType, TicksGuid * Gun.EncryptedSignedValue> //selector, defaultValue
         type R = TicksGuid -> Gun.EncryptedSignedValue
         type F = Gun.EncryptedSignedValue

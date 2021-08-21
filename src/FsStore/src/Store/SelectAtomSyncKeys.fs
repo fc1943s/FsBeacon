@@ -135,86 +135,81 @@ module SelectAtomSyncKeys =
                     setAtom
                     data
 
-            let subscribe callback _subscriptionId =
+            let subscribe setAtom subscriptionId : JS.Promise<IDisposable option> =
                 promise {
                     match syncEngine.GetGunAtomNode (), lastSubscription with
                     | _, Some _ ->
                         Logger.logTrace
                             (fun () ->
                                 $"Store.selectAtomSyncKeys subscribe. skipping subscribe, lastSubscription is set. key={key} {getDebugInfo ()} ")
-                    | Some (key, gunAtomNode), None ->
-                        Logger.logTrace
-                            (fun () ->
-                                $"Store.selectAtomSyncKeys subscribe. subscribing. atomPath={atomPath} key={key} {getDebugInfo ()} ")
 
+                        return None
+                    | Some (key, gunAtomNode), None ->
                         let batchKeysAtom (ticks, value) kind =
                             batchKeys
                                 (fun value ->
-                                    callback value
+                                    setAtom value
                                     newHashedDisposable ticks)
                                 (ticks, value)
                                 kind
 
-                        match syncEngine.GetGunOptions () with
-                        | Some (GunOptions.Sync _) ->
-                            gunAtomNode
-                                .map()
-                                .on (fun data (Gun.GunNodeSlice gunKey) ->
-                                    promise {
-                                        Logger.logTrace
-                                            (fun () ->
-                                                $"Store.selectAtomSyncKeys gun.on() HUB filter fetching/subscribing] @@@ gunAtomNode.map().on result
+                        let gunSubscription =
+                            match syncEngine.GetGunOptions () with
+                            | Some (GunOptions.Sync _) ->
+                                gunAtomNode
+                                    .map()
+                                    .on (fun data (Gun.GunNodeSlice gunKey) ->
+                                        promise {
+                                            Logger.logTrace
+                                                (fun () ->
+                                                    $"Store.selectAtomSyncKeys subscribe. gun.map().on() result (inside disposable)
                                           data={data} typeof data={jsTypeof data} gunKey={gunKey} typeof gunKey={jsTypeof gunKey}
                                           atomPath={atomPath} syncEngine.atomPath={syncEngine.GetAtomPath ()} key={key} {getDebugInfo ()} ")
 
-                                        match data with
-                                        | Gun.GunValue.EncryptedSignedValue (Gun.EncryptedSignedValue (String.Valid _)) ->
-                                            let newValue =
-                                                [|
-                                                    onFormat gunKey
-                                                |]
+                                            match data with
+                                            | Gun.GunValue.EncryptedSignedValue (Gun.EncryptedSignedValue (String.Valid _)) ->
+                                                let newValue =
+                                                    [|
+                                                        onFormat gunKey
+                                                    |]
 
 
-                                            batchKeysAtom (Guid.newTicksGuid (), newValue) BatchKind.Union
-                                        | _ -> ()
-                                    })
+                                                batchKeysAtom (Guid.newTicksGuid (), newValue) BatchKind.Union
+                                            | _ -> eprintfn $"invalid gun.map().on() data={data}"
+                                        })
 
-                            //                        gunAtomNode.on
-                            //                            (fun data _key ->
-                            //                                let result =
-                            //                                    JS.Constructors.Object.entries data
-                            //                                    |> unbox<(string * obj) []>
-                            //                                    |> Array.filter
-                            //                                        (fun (guid, value) ->
-                            //                                            guid.Length = 36
-                            //                                            && guid <> string Guid.Empty
-                            //                                            && value <> null)
-                            //                                    |> Array.map fst
-                            //
-                            //                                if result.Length > 0 then
-                            //                                    setData result
-                            //                                else
-                            //                                    Dom.loggetLogger().Debug(fun () -> $"@@ atomKeys gun.on() API filter fetching/subscribing] @@@
-                            //                                    skipping. result.Length=0
-                            //                                    atomPath={atomPath} lastAtomPath={lastAtomPath} {key}")
-                            //                                    )
+                                //                        gunAtomNode.on
+                                //                            (fun data _key ->
+                                //                                let result =
+                                //                                    JS.Constructors.Object.entries data
+                                //                                    |> unbox<(string * obj) []>
+                                //                                    |> Array.filter
+                                //                                        (fun (guid, value) ->
+                                //                                            guid.Length = 36
+                                //                                            && guid <> string Guid.Empty
+                                //                                            && value <> null)
+                                //                                    |> Array.map fst
+                                //
+                                //                                if result.Length > 0 then
+                                //                                    setData result
+                                //                                else
+                                //                                    Dom.loggetLogger().Debug(fun () -> $"@@ atomKeys gun.on() API filter fetching/subscribing] @@@
+                                //                                    skipping. result.Length=0
+                                //                                    atomPath={atomPath} lastAtomPath={lastAtomPath} {key}")
+                                //                                    )
 
-                            lastSubscription <- Some DateTime.Now.Ticks
-                        | _ ->
-                            Logger.logTrace
-                                (fun () ->
-                                    $"Store.selectAtomSyncKeys gun.on() HUB filter fetching/subscribing] @@@ gunAtomNode.map().on skip.
-                                      syncEngine.GetGunOptions() not in sync key={key} {getDebugInfo ()} ")
+                                lastSubscription <- Some DateTime.Now.Ticks
+                                Some ()
+                            | _ ->
+                                Logger.logTrace
+                                    (fun () ->
+                                        $"Store.selectAtomSyncKeys subscribe. gun.map().on() skipped. gun sync options disabled. (inside disposable) key={key} {getDebugInfo ()} ")
 
-                        Logger.logTrace
-                            (fun () ->
-                                $"Store.selectAtomSyncKeys gun.on() HUB filter fetching/subscribing] @@@
-                                atomPath={atomPath} syncEngine.atomPath={syncEngine.GetAtomPath ()} key={key} {getDebugInfo ()} ")
+                                None
 
-                        //                        (db?data?find {| selector = {| key = atomPath |} |})?``$``?subscribe (fun items ->
-                        match syncEngine.GetAtomPath (), syncEngine.GetHub (), syncEngine.GetAlias () with
-                        | Some (AtomPath atomPath), Some hub, Some (Gun.Alias alias) ->
-                            promise {
+                        let hubSubscription =
+                            match syncEngine.GetAtomPath (), syncEngine.GetHub (), syncEngine.GetAlias () with
+                            | Some (AtomPath atomPath), Some hub, Some (Gun.Alias alias) ->
                                 try
                                     let storeRoot, collection =
                                         match atomPath |> String.split "/" |> Array.toList with
@@ -231,12 +226,14 @@ module SelectAtomSyncKeys =
                                         | true, _sub ->
                                             Logger.logError
                                                 (fun () -> $"Store.selectAtomSyncKeys sub already present key={key}")
+
+                                            None
                                         | _ ->
                                             let handle items =
                                                 if items |> Array.isEmpty |> not then
                                                     Logger.logTrace
                                                         (fun () ->
-                                                            $"Store.selectAtomSyncKeys gun.on() HUB filter fetching/subscribing] @@@
+                                                            $"Store.selectAtomSyncKeys subscribe. hub data received (inside disposable)
                                                                           setting keys locally. items.Length={items.Length}
                                                                           atomPath={atomPath} syncEngine.atomPath={syncEngine.GetAtomPath ()} key={key} {getDebugInfo ()} ")
 
@@ -246,8 +243,7 @@ module SelectAtomSyncKeys =
                                                 else
                                                     Logger.logTrace
                                                         (fun () ->
-                                                            $"Store.selectAtomSyncKeys atomKeys gun.on() HUB filter fetching/subscribing] @@@
-                                                                          skipping. items.Length=0
+                                                            $"Store.selectAtomSyncKeys subscribe. skipping key batch. items.Length=0
                                                                           atomPath={atomPath} syncEngine.atomPath={syncEngine.GetAtomPath ()} key={key} {getDebugInfo ()} ")
 
 
@@ -280,36 +276,74 @@ module SelectAtomSyncKeys =
                                                 (fun _ex ->
                                                     Selectors.Hub.hubSubscriptionMap.Remove collectionPath
                                                     |> ignore)
+
+                                            Some ()
                                     | _ ->
                                         Logger.logError
                                             (fun () ->
                                                 $"Store.selectAtomSyncKeys #123561 invalid atom path atomPath={atomPath}")
+
+                                        None
                                 with
                                 | ex ->
                                     Logger.logError
                                         (fun () -> $"Store.selectAtomSyncKeys hub.filter, error={ex.Message}")
-                            }
-                            |> Promise.start
 
-                        //                        (collection?find ())?``$``?subscribe (fun items ->
-                        //                            getLogger().Debug
-                        //                                (fun () ->
-                        //                                    $"@@ [wrapper.on() RX KEYS subscribe]
-                        //                                    atomPath={atomPath}
-                        //                                    items={JS.JSON.stringify items}
-                        //                                            {baseInfo ()}
-                        //                                         "))
-                        | _ ->
-                            Logger.logTrace
-                                (fun () ->
-                                    $"Store.selectAtomSyncKeys [wrapper.on() RX KEYS subscribe]  skipping. {getDebugInfo ()}")
+                                    None
+                            | _ ->
+                                Logger.logTrace
+                                    (fun () ->
+                                        $"Store.selectAtomSyncKeys subscribe. all skipped. sync options disabled. (inside disposable) key={key} {getDebugInfo ()}")
 
+                                None
+
+                        return
+                            match gunSubscription with
+                            | Some () ->
+                                Object.newDisposable
+                                    (fun () ->
+                                        promise {
+                                            Logger.logDebug
+                                                (fun () ->
+                                                    $"Store.selectAtomSyncKeys subscribe. returning disposable... subscriptionId={subscriptionId} atomPath={atomPath} key={key} {getDebugInfo ()} ")
+
+
+
+                                        //                        (db?data?find {| selector = {| key = atomPath |} |})?``$``?subscribe (fun items ->
+
+                                        //                        (collection?find ())?``$``?subscribe (fun items ->
+                                        //                            getLogger().Debug
+                                        //                                (fun () ->
+                                        //                                    $"@@ [wrapper.on() RX KEYS subscribe]
+                                        //                                    atomPath={atomPath}
+                                        //                                    items={JS.JSON.stringify items}
+                                        //                                            {baseInfo ()}
+                                        //                                         "))
+
+                                        }
+                                        |> Promise.start)
+                                |> Some
+                            | None -> None
                     | None, _ ->
                         Logger.logTrace
                             (fun () ->
-                                $"Store.selectAtomSyncKeys [atomKeys gun.on() subscribing] skipping subscribe, no gun atom node. {getDebugInfo ()}")
+                                $"Store.selectAtomSyncKeys subscribe. skipping, no gun atom node. {getDebugInfo ()}")
 
-                    return None
+                        return None
+
+
+
+                //                        (db?data?find {| selector = {| key = atomPath |} |})?``$``?subscribe (fun items ->
+
+                //                        (collection?find ())?``$``?subscribe (fun items ->
+                //                            getLogger().Debug
+                //                                (fun () ->
+                //                                    $"@@ [wrapper.on() RX KEYS subscribe]
+                //                                    atomPath={atomPath}
+                //                                    items={JS.JSON.stringify items}
+                //                                            {baseInfo ()}
+                //                                         "))
+
                 }
 
             let unsubscribe _subscriptionId =

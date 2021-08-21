@@ -18,6 +18,9 @@ open FsStore.Bindings.Jotai
 [<AutoOpen>]
 module AtomWithSync =
     module Store =
+        let inline atomWithReducer<'TKey, 'TValue> atomkey (defaultValue: 'TValue) =
+            ()
+
         let inline atomWithSync<'TKey, 'TValue> atomKey (defaultValue: 'TValue) =
             let mutable lastUserAtomId = None
 
@@ -88,7 +91,7 @@ module AtomWithSync =
                     Logger.logDebug
                         (fun () -> $"Store.atomWithSync .syncTrigger. skipped. no accessors. {getDebugInfo ()}")
 
-            let subscribe (callback: 'TValue -> unit) (_subscriptionId: SubscriptionId) =
+            let subscribe (setAtom: 'TValue -> unit) (subscriptionId: SubscriptionId) =
                 promise {
                     let trigger (ticks, adapterValue: AdapterValue<'TValue> option) =
                         match syncState.AdapterValueMapByType with
@@ -119,18 +122,28 @@ module AtomWithSync =
                                 | Some (AdapterValue.Hub _) -> syncState.HubSubscription <- None
                                 | _ -> ()
 
-                            callback (
-                                lastValue
-                                |> Option.map snd
-                                |> Option.defaultValue defaultValue
-                            )
-                        //                            Store.setInternalFromSync
-//                                getDebugInfo
-//                                trigger
-//                                syncState.SyncPaused
+                            //                            callback (
 //                                lastValue
-//                                onError
-//                                (ticks, adapterValue)
+//                                |> Option.map snd
+//                                |> Option.defaultValue defaultValue
+//                            )
+//                            callback (
+//                                lastValue
+//                                |> Option.map snd
+//                                |> Option.defaultValue defaultValue
+//                            )
+
+                            Logger.logDebug
+                                (fun () ->
+                                    $"Store.atomWithSync. subscribe on trigger. @@@ should call setAtom? {getDebugInfo ()}")
+
+                            Store.setInternalFromSync
+                                getDebugInfo
+                                trigger
+                                syncState.SyncPaused
+                                lastValue
+                                onError
+                                (ticks, adapterValue)
                         | None -> ()
 
                     let rec onError () =
@@ -144,7 +157,14 @@ module AtomWithSync =
                         |> ignore
 
                     do! Store.syncSubscribe getDebugInfo syncEngine syncState trigger onError atomPath
-                    return None
+
+                    return
+                        Object.newDisposable
+                            (fun () ->
+                                Logger.logDebug
+                                    (fun () ->
+                                        $"AtomWithSync.subscribe. newDisposable. subscriptionId={subscriptionId} {getDebugInfo ()} "))
+                        |> Some
                 }
 
             let batchPutFromUi (ticks, newValue) =

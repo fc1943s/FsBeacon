@@ -351,7 +351,6 @@ module Component =
                 x.alignItems <- "flex-start"
                 x.fontSize <- "11px"
                 x.maxWidth <- "100vw"
-                x.padding <- "15px"
                 x.flex <- "1")
             [
                 Ui.stack
@@ -362,7 +361,6 @@ module Component =
                         SignInButton ()
 
                         AddFileButton ()
-
                     ]
 
                 HrefIndicator ()
@@ -376,9 +374,7 @@ module Component =
 
                 Files ()
 
-                //                SettingsIndicator ()
-
-                DebugPanel.DebugPanel DebugPanel.DebugPanelDisplay.Inline
+            //                SettingsIndicator ()
             ]
 
 
@@ -422,7 +418,6 @@ module Component =
 
         React.fragment [
             if not syncHydrateCompleted then
-                HydrateCoreContainer ()
                 if syncHydrateStarted then HydrateSyncContainer ()
         ]
 
@@ -434,11 +429,18 @@ module Component =
 
         let mounted = Store.useValue State.Atoms.mounted
 
-        React.fragment [
-            MountButton ()
-            if mounted then
-                HydrateContainer ()
-                MessagesListener ()
-                if signInStarted then SignInContainer ()
-                InnerComponent ()
-        ]
+        Ui.stack
+            (fun x -> x.padding <- "15px")
+            [
+                HydrateCoreContainer ()
+
+                MountButton ()
+
+                if mounted then
+                    HydrateContainer ()
+                    MessagesListener ()
+                    if signInStarted then SignInContainer ()
+                    InnerComponent ()
+
+                DebugPanel.DebugPanel DebugPanel.DebugPanelDisplay.Inline
+            ]

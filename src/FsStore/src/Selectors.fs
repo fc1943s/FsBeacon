@@ -208,6 +208,7 @@ lastValue={lastValue}
                 FsStore.root
                 (nameof alias)
                 (fun getter ->
+//                    Store.value getter asyncAlias
                     let logger = Store.value getter logger
                     let _gunTrigger = Store.value getter Atoms.gunTrigger
                     let gunUser = Store.value getter Gun.gunUser
