@@ -18,7 +18,17 @@ module Files =
         (fun () ->
             let homeUrl = "https://localhost:49212"
 
-            before (fun () -> Cy.visit homeUrl)
+            before
+                (fun () ->
+                    let timeout = 3000
+
+                    Cy.wait timeout
+
+                    promise {
+                        do! Promise.sleep timeout
+                        Cy.visit homeUrl
+                    }
+                    |> Promise.start)
 
             it
                 "all"

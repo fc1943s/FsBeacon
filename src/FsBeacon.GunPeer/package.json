@@ -6,7 +6,7 @@
   "author": "fc1943s",
   "private": true,
   "scripts": {
-    "ssl": "([ -d ssl ] || mkdir ssl) && mkcert -install && mkcert --cert-file=./ssl/%FSBEACON_DOMAIN%.pem --key-file=./ssl/%FSBEACON_DOMAIN%-key.pem %FSBEACON_DOMAIN%",
+    "ssl": "([ -d ssl ] || mkdir ssl) && cross-env FSBEACON_DOMAIN=%FSBEACON_DOMAIN% mkcert -install && mkcert --cert-file=./ssl/%FSBEACON_DOMAIN%.pem --key-file=./ssl/%FSBEACON_DOMAIN%-key.pem %FSBEACON_DOMAIN%",
     "start": "yarn install && yarn ssl && node server.js --root-path %ROOT_PATH% --domain %FSBEACON_DOMAIN%",
     "start-ci": "cross-env HTTPS=true yarn start",
     "start-prod": "cross-env HTTPS=true FSBEACON_DOMAIN=%FSBEACON_GUN_PEER_CONTAINER_ID_1%.eastus.azurecontainer.io yarn start",
