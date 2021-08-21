@@ -196,42 +196,28 @@ module Files =
                     Cy2.clickText "clear logs"
                     Cy2.clickText "add file"
 
-                    Cy2.waitForRegex
+                    [
                         """"<0> #Primitives.registerAtom FsStore/File/.+/chunkCount atom129 AtomWithSync": "1","""
-
-                    Cy2.waitForRegex """"<1> #Primitives.selector set FsStore/File/.+/chunkCount": "1","""
-                    Cy2.waitForRegex """"<2> #Primitives.selector get FsStore/gunAtomNode": "11","""
-                    Cy2.waitForRegex """"<3> FsStore/File/.+/chunkCount set": "1","""
-
-                    Cy2.waitForRegex
+                        """"<1> #Primitives.selector set FsStore/File/.+/chunkCount": "1","""
+                        """"<2> #Primitives.selector get FsStore/gunAtomNode": "11","""
+                        """"<3> FsStore/File/.+/chunkCount set": "1","""
                         """"<4> #Primitives.registerAtom FsStore/File/.+/0/chunk atom135 AtomWithSync": "1","""
-
-                    Cy2.waitForRegex """"<5> #Primitives.selector set FsStore/File/.+/0/chunk": "1","""
-                    Cy2.waitForRegex """"<6> FsStore/File/.+/0/chunk set": "1","""
-
-                    Cy2.waitForRegex
+                        """"<5> #Primitives.selector set FsStore/File/.+/0/chunk": "1","""
+                        """"<6> FsStore/File/.+/0/chunk set": "1","""
                         """"<7> #Primitives.registerAtom FsStore/File/.+/1/chunk atom141 AtomWithSync": "1","""
-
-                    Cy2.waitForRegex """"<8> #Primitives.selector set FsStore/File/.+/1/chunk": "1","""
-                    Cy2.waitForRegex """"<9> FsStore/File/.+/1/chunk set": "1","""
-
-                    Cy2.waitForRegex
+                        """"<8> #Primitives.selector set FsStore/File/.+/1/chunk": "1","""
+                        """"<9> FsStore/File/.+/1/chunk set": "1","""
                         """"<10> #Primitives.registerAtom FsStore/File/.+/2/chunk atom147 AtomWithSync": "1","""
-
-                    Cy2.waitForRegex """"<11> #Primitives.selector set FsStore/File/.+/2/chunk": "1","""
-                    Cy2.waitForRegex """"<12> FsStore/File/.+/2/chunk set": "1","""
-
-                    Cy2.waitForRegex
+                        """"<11> #Primitives.selector set FsStore/File/.+/2/chunk": "1","""
+                        """"<12> FsStore/File/.+/2/chunk set": "1","""
                         """"<13> #Primitives.registerAtom FsStore/File/.+/3/chunk atom153 AtomWithSync": "1","""
-
-                    Cy2.waitForRegex """"<14> #Primitives.selector set FsStore/File/.+/3/chunk": "1","""
-                    Cy2.waitForRegex """"<15> FsStore/File/.+/3/chunk set": "1","""
-
-                    Cy2.waitForRegex
+                        """"<14> #Primitives.selector set FsStore/File/.+/3/chunk": "1","""
+                        """"<15> FsStore/File/.+/3/chunk set": "1","""
                         """"<16> #Primitives.registerAtom FsStore/File/.+/pub atom159 AtomWithSync": "1","""
-
-                    Cy2.waitForRegex """"<17> #Primitives.selector set FsStore/File/.+/pub": "1","""
-                    Cy2.waitForRegex """"<18> FsStore/File/.+/pub set": "1"[^,]"""
+                        """"<17> #Primitives.selector set FsStore/File/.+/pub": "1","""
+                        """"<18> FsStore/File/.+/pub set": "1"[^,]"""
+                    ]
+                    |> List.iter Cy2.waitForRegex
 
                     Cy2.clickText "clear logs"
                     Cy2.clickText "unmount"

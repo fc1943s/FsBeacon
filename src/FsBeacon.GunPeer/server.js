@@ -25,7 +25,7 @@ if (process.argv[4] !== "--domain") {
 }
 
 const domain = process.argv[5] || process.env.FSBEACON_DOMAIN;
-if (!domain || rootPath === "%FSBEACON_DOMAIN%") {
+if (!domain || domain === "%FSBEACON_DOMAIN%") {
   throw new Error('Invalid --domain');
 }
 
