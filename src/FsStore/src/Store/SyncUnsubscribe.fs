@@ -23,7 +23,7 @@ module SyncUnsubscribe =
 
                     Logger.logTrace
                         (fun () ->
-                            $"Store.syncUnsubscribe. {key} (######## actually skipped) gunAtomNode={gunAtomNode} {getDebugInfo ()} ")
+                            $"Store.syncUnsubscribe. {key} gunAtomNode={gunAtomNode} {getDebugInfo ()} ")
 
                     gunAtomNode.off () |> ignore
                     success ()

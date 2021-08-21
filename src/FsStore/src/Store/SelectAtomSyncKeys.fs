@@ -293,7 +293,7 @@ module SelectAtomSyncKeys =
                             | _ ->
                                 Logger.logTrace
                                     (fun () ->
-                                        $"Store.selectAtomSyncKeys subscribe. all skipped. sync options disabled. (inside disposable) key={key} {getDebugInfo ()}")
+                                        $"Store.selectAtomSyncKeys subscribe. hub skipped. hub sync options disabled. (inside disposable) key={key} {getDebugInfo ()}")
 
                                 None
 
@@ -348,13 +348,13 @@ module SelectAtomSyncKeys =
 
             let unsubscribe _subscriptionId =
                 match syncEngine.GetGunAtomNode () with
-                | Some (key, _gunAtomNode) ->
+                | Some (key, gunAtomNode) ->
 
                     Logger.logTrace
                         (fun () ->
-                            $"Store.selectAtomSyncKeys. gunAtomNode found. calling off(). (actually skipped) key={key} subscriptionId={_subscriptionId} {getDebugInfo ()} ")
+                            $"Store.selectAtomSyncKeys. gunAtomNode found. calling off(). key={key} subscriptionId={_subscriptionId} {getDebugInfo ()} ")
 
-                //                    gunAtomNode.off () |> ignore
+                    gunAtomNode.off () |> ignore
                 //                    lastSubscription <- None
                 | None ->
                     Logger.logTrace

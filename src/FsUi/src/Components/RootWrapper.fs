@@ -10,7 +10,7 @@ open FsUi.Bindings
 module RootWrapper =
     [<ReactComponent>]
     let RootWrapper themeAtom children =
-        Profiling.addCount "RootWrapper().render"
+        Profiling.addCount "RootWrapper.render"
 
         React.strictMode [
             Store.provider [

@@ -49,12 +49,14 @@ module SyncEngine =
                     let subscribe, callback = lastSubscribeParameters
 
                     Logger.logTrace
-                        (fun () -> $"SyncEngine.subscribe. before subscribe promise. lastAtomPath={lastAtomPath}")
+                        (fun () ->
+                            $"SyncEngine.subscribe. before subscribe promise. lastAtomPath={lastAtomPath} subscription={subscription} lastGunAtomNode={lastGunAtomNode}")
 
                     let! disposable = subscribe callback subscriptionId
 
                     Logger.logTrace
-                        (fun () -> $"SyncEngine.subscribe. after subscribe promise. lastAtomPath={lastAtomPath}")
+                        (fun () ->
+                            $"SyncEngine.subscribe. after subscribe promise. lastAtomPath={lastAtomPath} subscription={subscription} lastGunAtomNode={lastGunAtomNode}")
                     //                            |> Promise.bind
                     //                                (fun disposablePromise ->
                     //                                    disposablePromise
@@ -68,7 +70,7 @@ module SyncEngine =
                     else
                         Logger.logTrace
                             (fun () ->
-                                $"SyncEngine.subscribe. no disposable returned from subscribe. lastAtomPath={lastAtomPath}")
+                                $"SyncEngine.subscribe. no disposable returned from subscribe. lastAtomPath={lastAtomPath} subscription={subscription} lastGunAtomNode={lastGunAtomNode}")
                 //                        Logger.logTrace (fun () -> $"SyncEngine.debouncedSubscribe. this={Json.encodeWithNull this} ")
                 }
 

@@ -84,7 +84,7 @@ module Iframe =
     let inline allFn fn p = iframes |> someFn fn p
 
     describe
-        "tests"
+        "iframe"
         (fun () ->
             let homeUrl = "https://localhost:9762"
 
@@ -101,7 +101,7 @@ module Iframe =
                     |> Promise.start)
 
             it
-                "login"
+                "all"
                 (fun () ->
                     Cy.window ()
                     |> Promise.iter (fun window -> window?indexedDB?deleteDatabase "radata")
@@ -219,7 +219,7 @@ module Iframe =
                     Cy.window ()
                     |> Promise.iter
                         (fun window ->
-                            (expect ((window?_global?get "profilingState")?CallCount?get "App().render"))
+                            (expect ((window?_global?get "profilingState")?CallCount?get "App.render"))
                                 .``to``.be.equal 2)
 
 

@@ -238,6 +238,45 @@ module Component =
             |}
 
     [<ReactComponent>]
+    let LogoutButton () =
+        let logger = Store.useValue Selectors.logger
+        logger.Info (fun () -> "LogoutButton.render")
+
+        let alias = Store.useValue Selectors.Gun.alias
+        let logout = Auth.useLogout ()
+
+        Button.Button
+            {|
+                Hint = None
+                Icon = Some (Icons.io5.IoKey |> Icons.render, Button.IconPosition.Left)
+                Props =
+                    fun x ->
+                        x.onClick <- (fun _ -> logout ())
+                        x.disabled <- alias.IsNone
+                Children =
+                    [
+                        str "logout"
+                    ]
+            |}
+
+    [<ReactComponent>]
+    let ClearButton () =
+        let logger = Store.useValue Selectors.logger
+        logger.Info (fun () -> "ClearButton.render")
+
+        Button.Button
+            {|
+                Hint = None
+                Icon = Some (Icons.md.MdClear |> Icons.render, Button.IconPosition.Left)
+                Props =
+                    fun x -> x.onClick <- (fun _ -> promise { (Dom.Global.get "clearProfilingState" (fun _ -> ())) () })
+                Children =
+                    [
+                        str "clear logs"
+                    ]
+            |}
+
+    [<ReactComponent>]
     let AddFileButton () =
         let logger = Store.useValue Selectors.logger
         logger.Info (fun () -> "AddFileButton.render")
@@ -361,6 +400,8 @@ module Component =
                         SignInButton ()
 
                         AddFileButton ()
+
+                        LogoutButton ()
                     ]
 
                 HrefIndicator ()
@@ -440,7 +481,10 @@ module Component =
                     HydrateContainer ()
                     MessagesListener ()
                     if signInStarted then SignInContainer ()
+
                     InnerComponent ()
+
+                ClearButton ()
 
                 DebugPanel.DebugPanel DebugPanel.DebugPanelDisplay.Inline
             ]

@@ -15,7 +15,7 @@ module ThemeWrapper =
         let theme = Store.useValue (themeAtom |> Option.defaultValue Store.emptyAtom)
         let darkMode = Store.useValue Atoms.Ui.darkMode
 
-        Profiling.addCount "ThemeLoader().render"
+        Profiling.addCount "ThemeLoader.render"
 
         let newTheme =
             React.useMemo (
