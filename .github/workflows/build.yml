@@ -35,7 +35,7 @@ jobs:
           working-directory: ./src/FsBeacon.Template
           build: yarn build:fable
           start: yarn cypress-serve
-          command: sh -c "/usr/bin/sleep 15s" && sh -c "yarn cypress-run"
+          command: yarn cypress-run-delay
 
       - uses: actions/upload-artifact@v2
         if: failure()

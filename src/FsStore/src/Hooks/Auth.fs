@@ -19,44 +19,42 @@ module rec Auth =
                     Store.change setter Atoms.hubTrigger ((+) 1)
                 })
 
-    let inline useSignIn () =
-        Store.useCallbackRef
-            (fun getter _setter (alias, password) ->
-                promise {
-                    let gunUser = Store.value getter Selectors.Gun.gunUser
+    let inline signIn getter _setter (alias, password) =
+        promise {
+            let gunUser = Store.value getter Selectors.Gun.gunUser
 
-                    let! ack =
-                        match alias, password with
-                        | "", keys ->
-                            printfn "keys sign in"
+            let! ack =
+                match alias, password with
+                | "", keys ->
+                    printfn "keys sign in"
 
-                            let keys =
-                                try
-                                    keys |> Json.decode<Gun.GunKeys>
-                                with
-                                | ex ->
-                                    printfn $"keys decode error: {ex.Message}"
-                                    Gun.GunKeys.Default
+                    let keys =
+                        try
+                            keys |> Json.decode<Gun.GunKeys>
+                        with
+                        | ex ->
+                            printfn $"keys decode error: {ex.Message}"
+                            Gun.GunKeys.Default
 
-                            Gun.authKeys gunUser keys
+                    Gun.authKeys gunUser keys
 
-                        | alias, password ->
-                            printfn "user/pass sign in"
-                            Gun.authUser gunUser (Gun.Alias alias) (Gun.Pass password)
+                | alias, password ->
+                    printfn "user/pass sign in"
+                    Gun.authUser gunUser (Gun.Alias alias) (Gun.Pass password)
 
-                    match ack with
-                    | { err = None } ->
-                        let keys = gunUser.__.sea
+            match ack with
+            | { err = None } ->
+                let keys = gunUser.__.sea
 
-                        match keys with
-                        | Some keys ->
-                            //                        do! Promise.sleep 100
-//                            Store.change setter Atoms.gunTrigger ((+) 1)
-//                            Store.change setter Atoms.hubTrigger ((+) 1)
-                            return Ok (Gun.Alias alias, keys)
-                        | None -> return Error $"No keys found for user {alias} after sign in"
-                    | { err = Some error } -> return Error error
-                })
+                match keys with
+                | Some keys ->
+                    //                        do! Promise.sleep 100
+                    //                            Store.change setter Atoms.gunTrigger ((+) 1)
+                    //                            Store.change setter Atoms.hubTrigger ((+) 1)
+                    return Ok (Gun.Alias alias, keys)
+                | None -> return Error $"No keys found for user {alias} after sign in"
+            | { err = Some error } -> return Error error
+        }
 
     let inline useChangePassword () =
         Store.useCallbackRef
@@ -111,10 +109,8 @@ module rec Auth =
                 })
 
     let inline useSignUp () =
-        let signIn = useSignIn ()
-
         Store.useCallbackRef
-            (fun getter _setter (alias, password) ->
+            (fun getter setter (alias, password) ->
                 promise {
                     if alias = "" || password = "" then
                         return Error "Required fields"
@@ -140,7 +136,7 @@ module rec Auth =
                                       ok = Some 0
                                       pub = Some _
                                   } ->
-                                    match! signIn (alias, password) with
+                                    match! signIn getter setter (alias, password) with
                                     | Ok (alias, keys) ->
                                         do! Gun.putPublicHash gun alias
                                         return Ok (alias, keys)

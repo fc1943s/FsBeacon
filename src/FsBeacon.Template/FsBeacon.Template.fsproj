@@ -11,6 +11,7 @@
         <Compile Include="src\Components\Content.fs" />
         <Compile Include="src\Tests\Iframe.spec.fs" />
         <Compile Include="src\Tests\Files.spec.fs" />
+        <Compile Include="src\Tests\Sync.spec.fs" />
         <Compile Include="src\App.fs" />
         <Compile Include="src\Main.fs" />
         <TypeScriptCompile Include="src\index.ts" />

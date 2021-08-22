@@ -13,7 +13,9 @@
         <Compile Include="src\Primitives.fs" />
         <Compile Include="src\Atoms.fs" />
         <Compile Include="src\Selectors.fs" />
+        <Compile Include="src\Engine.fs" />
         <Compile Include="src\BaseStore.fs" />
+        <Compile Include="src\AtomWithSubscription.fs" />
         <Compile Include="src\Store\ReadSelectorInterval.fs" />
         <Compile Include="src\Store\SyncEngine.fs" />
         <Compile Include="src\Store\SyncSubscribe.fs" />
@@ -30,10 +32,10 @@
         <Compile Include="src\State\Atoms\Join.fs" />
         <Compile Include="src\State\Selectors\File.fs" />
         <Compile Include="src\TempAtomStore.fs" />
+        <Compile Include="src\Hydrate.fs" />
         <Compile Include="src\Hooks\Store.fs" />
         <Compile Include="src\Hooks\Auth.fs" />
         <Compile Include="src\Hooks\Messaging.fs" />
-        <Compile Include="src\Hydrate.fs" />
         <Content Include="package.json" />
         <Content Include="paket.references" />
         <Content Include=".gitignore" />

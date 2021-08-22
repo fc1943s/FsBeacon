@@ -13,7 +13,7 @@ module DropdownMenuButton =
         =
         Button.Button
             {|
-                Hint = None
+                Tooltip = None
                 Icon =
                     Some (
                         (if input.Checked then

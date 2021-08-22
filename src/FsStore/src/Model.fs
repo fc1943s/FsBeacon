@@ -5,8 +5,10 @@ open FsCore
 open FsCore.BaseModel
 open FsStore.Bindings
 
+
 module FsStore =
     let root = StoreRoot (nameof FsStore)
+
 
 module Model =
     type Atom<'T> = Jotai.Atom<'T>
@@ -19,7 +21,6 @@ module Model =
     type InputScope<'TValue> =
         | Current
         | Temp of Gun.Serializer<'TValue>
-
 
     [<RequireQualifiedAccess>]
     type AtomReference<'T> =
@@ -101,15 +102,45 @@ module Model =
 
 
     [<RequireQualifiedAccess>]
-    type Message =
-        | None
-        | Command of command: Command
-        | Event
+    type Message<'TCommand, 'TEvent> =
+        | Command of command: 'TCommand
+        | Event of event: 'TEvent
 
-    and [<RequireQualifiedAccess>] Command =
-        | KeySignIn of keys: Gun.GunKeys
-        | Set of key: string * value: string
+    type AppEngineState =
+        {
+            Adapters: (unit -> unit) list
+        }
+        static member inline Default = { Adapters = [] }
 
+    type AtomEngineState =
+        {
+            Adapters: (unit -> unit) list
+        }
+        static member inline Default = { Adapters = [] }
+
+    [<RequireQualifiedAccess>]
+    type AppCommand =
+        | Init of state: AppEngineState
+        | SignInPair of keys: Gun.GunKeys
+        | RegisterAdapter of adapter: (unit -> unit)
+
+    [<RequireQualifiedAccess>]
+    type AppEvent =
+        | UserSignedIn
+        | AdapterRegistered
+        | Error of error: string
+
+    [<RequireQualifiedAccess>]
+    type AtomCommand =
+        | Init of state: AtomEngineState
+        | Subscribe
+        | Unsubscribe
+
+    [<RequireQualifiedAccess>]
+    type AtomEvent =
+        | Subscribed
+        | Unsubscribed
+        | Error of error: string
 
     type MessageId = MessageId of TicksGuid
 

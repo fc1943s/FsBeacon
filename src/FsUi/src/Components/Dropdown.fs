@@ -86,7 +86,7 @@ module Dropdown =
                                                     Some (
                                                         Button.Button
                                                             {|
-                                                                Hint = None
+                                                                Tooltip = None
                                                                 Icon =
                                                                     Some (
                                                                         Icons.io5.IoCaretDown |> Icons.render,
@@ -194,7 +194,7 @@ module Dropdown =
                                         [
                                             Button.Button
                                                 {|
-                                                    Hint = None
+                                                    Tooltip = None
                                                     Icon =
                                                         Some (
                                                             Icons.fi.FiCheck |> Icons.render,
@@ -229,7 +229,7 @@ module Dropdown =
             (fun visible setVisible ->
                 Button.Button
                     {|
-                        Hint = None
+                        Tooltip = None
                         Icon =
                             Some (
                                 (if visible then Icons.fi.FiChevronUp else Icons.fi.FiChevronDown)

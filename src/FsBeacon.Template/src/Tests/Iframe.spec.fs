@@ -8,6 +8,7 @@ open FsJs
 open FsJs.Bindings.Cypress
 open FsStore.Bindings
 open FsStore
+open FsStore.Model
 
 
 module Iframe =
@@ -118,9 +119,12 @@ module Iframe =
                                 let keysJson = JS.JSON.stringify privateKeys
 
                                 let keys = keysJson |> Json.decode<Gun.GunKeys>
-                                let message = Model.Message.Command (Model.Command.KeySignIn keys)
+                                let message = Message.Command (AppCommand.SignInPair keys)
                                 let messages = message |> Array.singleton
-                                let json = messages |> Json.encode<Model.Message []>
+
+                                let json =
+                                    messages
+                                    |> Json.encode<Message<AppCommand, AppEvent> []>
 
                                 let base64 =
                                     match Dom.window () with

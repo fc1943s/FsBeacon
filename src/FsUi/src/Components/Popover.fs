@@ -86,7 +86,7 @@ module Popover =
                                         else
                                             Button.Button
                                                 {|
-                                                    Hint = None
+                                                    Tooltip = None
                                                     Icon =
                                                         Some (
                                                             Icons.io.IoMdClose |> Icons.render,
@@ -181,7 +181,7 @@ module Popover =
                                         [
                                             Button.Button
                                                 {|
-                                                    Hint = None
+                                                    Tooltip = None
                                                     Icon =
                                                         Some (
                                                             Icons.fi.FiCheck |> Icons.render,

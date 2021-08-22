@@ -4,7 +4,6 @@ open System
 open System.Collections.Generic
 open FsStore
 open FsStore.BaseStore.Store
-open FsStore.Bindings
 open FsStore.Bindings.Gun.Types
 open FsStore.Model
 open Microsoft.FSharp.Core.Operators
@@ -31,9 +30,9 @@ module SyncEngine =
         let valueKeyOperation = DateTime.Now.Ticks, AdapterType.Gun, ValueKeyOperation.Add
 
         type SyncEngine<'T> (defaultValue: 'T, mapGunAtomNode) =
-            let internalAtom = Jotai.jotaiUtils.atomFamily (fun _alias -> Jotai.jotai.atom defaultValue) Object.compare
+            let internalAtom = Store.atomFamily (fun _alias -> defaultValue)
             let mutable lastAtomPath = None
-            let mutable lastAccessors = None
+            let mutable lastStore = None
             let mutable lastAlias = None
             let mutable lastGunOptions = None
             let mutable lastGunAtomNode = None
@@ -43,20 +42,36 @@ module SyncEngine =
             let mutable lastSubscribeParameters: (('T -> unit) -> SubscriptionId -> Fable.Core.JS.Promise<IDisposable option>) * ('T -> unit) =
                 (fun _ _ -> failwith "no lastSubscribeParameters"), (fun _ -> failwith "lastSubscribeParameters")
 
+            let mutable getDebugSummaryCount = 0
+
+            let getDebugSummary () =
+                let result =
+                    Json.encodeWithNull
+                        {|
+                            lastAtomPath = lastAtomPath
+                            lastAlias = lastAlias
+                            lastGunOptions = lastGunOptions
+                            subscription = subscription
+                            getDebugSummaryCount = getDebugSummaryCount
+                        |}
+
+                getDebugSummaryCount <- getDebugSummaryCount + 1
+                result
+
+            let getStore () =
+                lastStore
+                |> Option.defaultWith (fun () -> failwith "invalid store")
+
             let subscribe () =
                 promise {
                     let subscriptionId = SubscriptionId.NewId ()
                     let subscribe, callback = lastSubscribeParameters
 
-                    Logger.logTrace
-                        (fun () ->
-                            $"SyncEngine.subscribe. before subscribe promise. lastAtomPath={lastAtomPath} subscription={subscription} lastGunAtomNode={lastGunAtomNode}")
+                    Logger.logTrace (fun () -> $"SyncEngine.subscribe. before subscribe promise. {getDebugSummary ()}")
 
                     let! disposable = subscribe callback subscriptionId
 
-                    Logger.logTrace
-                        (fun () ->
-                            $"SyncEngine.subscribe. after subscribe promise. lastAtomPath={lastAtomPath} subscription={subscription} lastGunAtomNode={lastGunAtomNode}")
+                    Logger.logTrace (fun () -> $"SyncEngine.subscribe. after subscribe promise. {getDebugSummary ()}")
                     //                            |> Promise.bind
                     //                                (fun disposablePromise ->
                     //                                    disposablePromise
@@ -66,26 +81,52 @@ module SyncEngine =
                     subscription <- Some (subscriptionId, disposable)
 
                     if disposable.IsSome then
-                        Profiling.addCount $"@{lastAtomPath}"
+                        Profiling.addCount $"@ {lastAtomPath}"
+
+                        //                            let! events =
+//                                StoreEngine.consumeMessages
+//                                    (Dom.Global.get "update" (fun _ _ _ _ ->
+//                                        eprintfn "warning: update is still not found"
+//                                        promise { () }
+//                                        ))
+//                                    getter
+//                                    setter
+//                                    null
+//                                    (Message.Command Command.Subscribe
+//                                     |> List.singleton)
+                        let events = null
+
+                        Logger.logTrace
+                            (fun () -> $"SyncEngine.subscribe. consumed. events={events} {getDebugSummary ()}")
+                        //                            gunAtomNodeFromAtomPath getter lastAlias lastAtomPath
+//                            |> Option.map (mapGunAtomNode |> Option.defaultValue id)
+                        //                            lastGunAtomNode
+
+                        if (lastAtomPath
+                            |> Option.defaultValue (AtomPath "")
+                            |> AtomPath.Value)
+                            .Contains "/pub" then
+                            Profiling.addCount $"@@> {getDebugSummary ()}"
                     else
                         Logger.logTrace
                             (fun () ->
-                                $"SyncEngine.subscribe. no disposable returned from subscribe. lastAtomPath={lastAtomPath} subscription={subscription} lastGunAtomNode={lastGunAtomNode}")
+                                $"SyncEngine.subscribe. no disposable returned from subscribe. {getDebugSummary ()}")
                 //                        Logger.logTrace (fun () -> $"SyncEngine.debouncedSubscribe. this={Json.encodeWithNull this} ")
                 }
 
             let debouncedSubscribe = Js.debounce (fun () -> subscribe () |> Promise.start) 0
 
+            member this.GetDebugSummary = getDebugSummary
             member this.GetUserAtom<'T> () = internalAtom lastAlias
             member this.GetAtomPath () = lastAtomPath
-            member this.GetAccessors () = lastAccessors
             member this.GetAlias () = lastAlias
             member this.GetGunOptions () = lastGunOptions
+            member this.GetStore = getStore
 
             member this.GetGunAtomNode () =
-                match lastAccessors with
+                match lastStore with
                 | Some (getter, _) ->
-                    gunAtomNodeFromAtomPath getter lastAlias lastAtomPath
+                    Store.value getter (Selectors.Gun.gunAtomNode (lastAlias, lastAtomPath.Value))
                     |> Option.map (mapGunAtomNode |> Option.defaultValue id)
                 | None -> lastGunAtomNode
 
@@ -118,8 +159,16 @@ module SyncEngine =
 
                     match disposable with
                     | Some disposable ->
-                        Profiling.removeCount $"@{this.GetAtomPath ()}"
                         (disposable: IDisposable).Dispose ()
+
+                        Profiling.removeCount $"@ {this.GetAtomPath ()}"
+
+                        if (lastAtomPath
+                            |> Option.defaultValue (AtomPath "")
+                            |> AtomPath.Value)
+                            .Contains "/pub" then
+                            Profiling.addCount $"@@< {getDebugSummary ()}"
+
                         fn ticksGuid
                     | None ->
                         Logger.logTrace
@@ -132,10 +181,10 @@ module SyncEngine =
 
             member this.SetProviders getter atom =
                 if lastAtomPath.IsNone then
-                    lastAtomPath <- Internal.queryAtomPath (AtomReference.Atom atom)
+                    lastAtomPath <- Some (Internal.queryAtomPath (AtomReference.Atom atom))
 
-                if lastAccessors.IsNone then
-                    lastAccessors <- Store.value getter Selectors.atomAccessors
+                if lastStore.IsNone then
+                    lastStore <- Store.value getter Selectors.store
 
                 lastAlias <- Store.value getter Selectors.Gun.alias
                 lastGunOptions <- Some (Store.value getter Atoms.gunOptions)

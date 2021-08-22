@@ -15,7 +15,7 @@ module ReadSelectorInterval =
         let rec readSelectorInterval storeRoot name interval defaultValue getFn =
             let cache = jotai.atom defaultValue
 
-            let mutable lastAccessors = None
+            let mutable lastStore = None
             let mutable timeout = -1
 
             let getDebugInfo () =
@@ -24,7 +24,7 @@ module ReadSelectorInterval =
         storeRoot/name={storeRoot}/{name}
         interval={interval}
         defaultValue={defaultValue}
-        lastAccessors={lastAccessors.IsSome}
+        lastStore={lastStore.IsSome}
         timeout={timeout} "
 
             Logger.logTrace (fun () -> $"readSelectorInterval.constructor {getDebugInfo ()}")
@@ -36,8 +36,8 @@ module ReadSelectorInterval =
                     storeRoot
                     $"{name}_{nameof readSelectorWrapper}"
                     (fun getter ->
-                        if lastAccessors.IsNone then
-                            lastAccessors <- Store.value getter Selectors.atomAccessors
+                        if lastStore.IsNone then
+                            lastStore <- Store.value getter Selectors.store
 
                         Logger.State.lastLogger <- Store.value getter Selectors.logger
                         let cache = Store.value getter cache
@@ -56,7 +56,7 @@ module ReadSelectorInterval =
                 let fn () =
                     Logger.logTrace (fun () -> $"Store.readSelectorInterval. #1 timeout {getDebugInfo ()}")
 
-                    match lastAccessors with
+                    match lastStore with
                     | Some (getter, setter) when timeout >= 0 ->
                         let selectorValue = Store.value getter readSelector
 

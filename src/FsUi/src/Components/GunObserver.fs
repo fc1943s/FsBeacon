@@ -18,7 +18,7 @@ module GunObserver =
 
         logger.Debug (fun () -> "GunObserver.render: Constructor")
 
-        let callbacks = Store.useCallbacks ()
+        let store = Store.useStore ()
         let isMountedRef = React.useIsMountedRef ()
 
         // TODO: arr deps warning is not working with files in this package (only on template main)
@@ -71,7 +71,7 @@ module GunObserver =
 //
 //                                        Promise.lift None
 //
-                                let! _getter, setter = callbacks ()
+                                let! _getter, setter = store ()
                                 //                                ()
 
                                 Store.change setter Atoms.gunTrigger ((+) 1)
@@ -84,7 +84,7 @@ module GunObserver =
             [|
                 box isMountedRef
                 box gun
-                box callbacks
+                box store
             |]
         )
 

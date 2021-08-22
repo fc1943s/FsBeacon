@@ -19,6 +19,25 @@ open FsStore.Bindings.Jotai
 [<AutoOpen>]
 module SelectAtomSyncKeys =
     module Store =
+        module Adapter =
+            module Gun =
+                let adapter () = printfn $"Adapter.Gun.adapter"
+
+            module Hub =
+                let adapter () = printfn $"Adapter.Hub.adapter"
+
+            module Jotai =
+                let adapter () = printfn $"Adapter.Jotai.adapter"
+
+
+        //        let adapters =
+//            [
+//                Command.RegisterAdapter Adapter.Gun.adapter
+//                Command.RegisterAdapter Adapter.Hub.adapter
+//                Command.RegisterAdapter Adapter.Jotai.adapter
+//            ]
+
+
         let inline selectAtomSyncKeys
             storeRoot
             name
@@ -38,7 +57,7 @@ module SelectAtomSyncKeys =
             let atomPath = atomKey |> AtomKey.AtomPath
             let referenceAtom = atomFamily key
 
-            let syncEngine = Store.SyncEngine ([||], Some (fun (key, node) -> key, node.back().back ()))
+            let syncEngine = Store.SyncEngine ([||], Some (fun node -> node.back().back ()))
 
 
             let getDebugInfo () =
@@ -144,7 +163,7 @@ module SelectAtomSyncKeys =
                                 $"Store.selectAtomSyncKeys subscribe. skipping subscribe, lastSubscription is set. key={key} {getDebugInfo ()} ")
 
                         return None
-                    | Some (key, gunAtomNode), None ->
+                    | Some gunAtomNode, None ->
                         let batchKeysAtom (ticks, value) kind =
                             batchKeys
                                 (fun value ->
@@ -348,7 +367,7 @@ module SelectAtomSyncKeys =
 
             let unsubscribe _subscriptionId =
                 match syncEngine.GetGunAtomNode () with
-                | Some (key, gunAtomNode) ->
+                | Some gunAtomNode ->
 
                     Logger.logTrace
                         (fun () ->
@@ -362,11 +381,31 @@ module SelectAtomSyncKeys =
                             $"Store.selectAtomSyncKeys [atomKeys gun.off()] skipping unsubscribe, no gun atom node. subscriptionId={_subscriptionId} {getDebugInfo ()} ")
 
 
-
+            let atom1 = jotai.atom 0
 
             wrapper?onMount <- fun (setAtom: 'TKey [] -> unit) ->
+                                   let getter, setter = syncEngine.GetStore ()
+                                   let value = Store.value getter atom1
+
+                                   if (getDebugInfo ()).Contains "/pub" then
+                                       Profiling.addCount
+                                           $">>> Mmount. setting value. atom={value} d:{syncEngine.GetDebugSummary ()}"
+
+                                       Store.set setter atom1 (value + 1)
+
                                    syncEngine.Subscribe (subscribe, setAtom)
-                                   fun _ -> syncEngine.Unsubscribe unsubscribe
+
+                                   fun _ ->
+                                       let getter, setter = syncEngine.GetStore ()
+                                       let value = Store.value getter atom1
+
+                                       if (getDebugInfo ()).Contains "/pub" then
+                                           Profiling.addCount
+                                               $"<<< Umount. setting value. atom={value} d:{syncEngine.GetDebugSummary ()}"
+
+                                           Store.set setter atom1 (value + 1)
+
+                                       syncEngine.Unsubscribe unsubscribe
 
             Logger.logTrace
                 (fun () ->

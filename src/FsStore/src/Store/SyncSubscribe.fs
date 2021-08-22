@@ -28,14 +28,12 @@ module SyncSubscribe =
                     Logger.logTrace
                         (fun () ->
                             $"Store.syncSubscribe. skipping subscribe, lastSubscription is set. {getDebugInfo ()} ")
-                | Some (key, gunAtomNode), None ->
+                | Some gunAtomNode, None ->
                     let gunKeys =
                         let user = gunAtomNode.user ()
                         user.__.sea
 
-                    Profiling.addCount $"{key} subscribe"
-
-                    Logger.logTrace (fun () -> $"Store.syncSubscribe. batch subscribing. key={key} {getDebugInfo ()} ")
+                    Logger.logTrace (fun () -> $"Store.syncSubscribe. batch subscribing. {getDebugInfo ()} ")
 
                     //                    gunAtomNode.off () |> ignore
 
@@ -47,8 +45,7 @@ module SyncSubscribe =
                                 try
                                     match syncState.HubSubscription, syncEngine.GetAlias () with
                                     | Some _, _ ->
-                                        Logger.logError
-                                            (fun () -> $"Store.syncSubscribe. sub already present key={key}")
+                                        Logger.logError (fun () -> $"Store.syncSubscribe. sub already present")
                                     | None, None ->
                                         Logger.logError (fun () -> "Store.syncSubscribe. alias is none (subscription)")
                                     | None, Some (Gun.Alias alias) ->
@@ -68,7 +65,7 @@ module SyncSubscribe =
                                                         | Sync.Response.GetResult result ->
                                                             Logger.logTrace
                                                                 (fun () ->
-                                                                    $"Store.syncSubscribe. Sync.Response.GetResult key={key} atomPath={atomPath} {getDebugInfo ()} ")
+                                                                    $"Store.syncSubscribe. Sync.Response.GetResult  atomPath={atomPath} {getDebugInfo ()} ")
 
                                                             let! newValue =
                                                                 match result |> Option.defaultValue null with

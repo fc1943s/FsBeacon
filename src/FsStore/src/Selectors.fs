@@ -27,18 +27,18 @@ module Selectors =
                 let logLevel = Store.value getter Atoms.logLevel
                 Logger.Logger.Create logLevel)
 
-    let rec atomAccessors =
+    let rec store =
         let mutable lastValue = 0
         let valueAtom = jotai.atom lastValue
         let accessorsAtom = jotai.atom (None: (GetFn * SetFn) option)
 
         let getDebugInfo () =
             $"
-| atomAccessors baseInfo:
+| Selectors.store baseInfo:
 lastValue={lastValue}
 "
 
-        Logger.logTrace (fun () -> $"Selectors.atomAccessors constructor {getDebugInfo ()}")
+        Logger.logTrace (fun () -> $"Selectors.store constructor {getDebugInfo ()}")
 
         let rec valueWrapper =
             Store.selector
@@ -47,12 +47,15 @@ lastValue={lastValue}
                 (fun getter ->
                     let logger = Store.value getter logger
                     let result = Store.value getter valueAtom
-                    logger.Trace (fun () -> $"Selectors.atomAccessors valueWrapper.get() result={result} {getDebugInfo ()}")
+
+                    logger.Trace (fun () -> $"Selectors.store valueWrapper.get() result={result} {getDebugInfo ()}")
 
                     result)
                 (fun getter setter newValue ->
                     let logger = Store.value getter logger
-                    logger.Trace (fun () -> $"Selectors.atomAccessors  valueWrapper.set() newValue={newValue} {getDebugInfo ()}")
+
+                    logger.Trace
+                        (fun () -> $"Selectors.store  valueWrapper.set() newValue={newValue} {getDebugInfo ()}")
 
                     Store.set setter accessorsAtom (Some (getter, setter))
                     Store.set setter valueAtom newValue)
@@ -60,20 +63,20 @@ lastValue={lastValue}
         valueWrapper.onMount <-
             fun setAtom ->
                 Logger.logTrace
-                    (fun () -> $"Selectors.atomAccessors valueWrapper.onMount() lastValue={lastValue} {getDebugInfo ()}")
+                    (fun () -> $"Selectors.store valueWrapper.onMount() lastValue={lastValue} {getDebugInfo ()}")
 
                 lastValue <- lastValue + 1
                 setAtom lastValue
 
                 fun () ->
                     Logger.logTrace
-                        (fun () -> $"Selectors.atomAccessors valueWrapper.onUnmount() lastValue={lastValue} {getDebugInfo ()}")
+                        (fun () -> $"Selectors.store valueWrapper.onUnmount() lastValue={lastValue} {getDebugInfo ()}")
 
                     ()
 
         Store.readSelector
             FsStore.root
-            (nameof atomAccessors)
+            (nameof store)
             (fun getter ->
                 let logger = Store.value getter logger
                 let value = Store.value getter valueWrapper
@@ -208,7 +211,7 @@ lastValue={lastValue}
                 FsStore.root
                 (nameof alias)
                 (fun getter ->
-//                    Store.value getter asyncAlias
+                    //                    Store.value getter asyncAlias
                     let logger = Store.value getter logger
                     let _gunTrigger = Store.value getter Atoms.gunTrigger
                     let gunUser = Store.value getter Gun.gunUser
@@ -273,8 +276,11 @@ lastValue={lastValue}
             Store.readSelectorFamily
                 FsStore.root
                 (nameof gunAtomNode)
-                (fun (alias: Alias, AtomPath atomPath) getter ->
-                    let gunNamespace = Store.value getter gunNamespace
+                (fun (alias: Alias option, AtomPath atomPath) getter ->
+                    let gunNode =
+                        match alias with
+                        | Some _ -> Store.value getter gunNamespace
+                        | None -> Store.value getter gun :> Types.IGunNode
 
                     let nodes =
                         atomPath
@@ -290,7 +296,7 @@ lastValue={lastValue}
 //                                    |> Option.map (fun result -> result.get node))
 
 
-                    getRecursiveNode gunNamespace nodes getter alias)
+                    getRecursiveNode gunNode nodes getter alias)
 
     //    let rec username = Store.atom FsStore.root (nameof username) (None: Username option)
 //    let rec gunKeys = Store.atom FsStore.root (nameof gunKeys) Gun.GunKeys.Default

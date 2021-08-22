@@ -18,8 +18,7 @@ open FsStore.Bindings.Jotai
 [<AutoOpen>]
 module AtomWithSync =
     module Store =
-        let inline atomWithReducer<'TKey, 'TValue> atomkey (defaultValue: 'TValue) =
-            ()
+        let inline atomWithReducer<'TKey, 'TValue> atomkey (defaultValue: 'TValue) = ()
 
         let inline atomWithSync<'TKey, 'TValue> atomKey (defaultValue: 'TValue) =
             let mutable lastUserAtomId = None
@@ -39,15 +38,12 @@ module AtomWithSync =
     atomPath={atomPath} """
 
             let adapterValueMapAtom =
-                jotaiUtils.atomFamily
+                Store.atomFamily
                     (fun (_alias: Gun.Alias option) ->
-                        jotai.atom (
-                            [
-                                Guid.newTicksGuid (), AdapterValue.Internal defaultValue
-                            ]
-                            |> Map.ofList
-                        ))
-                    Object.compare
+                        [
+                            Guid.newTicksGuid (), AdapterValue.Internal defaultValue
+                        ]
+                        |> Map.ofList)
 
             let rec lastSyncValueByTypeAtom =
                 Store.readSelectorFamily
@@ -73,23 +69,20 @@ module AtomWithSync =
 
 
             let syncTrigger (ticks, newValue) =
-                match syncEngine.GetAccessors () with
-                | Some (_, setter) ->
-                    Store.change
-                        setter
-                        (adapterValueMapAtom (syncEngine.GetAlias ()))
-                        (fun oldAdapterValueMap ->
-                            Logger.logDebug
-                                (fun () ->
-                                    $"Store.atomWithSync. syncTrigger. setter. oldAdapterValueMap={oldAdapterValueMap} newValue={newValue}. {getDebugInfo ()}")
+                let _getter, setter = syncEngine.GetStore ()
 
-                            oldAdapterValueMap
-                            |> (match newValue with
-                                | Some value -> Map.add ticks value
-                                | None -> Map.remove ticks))
-                | None ->
-                    Logger.logDebug
-                        (fun () -> $"Store.atomWithSync .syncTrigger. skipped. no accessors. {getDebugInfo ()}")
+                Store.change
+                    setter
+                    (adapterValueMapAtom (syncEngine.GetAlias ()))
+                    (fun oldAdapterValueMap ->
+                        Logger.logDebug
+                            (fun () ->
+                                $"Store.atomWithSync. syncTrigger. setter. oldAdapterValueMap={oldAdapterValueMap} newValue={newValue}. {getDebugInfo ()}")
+
+                        oldAdapterValueMap
+                        |> (match newValue with
+                            | Some value -> Map.add ticks value
+                            | None -> Map.remove ticks))
 
             let subscribe (setAtom: 'TValue -> unit) (subscriptionId: SubscriptionId) =
                 promise {
@@ -331,11 +324,11 @@ module AtomWithSync =
 
             let unsubscribe _subscriptionId =
                 match syncEngine.GetGunAtomNode () with
-                | Some (key, _gunAtomNode) ->
+                | Some _gunAtomNode ->
 
                     Logger.logTrace
                         (fun () ->
-                            $"Store.atomWithSync. gunAtomNode found. calling off(). (actually skipped) key={key} subscriptionId={_subscriptionId} {getDebugInfo ()} ")
+                            $"Store.atomWithSync. gunAtomNode found. calling off(). (actually skipped) subscriptionId={_subscriptionId} {getDebugInfo ()} ")
 
                 //                    gunAtomNode.off () |> ignore
                 //                    lastSubscription <- None

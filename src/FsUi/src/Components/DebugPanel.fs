@@ -68,6 +68,11 @@ module DebugPanel =
     let PrivateKeysIndicator () =
         ValueIndicator (nameof Selectors.Gun.privateKeys) Selectors.Gun.privateKeys
 
+    let inline getSchedulingInterval (deviceInfo: Dom.DeviceInfo) =
+        if Dom.globalExit.Get () then Int32.MaxValue
+        elif not deviceInfo.IsTesting then 1000
+        else 0
+
     [<ReactComponent>]
     let DebugPanel display =
         let text, setText = React.useState ""
@@ -75,12 +80,14 @@ module DebugPanel =
         let showDebug = Store.useValue Atoms.showDebug
 
         let logger = Store.useValue Selectors.logger
+        let deviceInfo = Store.useValue Selectors.deviceInfo
 
-        logger.Info (fun () -> $"DebugPanel.render. showDebug={showDebug}")
+        let interval = (getSchedulingInterval deviceInfo)
+        logger.Info (fun () -> $"DebugPanel.render. showDebug={showDebug} interval={interval}")
 
         Scheduling.useScheduling
             Scheduling.Interval
-            1000
+            interval
             (fun _ _ ->
                 promise {
                     if not showDebug then
@@ -158,6 +165,7 @@ module DebugPanel =
                                 x.flex <- "1"
                                 x.id <- "debug"
                                 x.fontSize <- "9px"
+                                x.padding <- "4px"
                                 x.lineHeight <- "11px"
                                 x.whiteSpace <- "pre"
                                 x.fontFamily <- "Roboto Condensed Light, system-ui, sans-serif")

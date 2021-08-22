@@ -28,7 +28,7 @@ module PutFromUi =
 
                 try
                     match syncEngine.GetGunAtomNode () with
-                    | Some (key, gunAtomNode) ->
+                    | Some gunAtomNode ->
                         let user = gunAtomNode.user ()
                         let keys = user.__.sea
 
@@ -36,7 +36,7 @@ module PutFromUi =
                         | Some keys ->
                             Logger.logTrace
                                 (fun () ->
-                                    $"Store.putFromUi. atomFamily.wrapper.set() debounceGunPut promise. #2 before encode {key} newValue={newValue}")
+                                    $"Store.putFromUi. atomFamily.wrapper.set() debounceGunPut promise. #2 before encode newValue={newValue}")
 
                             let! newValueJson =
                                 promise {
@@ -52,7 +52,7 @@ module PutFromUi =
                             Logger.logTrace
                                 (fun () ->
                                     $"Store.putFromUi. atomFamily.wrapper.set() debounceGunPut promise. #3.
-        before put {key} newValue={newValue} {getDebugInfo ()}")
+        before put newValue={newValue} {getDebugInfo ()}")
 
                             let hubValue =
                                 match syncState.AdapterValueMapByType with
@@ -121,7 +121,7 @@ module PutFromUi =
 
                                         Logger.logTrace
                                             (fun () ->
-                                                $"Store.putFromUi. atomFamily.wrapper.set() debounceGunPut promise result. newValue={newValue} {key} {getDebugInfo ()} ")
+                                                $"Store.putFromUi. atomFamily.wrapper.set() debounceGunPut promise result. newValue={newValue} {getDebugInfo ()} ")
                                     else
                                         Browser.Dom.window?lastPutResult <- putResult
 
@@ -130,7 +130,7 @@ module PutFromUi =
                                             if window?Cypress = null then
                                                 Logger.logError
                                                     (fun () ->
-                                                        $"Store.putFromUi. atomFamily.wrapper.set() debounceGunPut promise put error. newValue={newValue} putResult={putResult} {key} {getDebugInfo ()}")
+                                                        $"Store.putFromUi. atomFamily.wrapper.set() debounceGunPut promise put error. newValue={newValue} putResult={putResult} {getDebugInfo ()}")
                                         | None -> ()
                             | _ ->
                                 Logger.logTrace

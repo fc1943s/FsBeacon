@@ -2,8 +2,8 @@ namespace FsStore.State.Atoms
 
 open FsCore.BaseModel
 open FsStore
-open FsStore.Store
 open FsStore.Model
+open FsStore.Store
 
 
 module rec Message =
@@ -23,10 +23,10 @@ module rec Message =
             (fun (_: MessageId) -> None: bool option)
             messageIdIdentifier
 
-    let rec message =
+    let rec appMessage =
         Store.atomFamilyWithSync
             FsStore.root
             collection
-            (nameof message)
-            (fun (_: MessageId) -> Model.Message.None)
+            (nameof appMessage)
+            (fun (_: MessageId) -> Message<AppCommand, AppEvent>.Command (AppCommand.Init AppEngineState.Default))
             messageIdIdentifier

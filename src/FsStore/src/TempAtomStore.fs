@@ -25,7 +25,7 @@ module TempAtomStore =
                     //                        (fun () -> $"getAtomField atomPath={atomPath} queryAtomPath atomPath={queryAtomPath atomPath}")
 
                     match Internal.queryAtomPath atomPath, inputScope with
-                    | Some atomPath, AtomScope.Temp -> Some (Join.tempValue atomPath)
+                    | atomPath, AtomScope.Temp -> Some (Join.tempValue atomPath)
                     | _ -> None
 
                 current, temp

@@ -12,6 +12,12 @@ open FsStore.State
 module Hydrate =
     let fileChunkSize = 12800
 
+    let inline hydrateAppMessage setter message =
+        let messageId = MessageId.NewId ()
+        Store.set setter (State.Atoms.Message.appMessage messageId) message
+        Store.set setter (State.Atoms.Message.ack messageId) (Some false)
+        messageId
+
     let inline hydrateFile setter (atomScope: AtomScope, hexString: string) =
         let chunkCount = int (Math.Ceiling (float hexString.Length / float fileChunkSize))
 

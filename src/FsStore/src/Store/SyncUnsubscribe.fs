@@ -22,8 +22,7 @@ module SyncUnsubscribe =
                     Profiling.addCount $"{key} unsubscribe"
 
                     Logger.logTrace
-                        (fun () ->
-                            $"Store.syncUnsubscribe. {key} gunAtomNode={gunAtomNode} {getDebugInfo ()} ")
+                        (fun () -> $"Store.syncUnsubscribe. {key} gunAtomNode={gunAtomNode} {getDebugInfo ()} ")
 
                     gunAtomNode.off () |> ignore
                     success ()

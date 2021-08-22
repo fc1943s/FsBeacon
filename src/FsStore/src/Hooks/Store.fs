@@ -155,19 +155,16 @@ module Store =
         let atom =
             React.useMemo (
                 (fun () ->
-                    jotai.atom (
-                        unbox null,
-                        Some
-                            (fun getter setter (arg, resolve, err) ->
-                                try
-                                    resolve (fnCallback (getter, setter, arg))
-                                with
-                                | ex ->
-                                    printfn $"atomCallback fn error: {ex}"
-                                    err ex
+                    Store.rawSetSelector
+                        (fun getter setter (arg, resolve, err) ->
+                            try
+                                resolve (fnCallback (getter, setter, arg))
+                            with
+                            | ex ->
+                                printfn $"atomCallback fn error: {ex}"
+                                err ex
 
-                                ())
-                    )),
+                            ())),
                 [|
                     box fnCallback
                 |]
@@ -175,19 +172,16 @@ module Store =
 
         let _value, setValue = useAtom atom
 
-        let useAtomCallback =
-            React.useCallback (
-                (fun arg ->
-                    Promise.create (fun resolve err -> setValue (arg, resolve, err))
-                    |> Promise.bind id),
-                [|
-                    box setValue
-                |]
-            )
+        React.useCallback (
+            (fun arg ->
+                Promise.create (fun resolve err -> setValue (arg, resolve, err))
+                |> Promise.bind id),
+            [|
+                box setValue
+            |]
+        )
 
-        useAtomCallback
-
-    let inline useCallbacks () =
+    let inline useStore () =
         useCallbackRef (fun getter setter () -> promise { return (getter, setter) })
 
     let inline useState atom = useAtom atom
@@ -202,7 +196,7 @@ module Store =
     Dom.Global.set (nameof hashCache) hashCache
 
     let inline useHashedEffectOnce hash fn =
-        let callbacks = useCallbacks ()
+        let store = useStore ()
 
         React.useEffectOnce
             (fun () ->
@@ -210,7 +204,7 @@ module Store =
                     if not (hashCache.ContainsKey hash) then
                         hashCache.[hash] <- true
 
-                        let! getter, setter = callbacks ()
+                        let! getter, setter = store ()
                         do! fn getter setter
                 }
                 |> Promise.start)

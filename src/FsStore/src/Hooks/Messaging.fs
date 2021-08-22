@@ -8,22 +8,56 @@ open FsStore.Bindings
 
 
 module Messaging =
-    let useMessageProcessor () =
-        let logger = Store.useValue Selectors.logger
-        let signIn = Auth.useSignIn ()
+    let inline appUpdate getter setter state command =
+        promise {
+            let logger = Store.value getter Selectors.logger
 
-        Store.useCallbackRef
-            (fun _ _ (ack, onAck, message) ->
+            let! result =
                 promise {
-                    match ack, message with
-                    | Some false,
-                      Message.Command (Command.KeySignIn ({
-                                                              priv = Some (Gun.Priv (String.Valid _))
-                                                          } as keys)) ->
-                        match! signIn ("", keys |> Json.encode<Gun.GunKeys>) with
+                    match command with
+                    | AppCommand.Init state -> return state, []
+                    | AppCommand.SignInPair keys ->
+                        match! Auth.signIn getter setter ("", keys |> Json.encode<Gun.GunKeys>) with
                         | Ok _ ->
-                            logger.Debug (fun () -> "MessageProcessor keySignIn ack")
-                            onAck ()
-                        | Error error -> logger.Error (fun () -> $"MessageProcessor keySignIn error={error}")
-                    | _ -> ()
-                })
+                            return
+                                state,
+                                Message.Event AppEvent.UserSignedIn
+                                |> List.singleton
+                        | Error error ->
+                            return
+                                state,
+                                Message.Event (AppEvent.Error error)
+                                |> List.singleton
+                    | AppCommand.RegisterAdapter adapter ->
+                        return
+                            { state with
+                                Adapters = adapter :: state.Adapters
+                            },
+                            []
+                //                    | _ -> return failwith "invalid message"
+                }
+
+            Profiling.addCount $"Messaging.appUpdate. command={command} result={result}"
+            logger.Trace (fun () -> $"Messaging.appUpdate. command={command} result={result}")
+            return result
+        //                    | _ -> return failwith "invalid message"
+        }
+
+    let inline atomUpdate getter setter state command =
+        promise {
+            let logger = Store.value getter Selectors.logger
+
+            let! result =
+                promise {
+                    match command with
+                    | AtomCommand.Init state -> return state, []
+                    | AtomCommand.Subscribe -> return state, []
+                    | AtomCommand.Unsubscribe -> return state, []
+                //                    | _ -> return failwith "invalid message"
+                }
+
+            Profiling.addCount $"Messaging.atomUpdate. command={command} result={result}"
+            logger.Trace (fun () -> $"Messaging.atomUpdate. command={command} result={result}")
+            return result
+        //                    | _ -> return failwith "invalid message"
+        }

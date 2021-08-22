@@ -18,13 +18,6 @@ open FsStore.Bindings.Jotai
 [<AutoOpen>]
 module BaseStore =
     module Store =
-        let inline gunAtomNodeFromAtomPath getter alias atomPath =
-            match alias, atomPath with
-            | Some alias, Some atomPath ->
-                match Store.value getter (Selectors.Gun.gunAtomNode (alias, atomPath)) with
-                | Some gunAtomNode -> Some ($">> atomPath={atomPath} alias={alias}", gunAtomNode)
-                | _ -> None
-            | _ -> None
 
 
         let testKeysCache = Dictionary<string, Set<string>> ()
@@ -47,7 +40,8 @@ module BaseStore =
 
                 return
                     Object.newDisposable
-                        (fun () -> Logger.logDebug (fun () -> $"BaseStore.newHashedDisposable disposing... ticks={ticks}"))
+                        (fun () ->
+                            Logger.logDebug (fun () -> $"BaseStore.newHashedDisposable disposing... ticks={ticks}"))
             }
 
         let inline splitAtom atom = jotaiUtils.splitAtom atom
@@ -73,9 +67,22 @@ module BaseStore =
             | Gun of 'T
             | Hub of 'T
 
-        type Event<'T> =
+        type Command2 =
+            | UnregisterAdapter
+            | CreateUser
+            | SignInAlias
+            | SignInPair
+            | SignOutUser
+
+
+        type Event2<'T> =
+            //            | AdapterRegistered
+            | AdapterUnregistered
             | UserCreated
             | UserSignedIn
+            | UserSignedOut
+            | AtomMount
+            | AtomUnmount
             | AdapterEnable
             | AdapterSubscribe
             | AdapterValue of AdapterValue<'T>
@@ -156,30 +163,31 @@ module BaseStore =
             | [||] -> unbox emptyArrayAtom
             | _ -> jotaiUtils.waitForAll atoms
 
+
         let inline deleteRoot getter atom =
             promise {
                 let alias = Store.value getter Selectors.Gun.alias
                 let atomPath = Internal.queryAtomPath (AtomReference.Atom atom)
 
-                let gunAtomNode = gunAtomNodeFromAtomPath getter alias atomPath
+                let gunAtomNode = Store.value getter (Selectors.Gun.gunAtomNode (alias, atomPath))
 
                 match gunAtomNode with
-                | Some (_key, gunAtomNode) ->
-                    let! _putResult = Gun.put (gunAtomNode.back ()) (unbox null)
-                    ()
-                | None -> ()
+                | Some gunAtomNode ->
+                    let! putResult = Gun.put (gunAtomNode.back ()) (unbox null)
+                    Logger.logDebug (fun () -> $"Store.deleteRoot. putResult={putResult}")
+                | None -> failwith "Store.deleteRoot. invalid gun atom node"
 
-                match alias, atomPath with
-                | Some (Gun.Alias alias), Some (AtomPath atomPath) ->
+                match alias with
+                | Some (Gun.Alias alias) ->
                     let hub = Store.value getter Selectors.Hub.hub
 
                     match hub with
                     | Some hub ->
-                        let nodes = atomPath |> String.split "/"
+                        let nodes = atomPath |> AtomPath.Value |> String.split "/"
 
                         if nodes.Length > 3 then
                             let rootAtomPath = nodes |> Array.take 3 |> String.concat "/"
                             do! hub.sendAsPromise (Sync.Request.Set (alias, rootAtomPath, null))
-                    | _ -> ()
-                | _ -> ()
+                    | _ -> Logger.logDebug (fun () -> "Store.deleteRoot. invalid hub. skipping")
+                | _ -> failwith "Store.deleteRoot. invalid alias"
             }

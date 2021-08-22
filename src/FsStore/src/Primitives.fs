@@ -39,7 +39,7 @@ module Internal =
         | AtomWithStorageSync
 
     let rec registerAtom (atomType: AtomType) (AtomPath atomPath) (atom: Atom<_>) =
-        Profiling.addCount $"#Primitives.{nameof registerAtom} {atomPath} {atom} {atomType}"
+        Profiling.addCount $"# Primitives.{nameof registerAtom} {atomPath} {atom} {atomType}"
 
         atomPathMap.[atomPath] <- atom.toString ()
         atomIdMap.[atom.toString ()] <- atomPath
@@ -49,12 +49,12 @@ module Internal =
             match atomReference with
             | AtomReference.Atom atom ->
                 match atomIdMap.TryGetValue (atom.toString ()) with
-                | true, value -> Some (AtomPath value)
-                | _ -> None
+                | true, value -> AtomPath value
+                | _ -> failwith $"Internal.queryAtomPath query error atomReference={atomReference} "
             | AtomReference.Path path ->
                 match atomPathMap.TryGetValue path with
-                | true, value -> Some (AtomPath value)
-                | _ -> None
+                | true, value -> AtomPath value
+                | _ -> failwith $"Internal.queryAtomPath query error atomReference={atomReference} "
 
         Logger.logTrace (fun () -> $"Internal.queryAtomPath atomReference={atomReference} result={result}")
 
@@ -69,7 +69,7 @@ module Primitives =
             jotai.atom (
                 (fun () ->
                     Profiling.addCount
-                        $"#Primitives.atom defaultValue getter {atomPath} { (*Json.encodeWithNull*) defaultValue}"
+                        $"# Primitives.atom defaultValue getter {atomPath} { (*Json.encodeWithNull*) defaultValue}"
 
                     defaultValue)
                     ()
@@ -78,24 +78,24 @@ module Primitives =
         Internal.registerAtom Internal.AtomType.Atom atomPath atom
         atom
 
+    let inline rawSelector<'TValue> (getFn: GetFn -> 'TValue) (setFn: GetFn -> SetFn -> 'TValue -> unit) =
+        jotai.atom (getFn, Some setFn)
+
     let inline selector<'TValue> atomKey (getFn: GetFn -> 'TValue) (setFn: GetFn -> SetFn -> 'TValue -> unit) =
         let atomPath = atomKey |> AtomKey.AtomPath
 
-        jotai.atom (
+        rawSelector
             (fun getter ->
-                Profiling.addCount $"#Primitives.selector get {atomPath}"
+                Profiling.addCount $"# Primitives.selector get {atomPath}"
+                getFn getter)
+            (fun getter setter value ->
+                Profiling.addCount $"# Primitives.selector set {atomPath}"
+                let newValue = value
+                //                        match jsTypeof value with
+                //                         | "function" -> (unbox value) () |> unbox
+                //                         | _ -> value
+                setFn getter setter newValue)
 
-                getFn getter),
-            Some
-                (fun getter setter value ->
-                    Profiling.addCount $"#Primitives.selector set {atomPath}"
-
-                    let newValue = value
-                    //                        match jsTypeof value with
-                    //                         | "function" -> (unbox value) () |> unbox
-                    //                         | _ -> value
-                    setFn getter setter newValue)
-        )
 
     let inline selectAtom atomKey atom selector =
         //        readSelector (
@@ -111,7 +111,7 @@ module Primitives =
         jotaiUtils.selectAtom
             atom
             (fun value ->
-                Profiling.addCount $"#Primitives.selectAtom {atomPath}"
+                Profiling.addCount $"# Primitives.selectAtom {atomPath}"
                 selector value)
             JS.undefined
 
@@ -125,13 +125,13 @@ module Primitives =
         jotai.atom (
             (fun getter ->
                 promise {
-                    Profiling.addCount $"#Primitives.asyncSelector get {atomPath}"
+                    Profiling.addCount $"# Primitives.asyncSelector get {atomPath}"
                     return! getFn getter
                 }),
             Some
                 (fun getter setter newValue ->
                     promise {
-                        Profiling.addCount $"#Primitives.asyncSelector set {atomPath}"
+                        Profiling.addCount $"# Primitives.asyncSelector set {atomPath}"
                         do! setFn getter setter newValue
                     })
         )
@@ -150,7 +150,7 @@ module PrimitivesMagic =
                 }
                 defaultValue
 
-        let inline atomFamily<'TKey, 'TValue>
+        let inline atomFamilyRegistered<'TKey, 'TValue>
             storeRoot
             collection
             name
@@ -168,6 +168,9 @@ module PrimitivesMagic =
                         }
                         (defaultValueFn param))
                 Object.compare
+
+        let inline atomFamily defaultValueFn =
+            jotaiUtils.atomFamily (fun param -> jotai.atom (defaultValueFn param)) Object.compare
 
         let inline selector<'TValue>
             storeRoot
@@ -243,6 +246,20 @@ module PrimitivesMagic =
                 }
                 atom
                 selector
+
+        let inline rawSetSelector setFn =
+            Primitives.rawSelector
+                (unbox null)
+                (fun getter setter newValue ->
+                    Profiling.addCount "# Primitives.rawSetSelector setFn"
+                    setFn getter setter newValue)
+
+        //        let inline writeOnlyAtom internalAtom =
+//            rawSetSelector
+//                (fun _getter setter newValue ->
+//                    Logger.logTrace (fun () -> $"writeOnlyAtom internalAtom={internalAtom} newValue={newValue}")
+//                    set setter internalAtom newValue)
+
 
         let inline selectAtomFamily storeRoot collection name atom selector =
             jotaiUtils.atomFamily

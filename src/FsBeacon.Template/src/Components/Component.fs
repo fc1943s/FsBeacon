@@ -1,16 +1,17 @@
 namespace FsBeacon.Template.Components
 
+open FsStore
+open FsStore.Store
 open FsCore
 open Browser.Types
 open Fable.React
 open Feliz
 open FsJs
-open FsStore
+open FsStore.Hooks
 open FsStore.Bindings.Gun
 open FsStore.Model
 open FsStore.State
 open FsStore.Bindings
-open FsStore.Hooks
 open FsBeacon.Template.State
 open FsBeacon.Template
 open FsUi.Bindings
@@ -61,7 +62,7 @@ module Component =
             //                Button.Button
 //                    {|
 //                        Icon = Some (Icons.bi.BiSave |> Icons.render, Button.IconPosition.Left)
-//                        Hint = None
+//                        Tooltip = None
 //                        Props = fun _ -> ()
 //                        Children =
 //                            [
@@ -72,7 +73,7 @@ module Component =
 //                Button.Button
 //                    {|
 //                        Icon = Some (Icons.bi.BiTrash |> Icons.render, Button.IconPosition.Left)
-//                        Hint = None
+//                        Tooltip = None
 //                        Props = fun _ -> ()
 //                        Children =
 //                            [
@@ -95,7 +96,7 @@ module Component =
 
 
     [<ReactComponent>]
-    let HydrateCoreContainer () =
+    let rec HydrateCoreContainer () =
         printfn "HydrateCoreContainer.render"
 
         Jotai.jotaiUtils.useHydrateAtoms [|
@@ -103,35 +104,42 @@ module Component =
             unbox Atoms.logLevel, unbox Logger.LogLevel.Trace
         |]
 
+        //        Store.useHashedEffectOnce
+//            (nameof HydrateCoreContainer)
+//            (fun _ setter -> promise {
+//            Store.set setter Atoms.showDebug true
+//            Store.set setter Atoms.logLevel Logger.LogLevel.Trace
+//        })
+
         nothing
 
     [<ReactComponent>]
-    let HydrateSyncContainer () =
+    let rec HydrateSyncContainer () =
         printfn "HydrateSyncContainer.render"
 
-        Jotai.jotaiUtils.useHydrateAtoms [|
-            unbox Atoms.gunOptions,
-            unbox (
-                GunOptions.Sync [|
-                    GunPeer "https://localhost:49221/gun"
-                |]
-            )
-            //            unbox Atoms.hubUrl, unbox (Some "https://localhost:49211")
-            |]
+        //        Jotai.jotaiUtils.useHydrateAtoms [|
+//            unbox Atoms.gunOptions,
+//            unbox (
+//                GunOptions.Sync [|
+//                    GunPeer "https://localhost:49221/gun"
+//                |]
+//            )
+//            //            unbox Atoms.hubUrl, unbox (Some "https://localhost:49211")
+//            |]
 
-        let callbacks = Store.useCallbacks ()
-
-        React.useEffect (
-            (fun () ->
+        Store.useHashedEffectOnce
+            (nameof HydrateSyncContainer)
+            (fun _ setter ->
                 promise {
-                    let! _getter, setter = callbacks ()
+                    Store.set
+                        setter
+                        Atoms.gunOptions
+                        (GunOptions.Sync [|
+                            GunPeer "https://localhost:49221/gun"
+                         |])
+
                     Store.set setter Atoms.syncHydrateCompleted true
-                }
-                |> Promise.start),
-            [|
-                box callbacks
-            |]
-        )
+                })
 
         nothing
 
@@ -141,16 +149,13 @@ module Component =
         let logger = Store.useValue Selectors.logger
         logger.Info (fun () -> "SignInContainer.render")
 
-        let deviceInfo = Store.useValue Selectors.deviceInfo
-
-        let signIn = Auth.useSignIn ()
         let signUp = Auth.useSignUp ()
 
         let toast = Ui.useToast ()
 
         Store.useHashedEffectOnce
-            (nameof SignInContainer, deviceInfo.DeviceId)
-            (fun _getter _setter ->
+            (nameof SignInContainer)
+            (fun getter setter ->
                 promise {
                     let credentials = $"a@{Dom.deviceTag}"
                     //
@@ -167,7 +172,7 @@ module Component =
                     | Ok _ -> ()
                     | Error error when error.Contains "User already created" ->
                         //                                do! Promise.sleep 300
-                        match! signIn (credentials, credentials) with
+                        match! Auth.signIn getter setter (credentials, credentials) with
                         | Ok _ -> ()
                         | Error error -> toast (fun x -> x.description <- $"1: {error}")
                     | Error error -> toast (fun x -> x.description <- $"2: {error}")
@@ -202,7 +207,7 @@ module Component =
 
         Button.Button
             {|
-                Hint = None
+                Tooltip = None
                 Icon = Some (Icons.bi.BiData |> Icons.render, Button.IconPosition.Left)
                 Props =
                     fun x ->
@@ -225,7 +230,7 @@ module Component =
 
         Button.Button
             {|
-                Hint = None
+                Tooltip = None
                 Icon = Some (Icons.io5.IoKey |> Icons.render, Button.IconPosition.Left)
                 Props =
                     fun x ->
@@ -247,7 +252,7 @@ module Component =
 
         Button.Button
             {|
-                Hint = None
+                Tooltip = None
                 Icon = Some (Icons.io5.IoKey |> Icons.render, Button.IconPosition.Left)
                 Props =
                     fun x ->
@@ -266,15 +271,20 @@ module Component =
 
         Button.Button
             {|
-                Hint = None
+                Tooltip = None
                 Icon = Some (Icons.md.MdClear |> Icons.render, Button.IconPosition.Left)
-                Props =
-                    fun x -> x.onClick <- (fun _ -> promise { (Dom.Global.get "clearProfilingState" (fun _ -> ())) () })
+                Props = fun x -> x.onClick <- (fun _ -> promise { Profiling.clearProfilingState () })
                 Children =
                     [
                         str "clear logs"
                     ]
             |}
+
+    //    let addFile
+////        : (unit -> Fable.Core.JS.Promise<unit>)
+//        = Store.rawSetSelector (fun getter setter newValue ->
+//            ()
+//    )
 
     [<ReactComponent>]
     let AddFileButton () =
@@ -301,7 +311,7 @@ module Component =
 
         Button.Button
             {|
-                Hint = None
+                Tooltip = None
                 Icon = Some (Icons.io5.IoAdd |> Icons.render, Button.IconPosition.Left)
                 Props =
                     fun x ->
@@ -322,7 +332,7 @@ module Component =
 
         Button.Button
             {|
-                Hint = None
+                Tooltip = Some (str "Tooltip test")
                 Icon = Some (Icons.io5.IoRefreshCircle |> Icons.render, Button.IconPosition.Left)
                 Props = fun x -> x.onClick <- (fun _ -> promise { setMounted (not mounted) })
                 Children =
@@ -420,21 +430,39 @@ module Component =
 
 
     [<ReactComponent>]
-    let MessageProcessor messageIdAtom =
+    let CommandConsumer messageIdAtom =
         let logger = Store.useValue Selectors.logger
-        logger.Trace (fun () -> "MessageProcessor.render")
-        let messageProcessor = Messaging.useMessageProcessor ()
+        logger.Trace (fun () -> "CommandConsumer.render")
+        let deviceInfo = Store.useValue Selectors.deviceInfo
+        let appState = Store.useValue (Engine.appState deviceInfo.DeviceId)
+        let consumeCommands = Store.useCallbackRef (Engine.consumeCommands Messaging.appUpdate appState)
         let messageId = Store.useValue messageIdAtom
-        let message = Store.useValue (Atoms.Message.message messageId)
+        let appMessage = Store.useValue (Atoms.Message.appMessage messageId)
         let ack, setAck = Store.useState (Atoms.Message.ack messageId)
 
         React.useEffect (
             (fun () ->
-                messageProcessor (ack, (fun () -> setAck (Some true)), message)
+                promise {
+                    match ack with
+                    | Some false ->
+                        match appMessage with
+                        | Message.Command command ->
+                            let! events = consumeCommands (command |> List.singleton)
+
+                            logger.Info
+                                (fun () ->
+                                    $"CommandConsumer. command processed. acked. command={command} events={events} ")
+
+                            setAck (Some true)
+                        | _ -> failwith "CommandConsumer. invalid command"
+
+                    | _ -> ()
+                }
                 |> Promise.start),
             [|
-                box messageProcessor
-                box message
+                box logger
+                box consumeCommands
+                box appMessage
                 box ack
                 box setAck
             |]
@@ -449,7 +477,7 @@ module Component =
         let messageIdAtoms = Store.useValue State.Selectors.asyncMessageIdAtoms
 
         React.fragment [
-            yield! messageIdAtoms |> Array.map MessageProcessor
+            yield! messageIdAtoms |> Array.map CommandConsumer
         ]
 
     [<ReactComponent>]

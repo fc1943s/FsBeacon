@@ -8,6 +8,7 @@ open Feliz
 open FsStore
 open FsStore.Model
 open FsStore.Hooks
+open FsStore.Store.SyncEngine
 open FsUi.Bindings
 open Fable.Core.JsInterop
 open Microsoft.FSharp.Core.Operators
@@ -21,9 +22,9 @@ module RouterObserver =
         logger.Debug (fun () -> "RouterObserver.render: Constructor")
 
         let deviceInfo = Store.useValue Selectors.deviceInfo
-
         let lastSegments = React.useRef []
-        let messageProcessor = Messaging.useMessageProcessor ()
+        let appState = Store.useValue (Engine.appState deviceInfo.DeviceId)
+        let consumeCommands = Store.useCallbackRef (Engine.consumeCommands Messaging.appUpdate appState)
 
         React.useEffect (
             (fun () ->
@@ -64,7 +65,9 @@ lastSegments.current={JS.JSON.stringify lastSegments.current} ")
                                             | Some window -> window?atob base64
                                             | None -> ""
 
-                                        json |> Json.decode<Message []> |> Some
+                                        json
+                                        |> Json.decode<Message<AppCommand, AppEvent> list>
+                                        |> Some
                                     with
                                     | ex ->
                                         logger.Error
@@ -73,11 +76,11 @@ lastSegments.current={JS.JSON.stringify lastSegments.current} ")
 error deserializing. ex={ex}
 newSegments={JS.JSON.stringify newSegments} ")
 
-                                        Some [||]
+                                        Some []
                                 | _ -> None
 
                             match messages with
-                            | Some [||] -> logger.Error (fun () -> $"Invalid messages. newSegments={newSegments}")
+                            | Some [] -> logger.Error (fun () -> $"Invalid messages. newSegments={newSegments}")
                             | Some messages ->
                                 logger.Debug
                                     (fun () ->
@@ -85,30 +88,28 @@ newSegments={JS.JSON.stringify newSegments} ")
                                                   messages={messages}
                                                   newSegments={JS.JSON.stringify newSegments} ")
 
-                                do!
+                                match alias with
+                                | Some _ ->
                                     messages
-                                    |> Array.map
+                                    |> List.iter
                                         (fun message ->
-                                            promise {
-                                                match alias with
-                                                | Some _ ->
-                                                    let messageId = MessageId.NewId ()
-                                                    Store.set setter (State.Atoms.Message.message messageId) message
-                                                    Store.set setter (State.Atoms.Message.ack messageId) (Some false)
-                                                | None ->
-                                                    let ack = Some false
+                                            let messageId = Hydrate.hydrateAppMessage setter message
 
-                                                    let onAck () =
-                                                        logger.Debug
-                                                            (fun () ->
-                                                                $"RouterObserver. acked.
-                                                                                          essage={message}
-                                                                                          newSegments={JS.JSON.stringify newSegments} ")
+                                            logger.Debug
+                                                (fun () -> $"RouterObserver. message hydrated. messageId={messageId} "))
+                                | None ->
+                                    let commands =
+                                        messages
+                                        |> List.choose
+                                            (function
+                                            | Message.Command command -> Some command
+                                            | _ -> None)
 
-                                                    do! messageProcessor (ack, onAck, message)
-                                            })
-                                    |> Promise.all
-                                    |> Promise.ignore
+
+                                    let! events = consumeCommands commands
+
+                                    logger.Debug
+                                        (fun () -> $"RouterObserver. no alias. consumed inline. events={events}  ")
 
                                 Router.navigatePath [||]
                             | None -> Router.navigatePath [||]

@@ -301,7 +301,7 @@ module Input =
                                 React.fragment [
                                     Button.Button
                                         {|
-                                            Hint = None
+                                            Tooltip = None
                                             Icon = Some (Icons.fa.FaSortUp |> Icons.render, Button.IconPosition.Left)
                                             Props =
                                                 fun x ->
@@ -321,7 +321,7 @@ module Input =
 
                                     Button.Button
                                         {|
-                                            Hint = None
+                                            Tooltip = None
                                             Icon = Some (Icons.fa.FaSortDown |> Icons.render, Button.IconPosition.Left)
                                             Props =
                                                 fun x ->

@@ -368,7 +368,7 @@ module Gun =
 //                let valueSet = node.set newValue
 
                 let! newValue = userEncode<'TValue> keys value
-                printfn $"putPublicHash 1. newValue={newValue} t={jsTypeof newValue}"
+                printfn $"putPublicHash starting. newValue={newValue} t={jsTypeof newValue}"
 
                 let valueSet = node.set (GunValue.EncryptedSignedValue newValue)
 
@@ -390,7 +390,7 @@ module Gun =
                             let! putResult = put node (GunValue.NodeReference key)
 
                             Logger.logDebug
-                                (fun () -> $"putPublicHash 2. putResult={putResult} key={key} pub={pub} hash={hash}")
+                                (fun () -> $"putPublicHash completed. putResult={putResult} key={key} pub={pub} hash={hash}")
                          }))
             | _ -> eprintfn $"invalid key. user.is={JS.JSON.stringify user.is}"
         }

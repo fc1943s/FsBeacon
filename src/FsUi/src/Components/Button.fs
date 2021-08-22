@@ -14,7 +14,7 @@ module Button =
     [<ReactComponent>]
     let Button
         (input: {| Icon: (ReactElement * IconPosition) option
-                   Hint: ReactElement option
+                   Tooltip: ReactElement option
                    Props: Ui.IChakraProps -> unit
                    Children: seq<ReactElement> |})
         =
@@ -25,7 +25,7 @@ module Button =
             | _ -> None, None
 
         Tooltip.wrap
-            (input.Hint |> Option.defaultValue null)
+            (input.Tooltip |> Option.defaultValue null)
             [
                 match icon, input.Children |> Seq.toList with
                 | Some icon, [] ->

@@ -36,7 +36,7 @@ module rec Join =
                 Logger.logTrace (fun () -> $"tempValueWrapper constructor. atomPath={atomPath} guidHash={guidHash}")
 
                 let wrapper =
-                    jotai.atom (
+                    Primitives.rawSelector
                         (fun getter ->
                             let value = Store.value getter atom
                             Profiling.addCount $"{atomPath} tempValue set"
@@ -50,21 +50,19 @@ module rec Join =
                             | _ ->
                                 match Json.decode<string * string option> value with
                                 | _, Some value -> value
-                                | _ -> null),
-                        Some
-                            (fun _ setter newValue ->
-                                Profiling.addCount $"{atomPath} tempValue set"
+                                | _ -> null)
+                        (fun _ setter newValue ->
+                            Profiling.addCount $"{atomPath} tempValue set"
 
-                                Logger.logTrace
-                                    (fun () ->
-                                        $"tempValueWrapper.set(). atomPath={atomPath} guidHash={guidHash} newValue={newValue}")
+                            Logger.logTrace
+                                (fun () ->
+                                    $"tempValueWrapper.set(). atomPath={atomPath} guidHash={guidHash} newValue={newValue}")
 
-                                let newValue = Json.encode (atomPath, newValue |> Option.ofObj)
+                            let newValue = Json.encode (atomPath, newValue |> Option.ofObj)
 
-                                Logger.logTrace (fun () -> $"tempValueWrapper.set(). newValue2={newValue} ")
+                            Logger.logTrace (fun () -> $"tempValueWrapper.set(). newValue2={newValue} ")
 
-                                Store.set setter atom (newValue |> box |> unbox))
-                    )
+                            Store.set setter atom (newValue |> box |> unbox))
 
                 wrapper)
             Object.compare

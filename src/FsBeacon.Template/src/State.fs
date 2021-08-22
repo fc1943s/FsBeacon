@@ -26,7 +26,7 @@ module State =
             let collection = Collection (nameof Host)
 
             let rec accordionHiddenFlag =
-                Store.atomFamily
+                Store.atomFamilyRegistered
                     FsBeacon.root
                     collection
                     (nameof accordionHiddenFlag)
