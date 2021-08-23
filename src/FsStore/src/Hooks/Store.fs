@@ -5,6 +5,7 @@ open Fable.Core
 open FsJs
 open FsStore
 open FsStore.Model
+open FsStore.State
 open FsStore.Store
 open Microsoft.FSharp.Core.Operators
 open Feliz
@@ -16,13 +17,13 @@ open FsStore.Bindings.Jotai
 module Store =
     let inline useAtom atom = jotai.useAtom atom // AtomScope.Current
 
-    let inline useStateOption (atom: Atom<'TValue5> option) =
+    let inline useStateOption (atom: AtomConfig<'TValue5> option) =
         let flatAtom =
             React.useMemo (
                 (fun () ->
                     match atom with
                     | Some atom -> atom
-                    | None -> Store.emptyAtom :?> Atom<'TValue5>),
+                    | None -> Store.emptyAtom |> unbox<AtomConfig<'TValue5>>),
                 [|
                     box atom
                 |]
@@ -44,7 +45,7 @@ module Store =
 
         let currentAtomField, tempAtomField =
             React.useMemo (
-                (fun () -> Store.getAtomField atom (InputScope.AtomScope inputScope)),
+                (fun () -> Store.getAtomField atom (InputScope<_>.AtomScope inputScope)),
                 [|
                     box atom
                     box inputScope
@@ -59,10 +60,10 @@ module Store =
                 let defaultJsonEncode, _defaultJsonDecode = unbox Gun.defaultSerializer
 
                 let newTempValue =
-                    match inputScope, tempValue |> Option.defaultValue null with
-                    | _, tempValue when tempValue = Store.___emptyTempAtom -> unbox null
-                    | _, null -> currentValue |> Option.defaultValue (unbox null)
-                    | Some (InputScope.Temp (_, jsonDecode)), tempValue ->
+                    match inputScope, tempValue |> Option.defaultValue None with
+                    | _, tempValue when tempValue = Some Store.___emptyTempAtom -> unbox null
+                    | _, None -> currentValue |> Option.defaultValue (unbox null)
+                    | Some (InputScope.Temp (_, jsonDecode)), Some tempValue ->
                         try
                             logger.Debug
                                 (fun () ->
@@ -87,10 +88,10 @@ module Store =
                         (fun newValue ->
                             setTempValue (
                                 match box newValue with
-                                | null -> Store.___emptyTempAtom
+                                | null -> Some Store.___emptyTempAtom
                                 | _ ->
                                     match inputScope with
-                                    | Some (InputScope.Temp (jsonEncode, _)) -> jsonEncode newValue
+                                    | Some (InputScope.Temp (jsonEncode, _)) -> Some (jsonEncode newValue)
                                     | _ -> defaultJsonEncode newValue
                             ))
                     else
@@ -138,7 +139,7 @@ module Store =
 
         useScopeState<'T> inputAtom inputScope
 
-    let inline useAtomTempState<'T> (atom: Atom<'T>) =
+    let inline useAtomTempState<'T> (atom: AtomConfig<'T>) =
         let atomReference =
             React.useMemo (
                 (fun () -> AtomReference.Atom atom),
@@ -149,13 +150,13 @@ module Store =
 
         useTempState<'T> atomReference
 
-    let inline useCallbackRef (fn: GetFn -> SetFn -> 'a -> JS.Promise<'c>) : ('a -> JS.Promise<'c>) =
+    let inline useCallbackRef (fn: Getter<obj> -> Setter<obj> -> 'a -> JS.Promise<'c>) : ('a -> JS.Promise<'c>) =
         let fnCallback = React.useCallbackRef (fun (getter, setter, arg) -> fn getter setter arg)
 
         let atom =
             React.useMemo (
                 (fun () ->
-                    Store.rawSetSelector
+                    Atom.Primitives.setSelector
                         (fun getter setter (arg, resolve, err) ->
                             try
                                 resolve (fnCallback (getter, setter, arg))

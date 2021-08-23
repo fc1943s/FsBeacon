@@ -163,7 +163,7 @@ module Accordion =
     [<ReactComponent>]
     let AccordionAtom
         (input: {| Items: (ReactElement * ReactElement) list
-                   Atom: Atom<string []>
+                   Atom: AtomConfig<string []>
                    Props: Ui.IChakraProps -> unit |})
         =
         let atomValue, setAtomValue = Store.useState input.Atom

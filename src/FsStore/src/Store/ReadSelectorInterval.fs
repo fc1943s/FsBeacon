@@ -3,6 +3,7 @@ namespace FsStore.Store
 open Fable.Core.JsInterop
 open Fable.Core
 open FsStore
+open FsStore.State
 open Microsoft.FSharp.Core.Operators
 open FsCore
 open FsJs
@@ -13,7 +14,7 @@ open FsStore.Bindings.Jotai
 module ReadSelectorInterval =
     module Store =
         let rec readSelectorInterval storeRoot name interval defaultValue getFn =
-            let cache = jotai.atom defaultValue
+            let cache = Atom.Primitives.atom defaultValue
 
             let mutable lastStore = None
             let mutable timeout = -1
@@ -29,18 +30,15 @@ module ReadSelectorInterval =
 
             Logger.logTrace (fun () -> $"readSelectorInterval.constructor {getDebugInfo ()}")
 
-            let readSelector = Store.readSelector storeRoot name getFn
+            let readSelector = Atom.Primitives.readSelector getFn
 
             let rec readSelectorWrapper =
-                Store.readSelector
-                    storeRoot
-                    $"{name}_{nameof readSelectorWrapper}"
+                Atom.Primitives.readSelector
                     (fun getter ->
-                        if lastStore.IsNone then
-                            lastStore <- Store.value getter Selectors.store
+                        if lastStore.IsNone then lastStore <- Atom.get getter Selectors.store
 
-                        Logger.State.lastLogger <- Store.value getter Selectors.logger
-                        let cache = Store.value getter cache
+                        Logger.State.lastLogger <- Atom.get getter Selectors.logger
+                        let cache = Atom.get getter cache
 
                         Logger.logTrace
                             (fun () ->
@@ -58,7 +56,7 @@ module ReadSelectorInterval =
 
                     match lastStore with
                     | Some (getter, setter) when timeout >= 0 ->
-                        let selectorValue = Store.value getter readSelector
+                        let selectorValue = Atom.get getter readSelector
 
                         if Some selectorValue
                            |> Object.compare lastValue
@@ -69,7 +67,7 @@ module ReadSelectorInterval =
                                                                                             |> Option.ofObjUnbox
                                                                                             |> Option.isSome} {getDebugInfo ()}")
 
-                            Store.set setter cache selectorValue
+                            Atom.set setter cache selectorValue
                             lastValue <- Some selectorValue
                     | _ -> ()
 
@@ -91,6 +89,5 @@ module ReadSelectorInterval =
             readSelectorWrapper
 
         let inline readSelectorFamilyInterval storeRoot name interval defaultValue getFn =
-            jotaiUtils.atomFamily
+            Atom.Primitives.atomFamily
                 (fun param -> readSelectorInterval storeRoot name interval defaultValue (getFn param))
-                Object.compare

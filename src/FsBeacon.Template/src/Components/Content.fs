@@ -4,6 +4,7 @@ open Feliz
 open FsJs
 open FsStore.Hooks
 open FsStore
+open FsStore.State
 open FsUi.Bindings
 open FsUi.Components
 

@@ -1,5 +1,6 @@
 namespace FsBeacon.Template
 
+open FsStore.Bindings.Jotai
 open FsStore.Store
 open System
 open FsCore
@@ -10,10 +11,12 @@ open FsStore.Model
 open FsStore.State
 open FsUi.State
 
+#nowarn "40"
+
 
 module State =
     module FsBeacon =
-        let root = StoreRoot (nameof FsBeacon)
+        let storeRoot = StoreRoot (nameof FsBeacon)
 
 
     [<RequireQualifiedAccess>]
@@ -26,42 +29,44 @@ module State =
             let collection = Collection (nameof Host)
 
             let rec accordionHiddenFlag =
-                Store.atomFamilyRegistered
-                    FsBeacon.root
-                    collection
-                    (nameof accordionHiddenFlag)
-                    (fun (_: AccordionType) -> [||]: string [])
-                    (string >> List.singleton)
+                Atom.Primitives.atomFamily
+                    (fun (accordionType: AccordionType) ->
+                        Atom.createRegistered
+                            (IndexedAtomPath (
+                                FsBeacon.storeRoot,
+                                collection,
+                                accordionType |> string |> List.singleton,
+                                (AtomName (nameof accordionHiddenFlag))
+                            ))
+                            (AtomType.Atom ([||]: string [])))
 
-        let rec syncHydrateStarted = Store.atom FsBeacon.root (nameof syncHydrateStarted) false
-        let rec syncHydrateCompleted = Store.atom FsBeacon.root (nameof syncHydrateCompleted) false
-        let rec signInStarted = Store.atom FsBeacon.root (nameof signInStarted) false
-        let rec mounted = Store.atom FsBeacon.root (nameof mounted) false
+
+        let rec syncHydrateStarted =
+            Atom.createRegistered
+                (RootAtomPath (FsBeacon.storeRoot, AtomName (nameof syncHydrateStarted)))
+                (AtomType.Atom false)
+
+        let rec syncHydrateCompleted =
+            Atom.createRegistered
+                (RootAtomPath (FsBeacon.storeRoot, AtomName (nameof syncHydrateCompleted)))
+                (AtomType.Atom false)
+
+        let rec signInStarted =
+            Atom.createRegistered
+                (RootAtomPath (FsBeacon.storeRoot, AtomName (nameof signInStarted)))
+                (AtomType.Atom false)
+
+        let rec mounted =
+            Atom.createRegistered (RootAtomPath (FsBeacon.storeRoot, AtomName (nameof mounted))) (AtomType.Atom false)
 
 
-        module File =
-            let rec pub =
-                Store.atomFamilyWithSync
-                    FsStore.root
-                    Atoms.File.collection
-                    (nameof pub)
-                    (fun (_: FileId) -> None: Gun.Pub option)
-                    Atoms.File.fileIdIdentifier
 
 
     module Selectors =
         let rec asyncFileIdAtoms =
-            Store.selectAtomSyncKeys
-                FsStore.root
-                (nameof asyncFileIdAtoms)
-                Atoms.File.pub
-                (FileId Guid.Empty)
-                (Guid >> FileId)
+            Store.selectAtomSyncKeys (CollectionAtomPath (FsStore.storeRoot, Atoms.File.collection)) (Guid >> FileId)
 
         let rec asyncMessageIdAtoms =
             Store.selectAtomSyncKeys
-                FsBeacon.root
-                (nameof asyncMessageIdAtoms)
-                Atoms.Message.ack
-                (MessageId Guid.Empty)
+                (CollectionAtomPath (FsStore.storeRoot, Atoms.Message.collection))
                 (Guid >> MessageId)

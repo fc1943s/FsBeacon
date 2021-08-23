@@ -5,12 +5,13 @@ open FsStore
 open FsStore.Model
 open FsCore
 open FsStore.Bindings
+open FsStore.State
 
 
 module Messaging =
     let inline appUpdate getter setter state command =
         promise {
-            let logger = Store.value getter Selectors.logger
+            let logger = Atom.get getter Selectors.logger
 
             let! result =
                 promise {
@@ -45,7 +46,7 @@ module Messaging =
 
     let inline atomUpdate getter setter state command =
         promise {
-            let logger = Store.value getter Selectors.logger
+            let logger = Atom.get getter Selectors.logger
 
             let! result =
                 promise {

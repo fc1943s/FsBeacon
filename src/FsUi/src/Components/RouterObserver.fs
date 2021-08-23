@@ -8,6 +8,7 @@ open Feliz
 open FsStore
 open FsStore.Model
 open FsStore.Hooks
+open FsStore.State
 open FsStore.Store.SyncEngine
 open FsUi.Bindings
 open Fable.Core.JsInterop
@@ -53,7 +54,7 @@ newSegments={JS.JSON.stringify newSegments}
 lastSegments.current={JS.JSON.stringify lastSegments.current} ")
 
                             lastSegments.current <- newSegments
-                            Store.change setter Atoms.routeTrigger ((+) 1)
+                            Atom.change setter Atoms.routeTrigger ((+) 1)
 
                             let messages =
                                 match newSegments with

@@ -2,28 +2,38 @@ namespace FsStore
 
 open FsCore.BaseModel
 open Fable.Core
+open FsStore.Bindings.Jotai
 open FsStore.Model
 open FsStore
+open FsStore.State
 open FsCore
+
+#nowarn "40"
 
 
 module rec Engine =
     let collection = Collection (nameof Engine)
 
+
     let rec appState =
-        Store.atomFamilyRegistered
-            root
-            collection
-            (nameof appState)
-            (fun (_: DeviceId) -> AppEngineState.Default)
-            (string >> List.singleton)
+        Atom.Primitives.atomFamily
+            (fun (deviceId: DeviceId) ->
+                Atom.createRegistered
+                    (IndexedAtomPath (
+                        storeRoot,
+                        collection,
+                        Atoms.Device.deviceIdIdentifier deviceId,
+                        AtomName (nameof appState)
+                    ))
+                    (AtomType.Atom AppEngineState.Default))
+
 
     type UpdateFn<'State, 'Command, 'Event> =
-        GetFn -> SetFn -> 'State -> 'Command -> JS.Promise<'State * Message<'Command, 'Event> list>
+        Getter<obj> -> Setter<obj> -> 'State -> 'Command -> JS.Promise<'State * Message<'Command, 'Event> list>
 
     let inline consumeCommands (updateFn: UpdateFn<_, _, _>) state getter setter commands =
         promise {
-            let logger = Store.value getter Selectors.logger
+            let logger = Atom.get getter Selectors.logger
 
             let rec loop state commands processedMessages =
                 promise {

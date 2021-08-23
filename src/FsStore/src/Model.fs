@@ -7,29 +7,37 @@ open FsStore.Bindings
 
 
 module FsStore =
-    let root = StoreRoot (nameof FsStore)
+    let storeRoot = StoreRoot (nameof FsStore)
 
 
 module Model =
-    type Atom<'T> = Jotai.Atom<'T>
-    type AtomScope = Jotai.AtomScope
-    type GetFn = Jotai.GetFn
-    type SetFn = Jotai.SetFn
 
-    //    [<Erase; RequireQualifiedAccess>]
+
     [<RequireQualifiedAccess>]
-    type InputScope<'TValue> =
+    type AtomScope =
         | Current
-        | Temp of Gun.Serializer<'TValue>
+        | Temp
+
+    type AtomConfig<'A> = Jotai.AtomConfig<'A>
+
+    type Getter<'A> = Jotai.Getter<'A>
+    type Setter<'A> = Jotai.Setter<'A>
+
+    type StoreAtomPath =
+        | RootAtomPath of storeRoot: StoreRoot * name: AtomName
+        | CollectionAtomPath of storeRoot: StoreRoot * collection: Collection
+        | IndexedAtomPath of storeRoot: StoreRoot * collection: Collection * keys: string list * name: AtomName
+
+    and AtomName = AtomName of string
 
     [<RequireQualifiedAccess>]
     type AtomReference<'T> =
-        | Atom of Atom<'T>
-        | Path of string
+        | Atom of Jotai.AtomConfig<'T>
+        | Path of StoreAtomPath
 
     type InputAtom<'T> = InputAtom of atomPath: AtomReference<'T>
 
-    type AtomField<'TValue67> = AtomField of Atom<'TValue67> option * Atom<string> option
+    type AtomField<'A> = AtomField of Jotai.AtomConfig<'A> option * Jotai.AtomConfig<string> option
 
     [<RequireQualifiedAccess>]
     type GunOptions =
@@ -38,11 +46,51 @@ module Model =
 
 
     [<Erase>]
-    type AtomPath =
-        | AtomPath of atomPath: string
-        static member inline Value (AtomPath atomPath) = atomPath
-        static member inline AtomKey _atomPath = AtomPath (failwith "invalid")
+    type AtomPath = AtomPath of atomPath: string
 
+    //    [<Erase; RequireQualifiedAccess>]
+    [<RequireQualifiedAccess>]
+    type InputScope<'A> =
+        | Current
+        | Temp of Gun.Serializer<'A>
+
+
+    [<RequireQualifiedAccess>]
+    type AppCommand =
+        | Init of state: AppEngineState
+        | SignInPair of keys: Gun.GunKeys
+        | RegisterAdapter of adapter: (unit -> unit)
+
+    and AppEngineState = { Adapters: (unit -> unit) list }
+
+    [<RequireQualifiedAccess>]
+    type AppEvent =
+        | UserSignedIn
+        | AdapterRegistered
+        | Error of error: string
+
+    [<RequireQualifiedAccess>]
+    type AtomCommand =
+        | Init of state: AtomEngineState
+        | Subscribe
+        | Unsubscribe
+
+    and AtomEngineState = { Adapters: (unit -> unit) list }
+
+    [<RequireQualifiedAccess>]
+    type AtomEvent =
+        | Subscribed
+        | Unsubscribed
+        | Error of error: string
+
+    type SubscriptionId = SubscriptionId of TicksGuid
+    type MessageId = MessageId of TicksGuid
+
+
+    [<RequireQualifiedAccess>]
+    type Message<'TCommand, 'TEvent> =
+        | Command of command: 'TCommand
+        | Event of event: 'TEvent
 
     //    let inline splitAtomPath (AtomPath atomPath) =
 //        let matches =
@@ -71,15 +119,26 @@ module Model =
 //            |> String.concat "/"
 //            |> AtomPath
 
+    type AtomName with
+        static member inline Value (AtomName name) = name
 
-    type AtomKey =
-        {
-            StoreRoot: StoreRoot
-            Collection: Collection option
-            Keys: string list
-            Name: string
-        }
+    type AtomPath with
+        static member inline Value (AtomPath atomPath) = atomPath
+        static member inline AtomKey _atomPath = AtomPath (failwith "invalid")
 
+    type AppEngineState with
+        static member inline Default = { Adapters = [] }
+
+    type AtomEngineState with
+        static member inline Default = { Adapters = [] }
+
+    type MessageId with
+        static member inline NewId () = MessageId (Guid.newTicksGuid ())
+        static member inline Value (MessageId guid) = guid
+
+    type SubscriptionId with
+        static member inline NewId () = SubscriptionId (Guid.newTicksGuid ())
+        static member inline Value (SubscriptionId guid) = guid
 
     type InputScope<'TValue> with
         static member inline AtomScope<'TValue> (inputScope: InputScope<'TValue> option) =
@@ -87,70 +146,23 @@ module Model =
             | Some (InputScope.Temp _) -> AtomScope.Temp
             | _ -> AtomScope.Current
 
-    type AtomKey with
-        static member AtomPath atomKey =
+    type StoreAtomPath with
+        static member AtomPath storeAtomPath =
+            let storeRoot, collection, keys, name =
+                match storeAtomPath with
+                | RootAtomPath (storeRoot, name) -> storeRoot, None, [], Some name
+                | CollectionAtomPath (storeRoot, collection) -> storeRoot, Some collection, [], None
+                | IndexedAtomPath (storeRoot, collection, keys, name) -> storeRoot, Some collection, keys, Some name
+
             [
-                yield atomKey.StoreRoot |> StoreRoot.Value
-                match atomKey.Collection with
+                yield storeRoot |> StoreRoot.Value
+                match collection with
                 | Some collection -> yield collection |> Collection.Value
                 | None -> ()
-                yield! atomKey.Keys
-                yield atomKey.Name
+                yield! keys
+                match name with
+                | Some name -> yield name |> AtomName.Value
+                | None -> ()
             ]
             |> String.concat "/"
             |> AtomPath
-
-
-    [<RequireQualifiedAccess>]
-    type Message<'TCommand, 'TEvent> =
-        | Command of command: 'TCommand
-        | Event of event: 'TEvent
-
-    type AppEngineState =
-        {
-            Adapters: (unit -> unit) list
-        }
-        static member inline Default = { Adapters = [] }
-
-    type AtomEngineState =
-        {
-            Adapters: (unit -> unit) list
-        }
-        static member inline Default = { Adapters = [] }
-
-    [<RequireQualifiedAccess>]
-    type AppCommand =
-        | Init of state: AppEngineState
-        | SignInPair of keys: Gun.GunKeys
-        | RegisterAdapter of adapter: (unit -> unit)
-
-    [<RequireQualifiedAccess>]
-    type AppEvent =
-        | UserSignedIn
-        | AdapterRegistered
-        | Error of error: string
-
-    [<RequireQualifiedAccess>]
-    type AtomCommand =
-        | Init of state: AtomEngineState
-        | Subscribe
-        | Unsubscribe
-
-    [<RequireQualifiedAccess>]
-    type AtomEvent =
-        | Subscribed
-        | Unsubscribed
-        | Error of error: string
-
-    type MessageId = MessageId of TicksGuid
-
-    type MessageId with
-        static member inline NewId () = MessageId (Guid.newTicksGuid ())
-        static member inline Value (MessageId guid) = guid
-
-
-    type SubscriptionId = SubscriptionId of TicksGuid
-
-    type SubscriptionId with
-        static member inline NewId () = SubscriptionId (Guid.newTicksGuid ())
-        static member inline Value (SubscriptionId guid) = guid

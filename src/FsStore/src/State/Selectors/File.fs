@@ -4,18 +4,32 @@ open FsCore.BaseModel
 open FsStore.State
 open FsJs
 open FsStore
+open FsStore.Bindings.Jotai
+open FsStore.Model
+open Microsoft.FSharp.Core.Operators
 
 #nowarn "40"
 
 
 module rec File =
+    let fileReadSelectorFamily atomName fn =
+        Atom.Primitives.atomFamily
+            (fun (fileId: FileId) ->
+                Atom.createRegistered
+                    (IndexedAtomPath (
+                        FsStore.storeRoot,
+                        Atoms.File.collection,
+                        Atoms.File.fileIdIdentifier fileId,
+                        atomName
+                    ))
+                    (AtomType.ReadSelector (fn fileId)))
+
     let rec hexString =
-        Store.readSelectorFamily
-            FsStore.root
-            (nameof byteArray)
-            (fun (fileId: FileId) getter ->
-                let logger = Store.value getter Selectors.logger
-                let chunkCount = Store.value getter (Atoms.File.chunkCount fileId)
+        fileReadSelectorFamily
+            (AtomName (nameof hexString))
+            (fun fileId getter ->
+                let logger = Atom.get getter Selectors.logger
+                let chunkCount = Atom.get getter (Atoms.File.chunkCount fileId)
 
                 match chunkCount with
                 | 0 -> None
@@ -25,48 +39,41 @@ module rec File =
                             0 .. chunkCount - 1
                         |]
                         |> Array.map (fun i -> Atoms.File.chunk (fileId, i))
-                        |> Store.waitForAll
-                        |> Store.value getter
+                        |> Atom.waitForAll
+                        |> Atom.get getter
 
                     if chunks |> Array.exists (String.length >> (=) 0) then
                         logger.Debug
                             (fun () ->
-                                $"File.blob
-                                        incomplete blob. skipping
-                                    chunkCount={chunkCount}
-                                    chunks.Length={chunks.Length}
-                                    chunks.[0].Length={if chunks.Length = 0 then unbox null else chunks.[0].Length}
-                                    ")
+                                $"File.blob incomplete blob. skipping
+chunkCount={chunkCount} chunks.Length={chunks.Length}
+chunks.[0].Length={if chunks.Length = 0 then unbox null else chunks.[0].Length} ")
 
                         None
                     else
                         logger.Debug
                             (fun () ->
-                                $"File.blob
-                                    chunkCount={chunkCount}
-                                    chunks.Length={chunks.Length}
-                                    chunks.[0].Length={if chunks.Length = 0 then unbox null else chunks.[0].Length}
-                                    ")
+                                $"File.blob chunkCount={chunkCount}
+chunks.Length={chunks.Length}
+chunks.[0].Length={if chunks.Length = 0 then unbox null else chunks.[0].Length} ")
 
                         match chunks |> String.concat "" with
                         | "" -> None
                         | chunks -> Some chunks)
 
     let rec byteArray =
-        Store.readSelectorFamily
-            FsStore.root
-            (nameof byteArray)
-            (fun (fileId: FileId) getter ->
-                let hexString = Store.value getter (hexString fileId)
+        fileReadSelectorFamily
+            (AtomName (nameof byteArray))
+            (fun fileId getter ->
+                let hexString = Atom.get getter (hexString fileId)
                 hexString |> Option.map Js.hexStringToByteArray)
 
     let rec progress =
-        Store.readSelectorFamily
-            FsStore.root
-            (nameof progress)
-            (fun (fileId: FileId) getter ->
-                let logger = Store.value getter Selectors.logger
-                let chunkCount = Store.value getter (Atoms.File.chunkCount fileId)
+        fileReadSelectorFamily
+            (AtomName (nameof progress))
+            (fun fileId getter ->
+                let logger = Atom.get getter Selectors.logger
+                let chunkCount = Atom.get getter (Atoms.File.chunkCount fileId)
 
                 match chunkCount with
                 | 0 -> 0
@@ -76,8 +83,8 @@ module rec File =
                             0 .. chunkCount - 1
                         |]
                         |> Array.map (fun i -> Atoms.File.chunk (fileId, i))
-                        |> Store.waitForAll
-                        |> Store.value getter
+                        |> Atom.waitForAll
+                        |> Atom.get getter
                         |> Array.filter (fun chunk -> chunk.Length > 0)
                         |> Array.length
 
@@ -86,28 +93,24 @@ module rec File =
                     logger.Debug
                         (fun () ->
                             $"File.progress
-                                    chunkCount={chunkCount}
-                                    completedChunkCount={completedChunkCount}
-                                    progress={progress} ")
+                                                chunkCount={chunkCount}
+                                                completedChunkCount={completedChunkCount}
+                                                progress={progress} ")
 
                     progress)
 
-
     let rec blob =
-        Store.readSelectorFamily
-            FsStore.root
-            (nameof blob)
-            (fun (fileId: FileId) getter ->
-                let byteArray = Store.value getter (byteArray fileId)
+        fileReadSelectorFamily
+            (AtomName (nameof blob))
+            (fun fileId getter ->
+                let byteArray = Atom.get getter (byteArray fileId)
 
                 byteArray
                 |> Option.map (Js.byteArrayToBlob "image/png"))
 
-
     let rec objectUrl =
-        Store.readSelectorFamily
-            FsStore.root
-            (nameof objectUrl)
-            (fun (fileId: FileId) getter ->
-                let blob = Store.value getter (blob fileId)
+        fileReadSelectorFamily
+            (AtomName (nameof objectUrl))
+            (fun fileId getter ->
+                let blob = Atom.get getter (blob fileId)
                 blob |> Option.map Browser.Url.URL.createObjectURL)

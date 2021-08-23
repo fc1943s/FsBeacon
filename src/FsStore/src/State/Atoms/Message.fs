@@ -2,8 +2,10 @@ namespace FsStore.State.Atoms
 
 open FsCore.BaseModel
 open FsStore
+open FsStore.Bindings.Jotai
 open FsStore.Model
-open FsStore.Store
+
+#nowarn "40"
 
 
 module rec Message =
@@ -15,18 +17,18 @@ module rec Message =
         |> string
         |> List.singleton
 
-    let rec ack =
-        Store.atomFamilyWithSync
-            FsStore.root
-            collection
-            (nameof ack)
-            (fun (_: MessageId) -> None: bool option)
-            messageIdIdentifier
+
+    let inline messageAtomFamilyWithAdapters atomName defaultValue =
+        Atom.Primitives.atomFamily
+            (fun (messageId: MessageId) ->
+                Atom.createRegistered
+                    (IndexedAtomPath (FsStore.storeRoot, collection, messageIdIdentifier messageId, atomName))
+                    (AtomType.Atom defaultValue)
+                |> Atom.enableAdapters)
+
+    let rec ack = messageAtomFamilyWithAdapters (AtomName (nameof ack)) (None: bool option)
 
     let rec appMessage =
-        Store.atomFamilyWithSync
-            FsStore.root
-            collection
-            (nameof appMessage)
-            (fun (_: MessageId) -> Message<AppCommand, AppEvent>.Command (AppCommand.Init AppEngineState.Default))
-            messageIdIdentifier
+        messageAtomFamilyWithAdapters
+            (AtomName (nameof appMessage))
+            (Message<AppCommand, AppEvent>.Command (AppCommand.Init AppEngineState.Default))

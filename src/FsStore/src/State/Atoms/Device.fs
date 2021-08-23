@@ -2,7 +2,10 @@ namespace FsStore.State.Atoms
 
 open FsCore.BaseModel
 open FsStore
-open FsStore.Store
+open FsStore.Bindings.Jotai
+open FsStore.Model
+
+#nowarn "40"
 
 
 module rec Device =
@@ -14,7 +17,13 @@ module rec Device =
         |> string
         |> List.singleton
 
-    let inline atomFamilyWithSync name defaultValueFn =
-        Store.atomFamilyWithSync FsStore.root collection name defaultValueFn deviceIdIdentifier
 
-    let rec devicePing = atomFamilyWithSync (nameof devicePing) (fun (_: DeviceId) -> Ping "0")
+    let inline deviceAtomFamilyWithAdapters atomName defaultValue =
+        Atom.Primitives.atomFamily
+            (fun (deviceId: DeviceId) ->
+                Atom.createRegistered
+                    (IndexedAtomPath (FsStore.storeRoot, collection, deviceIdIdentifier deviceId, atomName))
+                    (AtomType.Atom defaultValue)
+                |> Atom.enableAdapters)
+
+    let rec devicePing = deviceAtomFamilyWithAdapters (AtomName (nameof devicePing)) (Ping "0")

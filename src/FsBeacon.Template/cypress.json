@@ -5,5 +5,5 @@
   "testFiles": "**/*.spec.fs.js",
   "video": true,
   "viewportWidth": 1000,
-  "viewportHeight": 1200
+  "viewportHeight": 950
 }

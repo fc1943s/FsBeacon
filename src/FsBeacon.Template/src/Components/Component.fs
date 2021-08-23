@@ -22,15 +22,13 @@ open FsUi.Components
 
 module Component =
     let dataChar = "#"
-    let dataBlob = Fable.SimpleHttp.Blob.fromText (String.init (Hydrate.fileChunkSize * 2) (fun _ -> dataChar))
+    let dataBlob = Fable.SimpleHttp.Blob.fromText (String.init (Hydrate.fileChunkSize * 1) (fun _ -> dataChar))
     let hexStringPromise = Js.blobToHexString dataBlob
 
 
     [<ReactComponent>]
     let File fileIdAtom =
         let fileId = Store.useValue fileIdAtom
-        let privateKeys = Store.useValue Selectors.Gun.privateKeys
-        let pub = Store.useValue (Atoms.File.pub fileId)
         let progress = Store.useValue (Selectors.File.progress fileId)
 
         let logger = Store.useValue Selectors.logger
@@ -55,9 +53,7 @@ module Component =
         Ui.stack
             (fun _ -> ())
             [
-                match privateKeys with
-                | Some { pub = pub' } when pub' = pub -> str $"fileId={fileId} progress={progress}%%"
-                | _ -> str $"fileId={fileId} progress=invalid"
+                str $"fileId={fileId} progress={progress}%%"
 
             //                Button.Button
 //                    {|
@@ -107,8 +103,8 @@ module Component =
         //        Store.useHashedEffectOnce
 //            (nameof HydrateCoreContainer)
 //            (fun _ setter -> promise {
-//            Store.set setter Atoms.showDebug true
-//            Store.set setter Atoms.logLevel Logger.LogLevel.Trace
+//            Atom.set setter Atoms.showDebug true
+//            Atom.set setter Atoms.logLevel Logger.LogLevel.Trace
 //        })
 
         nothing
@@ -131,14 +127,14 @@ module Component =
             (nameof HydrateSyncContainer)
             (fun _ setter ->
                 promise {
-                    Store.set
+                    Atom.set
                         setter
                         Atoms.gunOptions
                         (GunOptions.Sync [|
                             GunPeer "https://localhost:49221/gun"
                          |])
 
-                    Store.set setter Atoms.syncHydrateCompleted true
+                    Atom.set setter Atoms.syncHydrateCompleted true
                 })
 
         nothing
@@ -177,7 +173,7 @@ module Component =
                         | Error error -> toast (fun x -> x.description <- $"1: {error}")
                     | Error error -> toast (fun x -> x.description <- $"2: {error}")
 
-                    //                            let gun = Store.value getter Selectors.Gun.gun
+                    //                            let gun = Atom.value getter Selectors.Gun.gun
 //                            let user = gun.user()
 //                            let! ack = Gun.createUser user (Gun.Alias deviceId) (Gun.Pass deviceId)
 //                            printfn $"ack={ack}"
@@ -186,7 +182,7 @@ module Component =
                     //                        let! hexString = hexStringPromise
 //                        let fileId = Hydrate.hydrateFile setter (Model.AtomScope.Current, hexString)
 //
-//                        Store.set setter (State.Device.fileId deviceInfo.DeviceId) fileId
+//                        Atom.set setter (State.Device.fileId deviceInfo.DeviceId) fileId
 
                     let fileId = null
 
@@ -292,7 +288,6 @@ module Component =
         logger.Info (fun () -> "AddFileButton.render")
 
         let alias = Store.useValue Selectors.Gun.alias
-        let privateKeys = Store.useValue Selectors.Gun.privateKeys
 
         let addFile =
             Store.useCallbackRef
@@ -303,10 +298,7 @@ module Component =
                         let! hexString = hexStringPromise
                         let fileId = Hydrate.hydrateFile setter (AtomScope.Current, hexString)
 
-                        match fileId, privateKeys with
-                        | Some fileId, Some privateKeys ->
-                            Store.set setter (State.Atoms.File.pub fileId) privateKeys.pub
-                        | _ -> logger.Error (fun () -> $"add file error. fileId={fileId}")
+                        Profiling.addCount $"addFile fileId={fileId}"
                     })
 
         Button.Button

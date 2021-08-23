@@ -8,12 +8,10 @@ open FsUi.State
 
 module rec Ui =
     let rec uiState =
-        Store.readSelector
-            FsUi.root
-            (nameof uiState)
+        Atom.Primitives.readSelector
             (fun getter ->
                 {
-                    DarkMode = Store.value getter Atoms.Ui.darkMode
-                    FontSize = Store.value getter Atoms.Ui.fontSize
-                    SystemUiFont = Store.value getter Atoms.Ui.systemUiFont
+                    DarkMode = Atom.get getter Atoms.Ui.darkMode
+                    FontSize = Atom.get getter Atoms.Ui.fontSize
+                    SystemUiFont = Atom.get getter Atoms.Ui.systemUiFont
                 })

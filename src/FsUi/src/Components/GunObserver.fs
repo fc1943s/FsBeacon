@@ -4,6 +4,7 @@ open Feliz
 open FsStore
 open FsStore.Hooks
 open FsStore.Bindings
+open FsStore.State
 open FsUi.Bindings
 open FsUi.Hooks
 open Fable.React
@@ -74,8 +75,8 @@ module GunObserver =
                                 let! _getter, setter = store ()
                                 //                                ()
 
-                                Store.change setter Atoms.gunTrigger ((+) 1)
-                                Store.change setter Atoms.hubTrigger ((+) 1)
+                                Atom.change setter Selectors.Gun.gunUser.Trigger ((+) 1)
+                                Atom.change setter Selectors.Hub.hub.Trigger ((+) 1)
                             }
                             |> Promise.start
                         else

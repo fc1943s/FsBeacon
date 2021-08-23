@@ -19,7 +19,7 @@ module Scheduling =
         | Timeout -> JS.setTimeout, JS.clearTimeout
         | Interval -> JS.setInterval, JS.clearInterval
 
-    let inline useScheduling schedulingType duration (fn: GetFn -> SetFn -> JS.Promise<unit>) =
+    let inline useScheduling schedulingType duration (fn: Getter<obj> -> Setter<obj> -> JS.Promise<unit>) =
         let fnCallback = React.useCallbackRef (fun (getter, setter) -> fn getter setter)
 
         let savedCallback = React.useRef fnCallback

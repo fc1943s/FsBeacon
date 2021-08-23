@@ -14,8 +14,8 @@ module Hydrate =
 
     let inline hydrateAppMessage setter message =
         let messageId = MessageId.NewId ()
-        Store.set setter (State.Atoms.Message.appMessage messageId) message
-        Store.set setter (State.Atoms.Message.ack messageId) (Some false)
+        Atom.set setter (State.Atoms.Message.appMessage messageId) message
+        Atom.set setter (State.Atoms.Message.ack messageId) (Some false)
         messageId
 
     let inline hydrateFile setter (atomScope: AtomScope, hexString: string) =
@@ -48,7 +48,7 @@ module Hydrate =
 
             if chunks.Length = chunkCount then
                 let fileId = FileId.NewId ()
-                Store.set setter (Atoms.File.chunkCount fileId) chunkCount
+                Atom.set setter (Atoms.File.chunkCount fileId) chunkCount
 
                 chunks
                 |> Array.iteri (fun i chunk -> Store.scopedSet setter atomScope (Atoms.File.chunk, (fileId, i), chunk))

@@ -10,7 +10,7 @@ open FsUi.Bindings
 module CheckboxInput =
     [<ReactComponent>]
     let CheckboxInput
-        (input: {| Atom: Atom<_>
+        (input: {| Atom: AtomConfig<_>
                    Label: string option
                    Props: Ui.IChakraProps -> unit |})
         =

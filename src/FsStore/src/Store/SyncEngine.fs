@@ -6,6 +6,7 @@ open FsStore
 open FsStore.BaseStore.Store
 open FsStore.Bindings.Gun.Types
 open FsStore.Model
+open FsStore.State
 open Microsoft.FSharp.Core.Operators
 open FsCore
 open FsJs
@@ -30,7 +31,7 @@ module SyncEngine =
         let valueKeyOperation = DateTime.Now.Ticks, AdapterType.Gun, ValueKeyOperation.Add
 
         type SyncEngine<'T> (defaultValue: 'T, mapGunAtomNode) =
-            let internalAtom = Store.atomFamily (fun _alias -> defaultValue)
+            let internalAtom = Atom.atomFamilyAtom (fun _alias -> defaultValue)
             let mutable lastAtomPath = None
             let mutable lastStore = None
             let mutable lastAlias = None
@@ -126,7 +127,7 @@ module SyncEngine =
             member this.GetGunAtomNode () =
                 match lastStore with
                 | Some (getter, _) ->
-                    Store.value getter (Selectors.Gun.gunAtomNode (lastAlias, lastAtomPath.Value))
+                    Atom.get getter (Selectors.Gun.gunAtomNode (lastAlias, lastAtomPath.Value))
                     |> Option.map (mapGunAtomNode |> Option.defaultValue id)
                 | None -> lastGunAtomNode
 
@@ -181,14 +182,16 @@ module SyncEngine =
 
             member this.SetProviders getter atom =
                 if lastAtomPath.IsNone then
-                    lastAtomPath <- Some (Internal.queryAtomPath (AtomReference.Atom atom))
+                    lastAtomPath <-
+                        Atom.query (AtomReference.Atom atom)
+                        |> StoreAtomPath.AtomPath
+                        |> Some
 
-                if lastStore.IsNone then
-                    lastStore <- Store.value getter Selectors.store
+                if lastStore.IsNone then lastStore <- Atom.get getter Selectors.store
 
-                lastAlias <- Store.value getter Selectors.Gun.alias
-                lastGunOptions <- Some (Store.value getter Atoms.gunOptions)
-                Logger.State.lastLogger <- Store.value getter Selectors.logger
+                lastAlias <- Atom.get getter Selectors.Gun.alias
+                lastGunOptions <- Some (Atom.get getter Atoms.gunOptions)
+                Logger.State.lastLogger <- Atom.get getter Selectors.logger
                 lastGunAtomNode <- this.GetGunAtomNode ()
 
                 match lastAtomPath, lastGunAtomNode with
@@ -205,5 +208,5 @@ module SyncEngine =
                         Logger.logTrace
                             (fun () -> $"SyncEngine.SetProviders. gun node present.  this={Json.encodeWithNull this}")
 
-                    lastHub <- Store.value getter Selectors.Hub.hub
+                    lastHub <- Atom.get getter Selectors.Hub.hub
                 | _ -> ()

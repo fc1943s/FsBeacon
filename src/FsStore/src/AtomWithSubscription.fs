@@ -1,13 +1,9 @@
 namespace FsStore
 
-open System
 open Fable.Core.JsInterop
-open System.Collections.Generic
 open FsStore
-open FsStore.BaseStore.Store
-open FsStore.Bindings
-open FsStore.Bindings.Gun.Types
 open FsStore.Model
+open FsStore.State
 open Microsoft.FSharp.Core.Operators
 open FsCore
 open FsJs
@@ -16,12 +12,19 @@ open FsJs
 
 
 module AtomWithSubscription =
-    let inline atomWithSubscription<'TValue> defaultValue subscribe unsubscribe mapGunAtomNode atom : Atom<'TValue> =
-//        let atomStateMap = Store.atomFamily (fun (_: Gun.Alias option) -> AtomEngineState.Default)
+    let inline atomWithSubscription<'TValue>
+        storeAtomPath
+        (defaultValue: 'TValue)
+        subscribe
+        unsubscribe
+        atom
+        : AtomConfig<'TValue> =
+        let atomPath = storeAtomPath |> StoreAtomPath.AtomPath
+
+        //        let atomStateMap = Store.atomFamily (fun (_: Gun.Alias option) -> AtomEngineState.Default)
 
         //                let syncEngine = SyncEngine.Store.SyncEngine (defaultValue, Some (fun (key, node) -> key, node.back().back ()))
 
-        let mutable lastAtomPath = None
         let mutable lastStore = None
         let mutable lastAlias = None
         let mutable lastGunOptions = None
@@ -30,41 +33,44 @@ module AtomWithSubscription =
         let getDebugInfo () =
             $"""
         | atomWithSubscription debugInfo:
+        storeAtomPath={storeAtomPath}
         defaultValue={defaultValue}
         atom={atom}
-        lastAtomPath={lastAtomPath}
         lastAlias={lastAlias}
         lastGunOptions={lastGunOptions}
         lastGunAtomNode={lastGunAtomNode} """
 
         let getGunAtomNode () =
             match lastStore with
-            | Some (getter, _) ->
-                Store.value getter (Selectors.Gun.gunAtomNode (lastAlias, lastAtomPath.Value))
-                |> Option.map (mapGunAtomNode |> Option.defaultValue id)
+            | Some (getter, _) -> Atom.get getter (Selectors.Gun.gunAtomNode (lastAlias, atomPath))
             | None -> lastGunAtomNode
 
+        let refreshSubscriptions () =
+            promise {
+                Logger.logTrace (fun () -> $"Store.atomWithSubscription. refreshSubscriptions {getDebugInfo ()} ") }
+
+        let debouncedRefreshSubscriptions = Js.debounce (fun () -> refreshSubscriptions () |> Promise.start) 0
+
         let refreshInternalState getter =
-            if lastAtomPath.IsNone then
-                lastAtomPath <- Some (Internal.queryAtomPath (AtomReference.Atom atom))
+            //            if lastAtomPath.IsNone then
+//                lastAtomPath <- Some (Internal.queryAtomPath (AtomReference.Atom atom))
+//
+            if lastStore.IsNone then lastStore <- Atom.get getter Selectors.store
 
-            if lastStore.IsNone then
-                lastStore <- Store.value getter Selectors.store
-
-            lastAlias <- Store.value getter Selectors.Gun.alias
-            lastGunOptions <- Some (Store.value getter Atoms.gunOptions)
-            Logger.State.lastLogger <- Store.value getter Selectors.logger
+            lastAlias <- Atom.get getter Selectors.Gun.alias
+            lastGunOptions <- Some (Atom.get getter Atoms.gunOptions)
+            Logger.State.lastLogger <- Atom.get getter Selectors.logger
             lastGunAtomNode <- getGunAtomNode ()
 
             Logger.logTrace
-                        (fun () ->
-                            $"Store.atomWithSubscription refreshInternalState. wrapper.get() atom={atom} {getDebugInfo ()} ")
+                (fun () -> $"Store.atomWithSubscription refreshInternalState. wrapper.get() {getDebugInfo ()} ")
 
-            match lastAtomPath, lastGunAtomNode with
-            | Some _, Some _ ->
-                printfn $"@@@@ subscription here"
+            match lastGunAtomNode with
+            | Some _ ->
+                printfn $"@@@@ subscription here {getDebugInfo ()}"
+                debouncedRefreshSubscriptions ()
 
-//                match subscription with
+            //                match subscription with
 //                | Some (_, None) ->
 //                    Logger.logTrace
 //                        (fun () ->
@@ -72,23 +78,25 @@ module AtomWithSubscription =
 //                    debouncedSubscribe ()
 //                | _ -> Logger.logTrace (fun () -> $"SyncEngine.SetProviders. gun node present. {getDebugInfo ()}")
 
-            | _ -> ()
+            | _ ->
+                Logger.logTrace
+                    (fun () -> $"Store.atomWithSubscription refreshInternalState. empty gun node {getDebugInfo ()} ")
 
         let rec wrapper =
-            Primitives.rawSelector
+            Atom.Primitives.selector
                 (fun getter ->
                     refreshInternalState getter
-                    let result = Store.value getter atom
+                    let result = Atom.get getter atom
 
                     Logger.logTrace
                         (fun () ->
-                            $"Store.atomWithSubscription wrapper.get() wrapper={wrapper} atom={atom} result={result} {getDebugInfo ()} ")
+                            $"Store.atomWithSubscription wrapper.get() wrapper={wrapper} result={result} {getDebugInfo ()} ")
 
                     result)
                 (fun getter setter newValueFn ->
                     refreshInternalState getter
 
-                    Store.set
+                    Atom.set
                         setter
                         atom
                         (unbox
@@ -102,9 +110,15 @@ module AtomWithSubscription =
 
                                 newValue)))
 
-        let internalSubscribe () = subscribe ()
+        let internalSubscribe () =
+            Logger.logTrace
+                (fun () -> $"Store.atomWithSubscription. internal subscribe wrapper={wrapper} {getDebugInfo ()} ")
+        //            subscribe ()
 
-        let internalUnsubscribe () = unsubscribe ()
+        let internalUnsubscribe () =
+            Logger.logTrace
+                (fun () -> $"Store.atomWithSubscription. internal unsubscribe wrapper={wrapper} {getDebugInfo ()} ")
+        //            unsubscribe ()
 
         wrapper?onMount <- fun (setAtom: 'TValue -> unit) ->
                                internalSubscribe ()
@@ -228,7 +242,7 @@ module AtomWithSubscription =
 //                member this.GetGunAtomNode () =
 //                    match lastAccessors with
 //                    | Some (getter, _) ->
-//                        Store.value getter (Selectors.Gun.gunAtomNode (lastAlias, lastAtomPath))
+//                        Atom.value getter (Selectors.Gun.gunAtomNode (lastAlias, lastAtomPath))
 //                        |> Option.map (mapGunAtomNode |> Option.defaultValue id)
 //                    | None -> lastGunAtomNode
 //
@@ -286,11 +300,11 @@ module AtomWithSubscription =
 //                        lastAtomPath <- Internal.queryAtomPath (AtomReference.Atom atom)
 //
 //                    if lastAccessors.IsNone then
-//                        lastAccessors <- Store.value getter Selectors.atomAccessors
+//                        lastAccessors <- Atom.value getter Selectors.atomAccessors
 //
-//                    lastAlias <- Store.value getter Selectors.Gun.alias
-//                    lastGunOptions <- Some (Store.value getter Atoms.gunOptions)
-//                    Logger.State.lastLogger <- Store.value getter Selectors.logger
+//                    lastAlias <- Atom.value getter Selectors.Gun.alias
+//                    lastGunOptions <- Some (Atom.value getter Atoms.gunOptions)
+//                    Logger.State.lastLogger <- Atom.value getter Selectors.logger
 //                    lastGunAtomNode <- this.GetGunAtomNode ()
 //
 //                    match lastAtomPath, lastGunAtomNode with
@@ -308,7 +322,7 @@ module AtomWithSubscription =
 //                                (fun () ->
 //                                    $"SyncEngine.SetProviders. gun node present.  this={Json.encodeWithNull this}")
 //
-//                        lastHub <- Store.value getter Selectors.Hub.hub
+//                        lastHub <- Atom.value getter Selectors.Hub.hub
 //                    | _ -> ()
 //
 //    module SelectAtomSyncKeys =
@@ -372,7 +386,7 @@ module AtomWithSubscription =
 //
 //                            let result =
 //                                if not Js.jestWorkerId then
-//                                    Store.value getter (syncEngine.GetUserAtom ())
+//                                    Atom.value getter (syncEngine.GetUserAtom ())
 //                                else
 //                                    match syncEngine.GetAtomPath () with
 //                                    | Some atomPath ->
@@ -411,13 +425,13 @@ module AtomWithSubscription =
 //                wrapper?onMount <- fun (setAtom: 'TKey [] -> unit) ->
 //                                       match syncEngine.GetAccessors () with
 //                                       | Some (getter, setter) ->
-//                                           let value = Store.value getter atom1
+//                                           let value = Atom.value getter atom1
 //
 //                                           if (getDebugInfo ()).Contains "/pub" then
 //                                               Profiling.addCount
 //                                                   $">>> Mmount. setting value. atom={value} d:{syncEngine.GetDebugSummary ()}"
 //
-//                                               Store.set setter atom1 (value + 1)
+//                                               Atom.set setter atom1 (value + 1)
 //
 //                                       | None -> failwith "invalid accessors"
 //
@@ -426,13 +440,13 @@ module AtomWithSubscription =
 //                                       fun _ ->
 //                                           match syncEngine.GetAccessors () with
 //                                           | Some (getter, setter) ->
-//                                               let value = Store.value getter atom1
+//                                               let value = Atom.value getter atom1
 //
 //                                               if (getDebugInfo ()).Contains "/pub" then
 //                                                   Profiling.addCount
 //                                                       $"<<< Umount. setting value. atom={value} d:{syncEngine.GetDebugSummary ()}"
 //
-//                                                   Store.set setter atom1 (value + 1)
+//                                                   Atom.set setter atom1 (value + 1)
 //
 //                                               syncEngine.Unsubscribe unsubscribe
 //                                           | None -> failwith "invalid accessors"

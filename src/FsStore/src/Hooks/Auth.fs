@@ -5,6 +5,7 @@ open Fable.Core
 open FsJs
 open FsStore
 open FsStore.Bindings
+open FsStore.State
 
 
 module rec Auth =
@@ -13,15 +14,15 @@ module rec Auth =
             (fun getter setter () ->
                 promise {
                     printfn "useLogout(). before leave"
-                    let gunUser = Store.value getter Selectors.Gun.gunUser
+                    let gunUser = Atom.get getter Selectors.Gun.gunUser
                     gunUser.leave ()
-                    Store.change setter Atoms.gunTrigger ((+) 1)
-                    Store.change setter Atoms.hubTrigger ((+) 1)
+                    Atom.change setter Selectors.Gun.gunUser.Trigger ((+) 1)
+                    Atom.change setter Selectors.Hub.hub.Trigger ((+) 1)
                 })
 
     let inline signIn getter _setter (alias, password) =
         promise {
-            let gunUser = Store.value getter Selectors.Gun.gunUser
+            let gunUser = Atom.get getter Selectors.Gun.gunUser
 
             let! ack =
                 match alias, password with
@@ -60,8 +61,8 @@ module rec Auth =
         Store.useCallbackRef
             (fun getter setter (password, newPassword) ->
                 promise {
-                    let alias = Store.value getter Selectors.Gun.alias
-                    let gunUser = Store.value getter Selectors.Gun.gunUser
+                    let alias = Atom.get getter Selectors.Gun.alias
+                    let gunUser = Atom.get getter Selectors.Gun.gunUser
 
                     match alias with
                     | Some (Gun.Alias alias) ->
@@ -72,8 +73,8 @@ module rec Auth =
                             promise {
                                 match ack with
                                 | { ok = Some 1; err = None } ->
-                                    Store.change setter Atoms.gunTrigger ((+) 1)
-                                    Store.change setter Atoms.hubTrigger ((+) 1)
+                                    Atom.change setter Selectors.Gun.gunUser.Trigger ((+) 1)
+                                    Atom.change setter Selectors.Hub.hub.Trigger ((+) 1)
                                     return Ok ()
                                 | { err = Some error } -> return Error error
                                 | _ -> return Error $"invalid ack {JS.JSON.stringify ack}"
@@ -87,11 +88,11 @@ module rec Auth =
         Store.useCallbackRef
             (fun getter _ password ->
                 promise {
-                    let alias = Store.value getter Selectors.Gun.alias
+                    let alias = Atom.get getter Selectors.Gun.alias
 
                     match alias with
                     | Some (Gun.Alias alias) ->
-                        let gunUser = Store.value getter Selectors.Gun.gunUser
+                        let gunUser = Atom.get getter Selectors.Gun.gunUser
 
                         let! ack = Gun.deleteUser gunUser (Gun.Alias alias) (Gun.Pass password)
                         printfn $"ack={JS.JSON.stringify ack}"
@@ -120,7 +121,7 @@ module rec Auth =
                          |> not then
                         return Error "Invalid email address"
                     else
-                        let gun = Store.value getter Selectors.Gun.gun
+                        let gun = Atom.get getter Selectors.Gun.gun
                         let user = gun.user ()
                         printfn $"Auth.useSignUp. gunUser.is={user.is |> Js.objectKeys}"
 

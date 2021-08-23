@@ -6,6 +6,7 @@ open Fable.Core
 open System
 open FsStore.Model
 open FsBeacon.Shared
+open FsStore.State
 open Microsoft.FSharp.Core.Operators
 open FsCore
 open FsJs
@@ -156,20 +157,17 @@ module BaseStore =
 
         let provider = jotai.provider
 
-        let emptyArrayAtom = jotai.atom<obj []> [||]
 
-        let inline waitForAll<'T> (atoms: Atom<'T> []) =
-            match atoms with
-            | [||] -> unbox emptyArrayAtom
-            | _ -> jotaiUtils.waitForAll atoms
 
 
         let inline deleteRoot getter atom =
             promise {
-                let alias = Store.value getter Selectors.Gun.alias
-                let atomPath = Internal.queryAtomPath (AtomReference.Atom atom)
+                let alias = Atom.get getter Selectors.Gun.alias
+                let storeAtomPath = Atom.query (AtomReference.Atom atom)
 
-                let gunAtomNode = Store.value getter (Selectors.Gun.gunAtomNode (alias, atomPath))
+                let atomPath = storeAtomPath |> StoreAtomPath.AtomPath
+
+                let gunAtomNode = Atom.get getter (Selectors.Gun.gunAtomNode (alias, atomPath))
 
                 match gunAtomNode with
                 | Some gunAtomNode ->
@@ -179,7 +177,7 @@ module BaseStore =
 
                 match alias with
                 | Some (Gun.Alias alias) ->
-                    let hub = Store.value getter Selectors.Hub.hub
+                    let hub = Atom.get getter Selectors.Hub.hub
 
                     match hub with
                     | Some hub ->

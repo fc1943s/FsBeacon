@@ -37,10 +37,15 @@ module Sync =
                     // atomWithStorageSync
 
 
-                    Cy2.clickText "clear logs"
-                    Cy2.clickText "mount"
-                    Cy2.clickText "hydrate"
-                    Cy2.clickText "sign in"
+//                    Cy2.clickText "clear logs"
+//                    Cy2.clickText "mount"
+//                    Cy2.clickText "hydrate"
+//                    Cy2.clickText "sign in"
+
+
+
+
+
 
                     //                    Cy2.waitFor "<30> @@"
 //                    Cy2.clickText "unmount"

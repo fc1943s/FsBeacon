@@ -1,6 +1,5 @@
 namespace FsStore
 
-open System.Collections.Generic
 open Fable.Core.JsInterop
 open Fable.Core
 open FsStore.Model
@@ -9,363 +8,184 @@ open FsCore
 open FsJs
 open FsStore.Bindings.Jotai
 
-module Enum =
-    let inline format<'T> (value: 'T) =
-        if typeof<'T>.IsEnum then value |> Enum.name |> unbox else value
+#nowarn "40"
 
-module Object =
-    let inline invokeOrReturnParam param argFn =
-        match jsTypeof argFn with
-        | "function" -> (argFn |> box |> unbox) param |> unbox
-        | _ -> argFn
-
-    let inline invokeOrReturn argFn = invokeOrReturnParam () argFn
 
 module Internal =
-    let private atomPathMap = Dictionary<string, string> ()
-    let private atomIdMap = Dictionary<string, string> ()
 
-    match Dom.window () with
-    | Some window ->
-        window?atomPathMap <- atomPathMap
-        window?atomIdMap <- atomIdMap
-    | None -> ()
+    //    [<RequireQualifiedAccess>]
+//    type AtomType =
+//        | Atom
+//        | AtomWithSync
+//        | AtomWithStorage
+//        | AtomWithStorageSync
 
-    [<RequireQualifiedAccess>]
-    type AtomType =
-        | Atom
-        | AtomWithSync
-        | AtomWithStorage
-        | AtomWithStorageSync
-
-    let rec registerAtom (atomType: AtomType) (AtomPath atomPath) (atom: Atom<_>) =
-        Profiling.addCount $"# Primitives.{nameof registerAtom} {atomPath} {atom} {atomType}"
-
-        atomPathMap.[atomPath] <- atom.toString ()
-        atomIdMap.[atom.toString ()] <- atomPath
-
-    let queryAtomPath atomReference =
-        let result =
-            match atomReference with
-            | AtomReference.Atom atom ->
-                match atomIdMap.TryGetValue (atom.toString ()) with
-                | true, value -> AtomPath value
-                | _ -> failwith $"Internal.queryAtomPath query error atomReference={atomReference} "
-            | AtomReference.Path path ->
-                match atomPathMap.TryGetValue path with
-                | true, value -> AtomPath value
-                | _ -> failwith $"Internal.queryAtomPath query error atomReference={atomReference} "
-
-        Logger.logTrace (fun () -> $"Internal.queryAtomPath atomReference={atomReference} result={result}")
-
-        result
+    //    let queryAtomPath atomReference =
+//        let result =
+//            match atomReference with
+//            | AtomReference.Atom atom ->
+//                match Atom.atomIdMap.TryGetValue (atom.ToString ()) with
+//                | true, value -> AtomPath value
+//                | _ -> failwith $"Internal.queryAtomPath query error atomReference={atomReference} "
+//            | AtomReference.Path path ->
+//                match atomPathMap.TryGetValue path with
+//                | true, value -> AtomPath value
+//                | _ -> failwith $"Internal.queryAtomPath query error atomReference={atomReference} "
+//
+//        Logger.logTrace (fun () -> $"Internal.queryAtomPath atomReference={atomReference} result={result}")
+//
+//        result
+    ()
 
 
-module Primitives =
-    let inline atom<'TValue> atomKey (defaultValue: 'TValue) =
-        let atomPath = atomKey |> AtomKey.AtomPath
-
-        let atom =
-            jotai.atom (
-                (fun () ->
-                    Profiling.addCount
-                        $"# Primitives.atom defaultValue getter {atomPath} { (*Json.encodeWithNull*) defaultValue}"
-
-                    defaultValue)
-                    ()
-            )
-
-        Internal.registerAtom Internal.AtomType.Atom atomPath atom
-        atom
-
-    let inline rawSelector<'TValue> (getFn: GetFn -> 'TValue) (setFn: GetFn -> SetFn -> 'TValue -> unit) =
-        jotai.atom (getFn, Some setFn)
-
-    let inline selector<'TValue> atomKey (getFn: GetFn -> 'TValue) (setFn: GetFn -> SetFn -> 'TValue -> unit) =
-        let atomPath = atomKey |> AtomKey.AtomPath
-
-        rawSelector
-            (fun getter ->
-                Profiling.addCount $"# Primitives.selector get {atomPath}"
-                getFn getter)
-            (fun getter setter value ->
-                Profiling.addCount $"# Primitives.selector set {atomPath}"
-                let newValue = value
-                //                        match jsTypeof value with
-                //                         | "function" -> (unbox value) () |> unbox
-                //                         | _ -> value
-                setFn getter setter newValue)
+module OldPrimitives =
+    //    let inline atomRegistered<'A> storeAtomPath (defaultValue: 'A) =
+//        jotai.atom defaultValue
+//        |> Atom.register storeAtomPath
 
 
-    let inline selectAtom atomKey atom selector =
-        //        readSelector (
-        //            atomPath,
-        //            fun getter ->
-        //                let value = value getter atom
-        //                Profiling.addCount $"{atomPath} :selectAtom"
-        //                selector value
-        //        )
+    //    let inline selector<'A> storeAtomPath (read: Read<'A>) (write: Write<'A>) =
+//        let atomPath = storeAtomPath |> StoreAtomPath.AtomPath
+//
+//        Atom.Primitives.rawSelector
+//            (fun getter ->
+//                Profiling.addCount $"# Primitives.selector get {atomPath}"
+//                read getter)
+//            (fun getter setter value ->
+//                Profiling.addCount $"# Primitives.selector set {atomPath}"
+//                let newValue = value
+//                //                        match jsTypeof value with
+//                //                         | "function" -> (unbox value) () |> unbox
+//                //                         | _ -> value
+//                write getter setter newValue)
 
-        let atomPath = atomKey |> AtomKey.AtomPath
 
-        jotaiUtils.selectAtom
-            atom
-            (fun value ->
-                Profiling.addCount $"# Primitives.selectAtom {atomPath}"
-                selector value)
-            JS.undefined
+    let inline selectAtom atom selector =
+        jotaiUtils.selectAtom atom selector JS.undefined
 
-    let inline asyncSelector<'TValue>
-        atomKey
-        (getFn: GetFn -> JS.Promise<'TValue>)
-        (setFn: GetFn -> SetFn -> 'TValue -> JS.Promise<unit>)
-        =
-        let atomPath = atomKey |> AtomKey.AtomPath
-
+    let inline asyncSelector<'A> (read: AsyncRead<'A>) (write: AsyncWrite<'A>) =
         jotai.atom (
-            (fun getter ->
-                promise {
-                    Profiling.addCount $"# Primitives.asyncSelector get {atomPath}"
-                    return! getFn getter
-                }),
-            Some
-                (fun getter setter newValue ->
-                    promise {
-                        Profiling.addCount $"# Primitives.asyncSelector set {atomPath}"
-                        do! setFn getter setter newValue
-                    })
+            (fun getter -> promise { return! read getter }),
+            Some (fun getter setter newValue -> promise { do! write getter setter newValue })
         )
 
 
 [<AutoOpen>]
 module PrimitivesMagic =
-    module Store =
-        let inline atom<'TValue> storeRoot name (defaultValue: 'TValue) =
-            Primitives.atom
-                {
-                    StoreRoot = storeRoot
-                    Collection = None
-                    Keys = []
-                    Name = name
-                }
-                defaultValue
+    module OldStore =
+        let inline atom<'A> storeRoot name (defaultValue: 'A) =
+            Atom.createRegistered (RootAtomPath (storeRoot, AtomName name)) (AtomType.Atom defaultValue)
 
-        let inline atomFamilyRegistered<'TKey, 'TValue>
+
+        let inline atomFamilyRegistered<'TKey, 'A>
             storeRoot
             collection
             name
-            (defaultValueFn: 'TKey -> 'TValue)
+            (defaultValueFn: 'TKey -> 'A)
             keyIdentifier
             =
             jotaiUtils.atomFamily
                 (fun param ->
-                    Primitives.atom
-                        {
-                            StoreRoot = storeRoot
-                            Collection = Some collection
-                            Keys = keyIdentifier param
-                            Name = name
-                        }
-                        (defaultValueFn param))
-                Object.compare
-
-        let inline atomFamily defaultValueFn =
-            jotaiUtils.atomFamily (fun param -> jotai.atom (defaultValueFn param)) Object.compare
-
-        let inline selector<'TValue>
-            storeRoot
-            name
-            (getFn: GetFn -> 'TValue)
-            (setFn: GetFn -> SetFn -> 'TValue -> unit)
-            =
-            Primitives.selector
-                {
-                    StoreRoot = storeRoot
-                    Collection = None
-                    Keys = []
-                    Name = name
-                }
-                getFn
-                setFn
-
-        let inline readSelector<'TValue> storeRoot name (getFn: GetFn -> 'TValue) =
-            selector
-                storeRoot
-                name
-                getFn
-                (fun _ _ _ -> failwith $"Primitives.readSelector {storeRoot}/{name} is read only.")
-
-        let inline selectorFamily<'TKey, 'TValue>
-            storeRoot
-            collection
-            name
-            (getFn: 'TKey -> GetFn -> 'TValue)
-            (setFn: 'TKey -> GetFn -> SetFn -> 'TValue -> unit)
-            =
-            jotaiUtils.atomFamily
-                (fun param ->
-                    Primitives.selector
-                        {
-                            StoreRoot = storeRoot
-                            Collection = collection
-                            Keys = []
-                            Name = name
-                        }
-                        (getFn param)
-                        (setFn param))
-                Object.compare
+                    Atom.createRegistered
+                        (IndexedAtomPath (storeRoot, collection, keyIdentifier param, AtomName name))
+                        (AtomType.Atom (defaultValueFn param)))
+        //                Object.compare
 
 
-        let inline readSelectorFamily<'TKey, 'TValue>
-            storeRoot
-            name
-            (getFn: 'TKey -> GetFn -> 'TValue)
-            : ('TKey -> Atom<'TValue>) =
-            selectorFamily
-                storeRoot
-                None
-                name
-                getFn
-                (fun _ _ _ -> failwith $"Primitives.readSelectorFamily {storeRoot}/{name} is read only.")
+        let inline selector<'A> (read: Read<'A>) (write: Write<'A>) = Atom.Primitives.selector read write
 
-        let inline value<'TValue> (getter: GetFn) (atom: Atom<'TValue>) : 'TValue = (getter (unbox atom)) :?> 'TValue
+        let inline readSelector<'A> (read: Read<'A>) =
+            selector<'A> read (fun _ _ _ -> failwith $"Primitives.readSelector is read only.")
 
-        let inline set<'TValue> (setter: SetFn) (atom: Atom<'TValue>) (value: 'TValue) =
-            setter (atom |> box |> unbox) value
-
-        let inline change<'TValue> (setter: SetFn) (atom: Atom<'TValue>) (value: 'TValue -> 'TValue) =
-            setter (atom |> box |> unbox) value
-
-        let inline selectAtom storeRoot name atom selector =
-            Primitives.selectAtom
-                {
-                    StoreRoot = storeRoot
-                    Collection = None
-                    Keys = []
-                    Name = name
-                }
-                atom
-                selector
-
-        let inline rawSetSelector setFn =
-            Primitives.rawSelector
-                (unbox null)
-                (fun getter setter newValue ->
-                    Profiling.addCount "# Primitives.rawSetSelector setFn"
-                    setFn getter setter newValue)
-
-        //        let inline writeOnlyAtom internalAtom =
-//            rawSetSelector
-//                (fun _getter setter newValue ->
-//                    Logger.logTrace (fun () -> $"writeOnlyAtom internalAtom={internalAtom} newValue={newValue}")
-//                    set setter internalAtom newValue)
+        let inline selectorFamily<'TKey, 'A> (read: 'TKey -> Read<'A>) (write: 'TKey -> Write<'A>) =
+            Atom.Primitives.atomFamily (fun param -> Atom.Primitives.selector (read param) (write param))
 
 
-        let inline selectAtomFamily storeRoot collection name atom selector =
-            jotaiUtils.atomFamily
-                (fun param ->
-                    Primitives.selectAtom
-                        {
-                            StoreRoot = storeRoot
-                            Collection = Some collection
-                            Keys = []
-                            Name = name
-                        }
-                        atom
-                        (selector param))
-                Object.compare
+        let inline readSelectorFamily<'TKey, 'A> (read: 'TKey -> Read<'A>) : ('TKey -> AtomConfig<'A>) =
+            selectorFamily read (fun _ _ _ -> failwith $"Primitives.readSelectorFamily is read only.")
 
 
-        let inline atomWithStorage storeRoot name defaultValue =
-            let atomPath =
-                {
-                    StoreRoot = storeRoot
-                    Collection = None
-                    Keys = []
-                    Name = name
-                }
-                |> AtomKey.AtomPath
+        let inline writeOnlyAtom internalAtom =
+            Atom.Primitives.setSelector
+                (fun _getter setter newValue ->
+                    Logger.logTrace (fun () -> $"writeOnlyAtom internalAtom={internalAtom} newValue={newValue}")
+                    Atom.set setter internalAtom newValue)
+
+        let inline selectAtomFamily atom selector =
+            Atom.Primitives.atomFamily (fun param -> Atom.Primitives.selectAtom atom (selector param))
 
 
-            let defaultValueFormatted = defaultValue |> Enum.format
+        //        let inline atomWithStorage2 (atomPath: RootAtomPath) defaultValue =
+//            let atomPath =
+//                {
+//                    StoreRoot = storeRoot
+//                    Collection = None
+//                    Keys = []
+//                    Name = Some (AtomName name)
+//                }
+//                |> AtomKey.AtomPath
+//
+//
+//            let defaultValueFormatted = defaultValue |> Enum.formatIfEnum
+//
+//            let internalAtom = jotaiUtils.atomWithStorage (atomPath |> AtomPath.Value) defaultValueFormatted
+//
+//            let selectorWrapper =
+//                selector
+//                    storeRoot
+//                    name
+//                    (fun getter -> value getter internalAtom)
+//                    (fun _ setter argFn ->
+//                        let newValue = argFn |> Object.invokeOrReturn |> Enum.formatIfEnum
+//                        set setter internalAtom newValue)
+//
+//            selectorWrapper?init <- defaultValueFormatted
+//
+//            Internal.registerAtom Internal.AtomType.AtomWithStorage atomPath selectorWrapper
+//
+//            selectorWrapper
 
-            let internalAtom = jotaiUtils.atomWithStorage (atomPath |> AtomPath.Value) defaultValueFormatted
+        let inline atomWithStorage storeAtomPath defaultValue =
+            let defaultValueFormatted = defaultValue |> Enum.formatIfEnum
+
+            let internalAtom =
+                jotaiUtils.atomWithStorage
+                    (storeAtomPath
+                     |> StoreAtomPath.AtomPath
+                     |> AtomPath.Value)
+                    defaultValueFormatted
 
             let selectorWrapper =
                 selector
-                    storeRoot
-                    name
-                    (fun getter -> value getter internalAtom)
+                    (fun getter -> Atom.get getter internalAtom)
                     (fun _ setter argFn ->
-                        let newValue = argFn |> Object.invokeOrReturn |> Enum.format
-                        set setter internalAtom newValue)
+                        let newValue =
+                            argFn
+                            |> Object.invokeOrReturn
+                            |> Enum.formatIfEnum
+
+                        Atom.set setter internalAtom newValue)
 
             selectorWrapper?init <- defaultValueFormatted
-
-            Internal.registerAtom Internal.AtomType.AtomWithStorage atomPath selectorWrapper
 
             selectorWrapper
 
 
-        let inline asyncSelector<'TValue>
-            storeRoot
-            name
-            (getFn: GetFn -> JS.Promise<'TValue>)
-            (setFn: GetFn -> SetFn -> 'TValue -> JS.Promise<unit>)
-            =
-            Primitives.asyncSelector
-                {
-                    StoreRoot = storeRoot
-                    Collection = None
-                    Keys = []
-                    Name = name
-                }
-                getFn
-                setFn
-
-        let inline asyncReadSelector<'TValue> storeRoot name (getFn: GetFn -> JS.Promise<'TValue>) =
-            asyncSelector
-                storeRoot
-                name
-                getFn
-                (fun _ _ _newValue ->
-                    promise { failwith $"Primitives.asyncReadSelector {storeRoot}/{name} is read only." })
+        let inline asyncReadSelector<'A> (read: AsyncRead<'A>) =
+            OldPrimitives.asyncSelector
+                read
+                (fun _ _ _newValue -> promise { failwith "Primitives.asyncReadSelector is read only." })
 
 
-        let inline asyncSelectorFamily<'TKey, 'TValue>
-            storeRoot
-            collection
-            name
-            keyIdentifier
-            (getFn: 'TKey -> GetFn -> JS.Promise<'TValue>)
-            (setFn: 'TKey -> GetFn -> SetFn -> 'TValue -> JS.Promise<unit>)
-            =
+        let inline asyncSelectorFamily<'TKey, 'A> (read: 'TKey -> AsyncRead<'A>) (write: 'TKey -> AsyncWrite<'A>) =
             jotaiUtils.atomFamily
                 (fun param ->
-                    Primitives.asyncSelector
-                        {
-                            StoreRoot = storeRoot
-                            Collection = Some collection
-                            Keys = keyIdentifier param
-                            Name = name
-                        }
-                        (getFn param)
-                        (fun getter setter newValue -> promise { do! setFn param getter setter newValue }))
-                Object.compare
+                    OldPrimitives.asyncSelector
+                        (read param)
+                        (fun getter setter newValue -> promise { do! write param getter setter newValue }))
+        //                Object.compare
 
-        let inline asyncReadSelectorFamily<'TKey, 'TValue>
-            storeRoot
-            collection
-            name
-            keyIdentifier
-            (getFn: 'TKey -> GetFn -> JS.Promise<'TValue>)
-            =
+        let inline asyncReadSelectorFamily<'TKey, 'A> (read: 'TKey -> AsyncRead<'A>) =
             asyncSelectorFamily
-                storeRoot
-                collection
-                name
-                keyIdentifier
-                getFn
-                (fun _key _ _ _newValue ->
-                    promise {
-                        failwith $"Primitives.asyncReadSelectorFamily {storeRoot}/{collection}/{name} is read only." })
+                read
+                (fun _key _ _ _newValue -> promise { failwith $"Primitives.asyncReadSelectorFamily is read only." })

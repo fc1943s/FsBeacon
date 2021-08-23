@@ -4,7 +4,7 @@ open FsCore.BaseModel
 
 
 module FsUi =
-    let root = StoreRoot (nameof FsUi)
+    let storeRoot = StoreRoot (nameof FsUi)
 
 
 module Model =

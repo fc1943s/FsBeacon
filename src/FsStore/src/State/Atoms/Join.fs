@@ -1,6 +1,5 @@
 namespace FsStore.State.Atoms
 
-open FsStore.Store
 open System
 open FsCore.BaseModel
 open FsStore
@@ -15,57 +14,60 @@ open FsStore.Bindings.Jotai
 module rec Join =
     let collection = Collection (nameof Join)
 
+
     let inline createJoinAtom name =
         let rec internalAtomFamily =
-            Store.atomFamilyWithSync
-                FsStore.root
-                collection
-                name
-                (fun (_atomPathGuidHash: Guid) -> null: string)
+            Atom.Primitives.atomFamily
                 (fun (atomPathGuidHash: Guid) ->
-                    [
-                        string atomPathGuidHash
-                    ])
+                    Atom.createRegistered
+                        (IndexedAtomPath (
+                            FsStore.storeRoot,
+                            collection,
+                            [
+                                string atomPathGuidHash
+                            ],
+                            AtomName name
+                        ))
+                        (AtomType.Atom (None: string option))
+                    |> Atom.enableAdapters)
 
-        jotaiUtils.atomFamily
-            (fun (AtomPath atomPath) ->
+        Atom.Primitives.atomFamily
+            (fun (storeAtomPath: StoreAtomPath) ->
+                let atomPath = storeAtomPath |> StoreAtomPath.AtomPath
 
-                let guidHash = Crypto.getTextGuidHash atomPath
+                let guidHash = Crypto.getTextGuidHash (atomPath |> AtomPath.Value)
                 let atom = internalAtomFamily guidHash
 
-                Logger.logTrace (fun () -> $"tempValueWrapper constructor. atomPath={atomPath} guidHash={guidHash}")
+                Logger.logTrace (fun () -> $"Atoms.Join.joinAtom atomPath={atomPath} guidHash={guidHash}")
 
-                let wrapper =
-                    Primitives.rawSelector
-                        (fun getter ->
-                            let value = Store.value getter atom
-                            Profiling.addCount $"{atomPath} tempValue set"
+                Atom.Primitives.selector
+                    (fun getter ->
+                        let value = Atom.get getter atom
+                        Profiling.addCount $"{atomPath} joinAtom get"
 
-                            Logger.logTrace
-                                (fun () ->
-                                    $"tempValueWrapper.get(). atomPath={atomPath} guidHash={guidHash} value={value}")
+                        Logger.logTrace
+                            (fun () ->
+                                $"Atoms.Join.joinAtom get() atomPath={atomPath} guidHash={guidHash} value={value}")
 
-                            match value with
-                            | null -> null
-                            | _ ->
-                                match Json.decode<string * string option> value with
+                        value
+                        |> Option.map
+                            (fun value ->
+                                match Json.decode<AtomPath * string option> value with
                                 | _, Some value -> value
-                                | _ -> null)
-                        (fun _ setter newValue ->
-                            Profiling.addCount $"{atomPath} tempValue set"
+                                | _ -> null))
+                    (fun _ setter newValue ->
+                        Profiling.addCount $"{atomPath} joinAtom set"
 
-                            Logger.logTrace
-                                (fun () ->
-                                    $"tempValueWrapper.set(). atomPath={atomPath} guidHash={guidHash} newValue={newValue}")
+                        let newValueJson =
+                            match Json.encode (atomPath, newValue) with
+                            | String.Valid json -> Some json
+                            | _ -> None
 
-                            let newValue = Json.encode (atomPath, newValue |> Option.ofObj)
+                        Logger.logTrace
+                            (fun () ->
+                                $"Atoms.Join.joinAtom set() atomPath={atomPath} guidHash={guidHash} newValue={newValue}  newValueJson={newValueJson} ")
 
-                            Logger.logTrace (fun () -> $"tempValueWrapper.set(). newValue2={newValue} ")
-
-                            Store.set setter atom (newValue |> box |> unbox))
-
-                wrapper)
-            Object.compare
+                        Atom.set setter atom newValueJson))
 
 
     let rec tempValue = createJoinAtom (nameof tempValue)

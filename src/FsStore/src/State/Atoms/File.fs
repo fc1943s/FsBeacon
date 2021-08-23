@@ -2,7 +2,10 @@ namespace FsStore.State.Atoms
 
 open FsCore.BaseModel
 open FsStore
-open FsStore.Store
+open FsStore.Model
+open Microsoft.FSharp.Core.Operators
+open FsCore
+open FsStore.Bindings.Jotai
 
 #nowarn "40"
 
@@ -13,17 +16,24 @@ module rec File =
     let fileIdIdentifier (fileId: FileId) =
         fileId |> FileId.Value |> string |> List.singleton
 
-    let rec chunkCount =
-        Store.atomFamilyWithSync FsStore.root collection (nameof chunkCount) (fun (_: FileId) -> 0) fileIdIdentifier
+    let atomFamilyWithAdapters keyIdentifierFn atomName (defaultValue: 'A) =
+        Atom.Primitives.atomFamily
+            (fun (key: 'TKey) ->
+                Atom.createRegistered
+                    (IndexedAtomPath (FsStore.storeRoot, collection, keyIdentifierFn key, atomName))
+                    (AtomType.Atom defaultValue)
+                |> Atom.enableAdapters)
+
+    let fileAtomFamilyWithAdapters = atomFamilyWithAdapters fileIdIdentifier
+
+    let rec chunkCount = fileAtomFamilyWithAdapters (AtomName (nameof chunkCount)) 0
 
     let rec chunk =
-        Store.atomFamilyWithSync
-            FsStore.root
-            collection
-            (nameof chunk)
-            (fun (_: FileId, _: int) -> "")
-            (fun (fileId: FileId, index: int) ->
+        atomFamilyWithAdapters
+            (fun (fileId, index: int) ->
                 fileIdIdentifier fileId
                 @ [
                     string index
                 ])
+            (AtomName (nameof chunk))
+            ""
