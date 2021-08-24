@@ -11,7 +11,6 @@ open Microsoft.FSharp.Core.Operators
 open FsCore
 open FsJs
 open FsStore.Bindings
-open FsStore.Bindings.Jotai
 
 #nowarn "40"
 
@@ -45,8 +44,6 @@ module BaseStore =
                             Logger.logDebug (fun () -> $"BaseStore.newHashedDisposable disposing... ticks={ticks}"))
             }
 
-        let inline splitAtom atom = jotaiUtils.splitAtom atom
-
 
 
 
@@ -56,17 +53,6 @@ module BaseStore =
         //        | Gun of int64 * obj
         //        | Hub of int64 * obj
 
-        [<RequireQualifiedAccess>]
-        type AdapterType =
-            | Internal
-            | Gun
-            | Hub
-
-        [<RequireQualifiedAccess>]
-        type AdapterValue<'T> =
-            | Internal of 'T
-            | Gun of 'T
-            | Hub of 'T
 
         type Command2 =
             | UnregisterAdapter
@@ -86,12 +72,12 @@ module BaseStore =
             | AtomUnmount
             | AdapterEnable
             | AdapterSubscribe
-            | AdapterValue of AdapterValue<'T>
+            | AdapterValue of Atom.AdapterValue<'T>
             | AdapterUnsubscribe
             | AdapterDisable
 
-        let adapterValueMap = Map<TicksGuid, AdapterValue<'T>>
-        type Z = Map<AdapterType, TicksGuid * Gun.EncryptedSignedValue> //selector, defaultValue
+        let adapterValueMap = Map<TicksGuid, Atom.AdapterValue<'T>>
+        type Z = Map<Atom.AdapterType, TicksGuid * Gun.EncryptedSignedValue> //selector, defaultValue
         type R = TicksGuid -> Gun.EncryptedSignedValue
         type F = Gun.EncryptedSignedValue
 
@@ -105,7 +91,7 @@ module BaseStore =
 
 
         type SyncState<'TValue> () =
-            let mutable lastAdapterValueMapByType: Map<AdapterType, (TicksGuid * 'TValue) option> option = None
+            let mutable lastAdapterValueMapByType: Map<Atom.AdapterType, (TicksGuid * 'TValue) option> option = None
             let mutable lastGunSubscription = None
             let mutable lastHubSubscription = None
             let mutable syncPaused = false
@@ -133,9 +119,9 @@ module BaseStore =
                 |> Map.toSeq
                 |> Seq.map
                     (function
-                    | ticks, AdapterValue.Internal value -> AdapterType.Internal, (ticks, value)
-                    | ticks, AdapterValue.Gun value -> AdapterType.Gun, (ticks, value)
-                    | ticks, AdapterValue.Hub value -> AdapterType.Hub, (ticks, value))
+                    | ticks, Atom.AdapterValue.Jotai value -> Atom.AdapterType.Jotai, (ticks, value)
+                    | ticks, Atom.AdapterValue.Gun value -> Atom.AdapterType.Gun, (ticks, value)
+                    | ticks, Atom.AdapterValue.Hub value -> Atom.AdapterType.Hub, (ticks, value))
                 |> Seq.groupBy fst
                 |> Map.ofSeq
                 |> Map.map
@@ -145,7 +131,7 @@ module BaseStore =
                         |> Seq.sortByDescending fst
                         |> Seq.head)
 
-            Reflection.unionCases<AdapterType>
+            Reflection.unionCases<Atom.AdapterType>
             |> List.map (fun case -> case, (newMap |> Map.tryFind case))
             |> Map.ofList
 

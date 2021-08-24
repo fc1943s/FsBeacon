@@ -1,5 +1,6 @@
 namespace FsUi.Components
 
+open Fable.Core
 open Feliz
 open FsStore
 open FsStore.Hooks
@@ -28,62 +29,28 @@ module GunObserver =
                 gun.on (
                     Gun.GunEvent "auth",
                     (fun () ->
-                        if isMountedRef.current then
-                            promise {
-                                ()
-                                //                                let user = gun.user ()
+//                        JS.setTimeout
+//                            (fun () ->
+                                promise {
+                                    if isMountedRef.current then
+                                        let! _getter, setter = store ()
+                                        //                                ()
 
-                                //                                let! alias =
-//                                    match user.__.sea, user.is with
-//                                    | _,
-//                                      Some {
-//                                               alias = Some (Gun.GunUserAlias.Alias (Gun.Alias (String.Valid alias)))
-//                                           } ->
-//                                        logger.Debug
-//                                            (fun () ->
-//                                                $"GunObserver.render: .on(auth) effect. setUsername. alias={alias}")
-//
-//                                        let keys = user.__.sea
-//
-//                                        match keys with
-//                                        | Some _keys -> Some (Gun.Alias alias) |> Promise.lift
-//                                        | None -> failwith $"GunObserver.render: No keys found for user {alias}"
-//                                    | Some ({
-//                                                pub = Some (Gun.Pub (String.Valid _))
-//                                            } as keys),
-//                                      _ ->
-//                                        promise {
-//                                            let! data = Gun.radQuery gun
-//                                            let! alias = Gun.userDecode<Gun.Alias> keys data
-//                                            return alias
-//                                        }
-//                                    | _ ->
-//                                        match Dom.window () with
-//                                        | Some window -> window?gun <- gun
-//                                        | None -> ()
-//
-//                                        // @@@@ getImmutableUsername pub
-//
-//                                        logger.Debug
-//                                            (fun () ->
-//                                                $"GunObserver.render: Auth occurred without username.
-//                                        user.is={user.is |> Js.objectKeys}
-//                                        user.is={user.is |> JS.JSON.stringify} ")
-//
-//                                        Promise.lift None
-//
-                                let! _getter, setter = store ()
-                                //                                ()
+                                        Profiling.addTimestamp
+                                            $"{nameof FsUi} | GunObserver [ render / useEffect / setTimeout ] triggering."
 
-                                Atom.change setter Selectors.Gun.gunTrigger ((+) 1)
-                                Atom.change setter Selectors.Hub.hubTrigger ((+) 1)
+                                        Atom.change setter Atoms.gunTrigger ((+) 1)
+                                        Atom.change setter Atoms.hubTrigger ((+) 1)
 
-                                Profiling.addTimestamp $"{nameof FsUi} | GunObserver [ render / useEffect ] triggered."
-                                logger.Debug (fun () -> "GunObserver.render. triggered.  ")
-                            }
-                            |> Promise.start
-                        else
-                            logger.Debug (fun () -> "GunObserver.render. already disposed"))
+                                        logger.Debug (fun () -> "GunObserver.render. triggered.  ")
+                                    else
+                                        logger.Debug (fun () -> "GunObserver.render. already disposed")
+                                }
+                                |> Promise.start
+//                                )
+//                            0
+//                        |> ignore
+                        )
                 )),
             [|
                 box isMountedRef

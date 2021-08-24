@@ -35,5 +35,11 @@ module AtomsMagic =
                 (RootAtomPath (FsStore.storeRoot, AtomName (nameof sessionRestored)))
                 (AtomType.Atom false)
 
+        let rec gunTrigger =
+            Atom.createRegistered (RootAtomPath (FsStore.storeRoot, AtomName (nameof gunTrigger))) (AtomType.Atom 0)
+
+        let rec hubTrigger =
+            Atom.createRegistered (RootAtomPath (FsStore.storeRoot, AtomName (nameof hubTrigger))) (AtomType.Atom 0)
+
         let rec routeTrigger =
             Atom.createRegistered (RootAtomPath (FsStore.storeRoot, AtomName (nameof routeTrigger))) (AtomType.Atom 0)

@@ -16,8 +16,8 @@ module rec Auth =
                     printfn "useLogout(). before leave"
                     let gunUser = Atom.get getter Selectors.Gun.gunUser
                     gunUser.leave ()
-                    Atom.change setter Selectors.Gun.gunTrigger ((+) 1)
-                    Atom.change setter Selectors.Hub.hubTrigger ((+) 1)
+                    Atom.change setter Atoms.gunTrigger ((+) 1)
+                    Atom.change setter Atoms.hubTrigger ((+) 1)
                 })
 
     let inline signIn getter _setter (alias, password) =
@@ -73,8 +73,8 @@ module rec Auth =
                             promise {
                                 match ack with
                                 | { ok = Some 1; err = None } ->
-                                    Atom.change setter Selectors.Gun.gunTrigger ((+) 1)
-                                    Atom.change setter Selectors.Hub.hubTrigger ((+) 1)
+                                    Atom.change setter Atoms.gunTrigger ((+) 1)
+                                    Atom.change setter Atoms.hubTrigger ((+) 1)
                                     return Ok ()
                                 | { err = Some error } -> return Error error
                                 | _ -> return Error $"invalid ack {JS.JSON.stringify ack}"
@@ -122,12 +122,13 @@ module rec Auth =
                         return Error "Invalid email address"
                     else
                         let gun = Atom.get getter Selectors.Gun.gun
+                        let logger = Atom.get getter Selectors.logger
                         let user = gun.user ()
-                        printfn $"Auth.useSignUp. gunUser.is={user.is |> Js.objectKeys}"
+                        logger.Debug (fun () -> $"Auth.useSignUp. gunUser.is={user.is |> Js.objectKeys}")
 
                         let! ack = Gun.createUser user (Gun.Alias alias) (Gun.Pass password)
 
-                        printfn $"Auth.useSignUp. Gun.createUser signUpAck={JS.JSON.stringify ack}"
+                        logger.Debug (fun () -> $"Auth.useSignUp. Gun.createUser signUpAck={JS.JSON.stringify ack}")
 
                         return!
                             promise {

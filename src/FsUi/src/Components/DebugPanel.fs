@@ -70,7 +70,7 @@ module DebugPanel =
 
     let inline getSchedulingInterval (deviceInfo: Dom.DeviceInfo) =
         if not deviceInfo.IsTesting then 1000
-        elif Dom.globalExit.Get () then 30 * 1000
+        elif Dom.globalExit.Get () then 4000 // * 30
         else 0
 
     [<ReactComponent>]
@@ -95,13 +95,6 @@ module DebugPanel =
                             [
                                 Json.encodeWithNullFormatted
                                     {|
-                                        TimestampMap =
-                                            Profiling.profilingState.TimestampMap
-                                            |> Seq.map (fun (k, v) -> $"{k} = {v}ms")
-                                            |> Seq.toArray
-                                    |}
-                                Json.encodeWithNullFormatted
-                                    {|
                                         CountMap =
                                             Profiling.profilingState.CountMap
                                             |> mapDict
@@ -114,6 +107,13 @@ module DebugPanel =
                                             |> mapDict
                                             |> Seq.sortByDescending (snd >> string)
                                             |> createObj
+                                    |}
+                                Json.encodeWithNullFormatted
+                                    {|
+                                        TimestampMap =
+                                            Profiling.profilingState.TimestampMap
+                                            |> Seq.map (fun (k, v) -> $"{k} = {v}ms")
+                                            |> Seq.toArray
                                     |}
                             ]
                             |> String.concat Environment.NewLine

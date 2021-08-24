@@ -23,7 +23,6 @@
         <Compile Include="src\Primitives.fs" />
         <Compile Include="src\BaseStore.fs" />
         <Compile Include="src\AtomWithSubscription.fs" />
-        <Compile Include="src\Store\ReadSelectorInterval.fs" />
         <Compile Include="src\Store\SyncEngine.fs" />
         <Compile Include="src\Store\SyncSubscribe.fs" />
         <Compile Include="src\Store\SyncUnsubscribe.fs" />

@@ -25,7 +25,7 @@ module RouterObserverWrapper =
 
         let deviceInfo = Store.useValue Selectors.deviceInfo
         let lastSegments = React.useRef []
-        let appState = Store.useValue (Engine.appState deviceInfo.DeviceId)
+        let appState = Store.useValue (Atoms.Device.appState deviceInfo.DeviceId)
         let consumeCommands = Store.useCallbackRef (Engine.consumeCommands Messaging.appUpdate appState)
 
         React.useEffect (

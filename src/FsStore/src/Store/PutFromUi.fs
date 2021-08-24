@@ -1,6 +1,7 @@
 namespace FsStore.Store
 
 open Fable.Core.JsInterop
+open FsStore.Atom
 open FsStore.BaseStore.Store
 open FsStore.Model
 open FsBeacon.Shared
@@ -62,8 +63,8 @@ module PutFromUi =
                                 | None -> None
 
                             match hubValue with
-                            | Some lastHubValue when
-                                lastHubValue |> Object.compare newValue
+                            | Some (Some lastHubValue) when
+                                lastHubValue |> snd |> Object.compare newValue
                                 || unbox lastHubValue = null
                                 ->
                                 Logger.logTrace
@@ -106,9 +107,17 @@ module PutFromUi =
                                 | None -> None
 
                             match syncEngine.GetGunOptions () with
-                            | Some (GunOptions.Sync _) when gunValue |> Object.compare (Some newValue) |> not ->
+                            | Some (GunOptions.Sync _) when
+                                gunValue.Value
+                                |> Option.map snd
+                                |> Object.compare (Some newValue)
+                                |> not
+                                ->
                                 if gunValue.IsNone
-                                   || gunValue |> Object.compare newValue |> not
+                                   || gunValue.Value
+                                      |> Option.map snd
+                                      |> Object.compare (Some newValue)
+                                      |> not
                                    || unbox newValue = null then
 
                                     let! putResult =

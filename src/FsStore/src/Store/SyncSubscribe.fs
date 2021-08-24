@@ -2,6 +2,7 @@ namespace FsStore.Store
 
 open Fable.Core.JsInterop
 open System
+open FsStore
 open FsStore.BaseStore.Store
 open FsStore.Model
 open FsBeacon.Shared
@@ -18,7 +19,7 @@ module SyncSubscribe =
             getDebugInfo
             (syncEngine: Store.SyncEngine<_>)
             (syncState: SyncState<'TValue>)
-            (trigger: TicksGuid * AdapterValue<'TValue> option -> unit)
+            (trigger: TicksGuid * Atom.AdapterValue<'TValue> option -> unit)
             onError
             atomPath
             =
@@ -75,7 +76,7 @@ module SyncSubscribe =
                                                                         gunKeys
                                                                         (Gun.EncryptedSignedValue result)
 
-                                                            trigger (ticks, (newValue |> Option.map AdapterValue.Hub))
+                                                            trigger (ticks, (newValue |> Option.map Atom.AdapterValue.Hub))
                                                         | _ -> ()
 
                                                         return! newHashedDisposable ticks
@@ -117,17 +118,19 @@ module SyncSubscribe =
                                                 Gun.userDecode<'TValue> gunKeys result
                                             | _ -> unbox null |> Promise.lift
 
-                                        trigger (ticks, (newValue |> Option.map AdapterValue.Gun))
+                                        trigger (ticks, (newValue |> Option.map Atom.AdapterValue.Gun))
 
                                         let hubValue =
                                             match syncState.AdapterValueMapByType with
                                             | Some adapterValueMapByType ->
                                                 adapterValueMapByType
-                                                |> Map.tryFind AdapterType.Hub
+                                                |> Map.tryFind Atom.AdapterType.Hub
                                             | None -> None
 
                                         if hubValue.IsNone
-                                           || hubValue |> Object.compare newValue then
+                                           || hubValue.Value
+                                              |> Option.map snd
+                                              |> Object.compare newValue then
                                             Logger.logTrace
                                                 (fun () ->
                                                     $"Store.syncSubscribe. debouncedPut() HUB (update from gun) SKIPPED
@@ -158,7 +161,7 @@ module SyncSubscribe =
 
                                                                 trigger (
                                                                     ticks,
-                                                                    (newValue |> Option.map AdapterValue.Hub)
+                                                                    (newValue |> Option.map Atom.AdapterValue.Hub)
                                                                 )
                                                         | response ->
                                                             Logger.logError

@@ -40,8 +40,12 @@ module Sync =
 
 
                     //                    Cy2.clickText "clear logs"
+
 //                    Cy2.clickText "mount"
 //                    Cy2.clickText "hydrate"
+//                    Cy2.clickText "clear logs"
+
+
 //                    Cy2.clickText "sign in"
 
 

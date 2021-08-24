@@ -1,134 +1,179 @@
 namespace FsStore
 
-open Fable.Core.JsInterop
 open FsStore
 open FsStore.Model
 open FsStore.State
 open Microsoft.FSharp.Core.Operators
-open FsCore
 open FsJs
 
 #nowarn "40"
 
 
 module AtomWithSubscription =
-    let inline atomWithSubscription<'TValue>
-        storeAtomPath
-        (defaultValue: 'TValue)
-        subscribe
-        unsubscribe
-        atom
-        : AtomConfig<'TValue> =
-        let atomPath = storeAtomPath |> StoreAtomPath.AtomPath
-
-        //        let atomStateMap = Store.atomFamily (fun (_: Gun.Alias option) -> AtomEngineState.Default)
-
-        //                let syncEngine = SyncEngine.Store.SyncEngine (defaultValue, Some (fun (key, node) -> key, node.back().back ()))
-
-        let mutable lastStore = None
+    let inline wrapAtomWithSubscription defaultValue mount unmount atom =
         let mutable lastAlias = None
         let mutable lastGunOptions = None
         let mutable lastGunAtomNode = None
 
+        let storeAtomPath = null
+
         let getDebugInfo () =
             $"""
-        | atomWithSubscription debugInfo:
-        storeAtomPath={storeAtomPath}
+        | wrapAtomWithSubscription debugInfo:
         defaultValue={defaultValue}
         atom={atom}
+        storeAtomPath={storeAtomPath}
         lastAlias={lastAlias}
         lastGunOptions={lastGunOptions}
         lastGunAtomNode={lastGunAtomNode} """
 
-        let getGunAtomNode () =
-            match lastStore with
-            | Some (getter, _) -> Atom.get getter (Selectors.Gun.gunAtomNode (lastAlias, atomPath))
-            | None -> lastGunAtomNode
+        let getGunAtomNode () = ()
+        //            Atom.get getter (Selectors.Gun.gunAtomNode (lastAlias, atomPath))
 
-        let refreshSubscriptions () =
-            promise {
-                Logger.logTrace (fun () -> $"Store.atomWithSubscription. refreshSubscriptions {getDebugInfo ()} ") }
+        atom
+        |> Engine.wrapAtom
+            (fun getter setter _setAtom ->
+                promise {
+                    let logger = Logger.State.lastLogger
+                    logger.Trace (fun () -> $"Store.wrapAtomWithSubscription. onMount() {getDebugInfo ()}")
 
-        let debouncedRefreshSubscriptions = Js.debounce (fun () -> refreshSubscriptions () |> Promise.start) 0
+                    lastAlias <- Atom.get getter Selectors.Gun.alias
+                    lastGunOptions <- Some (Atom.get getter Atoms.gunOptions)
+                    //                    lastGunAtomNode <- getGunAtomNode ()
 
-        let refreshInternalState getter =
-            //            if lastAtomPath.IsNone then
-//                lastAtomPath <- Some (Internal.queryAtomPath (AtomReference.Atom atom))
+                    logger.Trace (fun () -> $"Store.wrapAtomWithSubscription. #2 timeout  {getDebugInfo ()}")
+
+                    do! mount ()
+                })
+            (fun _getter _setter ->
+                let logger = Logger.State.lastLogger
+                logger.Trace (fun () -> $"Store.wrapAtomWithSubscription onUnmount() {getDebugInfo ()}")
+                unmount()
+
+                ())
+
+
+    let inline atomWithSubscription<'TValue>
+        storeAtomPath
+        (defaultValue: 'TValue)
+        mount
+        unmount
+        atom
+        : AtomConfig<'TValue> =
+        let atomPath = storeAtomPath |> StoreAtomPath.AtomPath
+
+        atom
+            |> wrapAtomWithSubscription defaultValue mount unmount
 //
-            if lastStore.IsNone then lastStore <- Atom.get getter Selectors.store
-
-            lastAlias <- Atom.get getter Selectors.Gun.alias
-            lastGunOptions <- Some (Atom.get getter Atoms.gunOptions)
-            Logger.State.lastLogger <- Atom.get getter Selectors.logger
-            lastGunAtomNode <- getGunAtomNode ()
-
-            Logger.logTrace
-                (fun () -> $"Store.atomWithSubscription refreshInternalState. wrapper.get() {getDebugInfo ()} ")
-
-            match lastGunAtomNode with
-            | Some _ ->
-                printfn $"@@@@ subscription here {getDebugInfo ()}"
-                debouncedRefreshSubscriptions ()
-
-            //                match subscription with
-//                | Some (_, None) ->
+//        //        let atomStateMap = Store.atomFamily (fun (_: Gun.Alias option) -> AtomEngineState.Default)
+//
+//        //                let syncEngine = SyncEngine.Store.SyncEngine (defaultValue, Some (fun (key, node) -> key, node.back().back ()))
+//
+//        let mutable lastStore = None
+//        let mutable lastAlias = None
+//        let mutable lastGunOptions = None
+//        let mutable lastGunAtomNode = None
+//
+//        let getDebugInfo () =
+//            $"""
+//        | atomWithSubscription debugInfo:
+//        storeAtomPath={storeAtomPath}
+//        defaultValue={defaultValue}
+//        atom={atom}
+//        lastAlias={lastAlias}
+//        lastGunOptions={lastGunOptions}
+//        lastGunAtomNode={lastGunAtomNode} """
+//
+//        let getGunAtomNode () =
+//            match lastStore with
+//            | Some (getter, _) -> Atom.get getter (Selectors.Gun.gunAtomNode (lastAlias, atomPath))
+//            | None -> lastGunAtomNode
+//
+//        let refreshSubscriptions () =
+//            promise {
+//                Logger.logTrace (fun () -> $"Store.atomWithSubscription. refreshSubscriptions {getDebugInfo ()} ") }
+//
+//        let debouncedRefreshSubscriptions = Js.debounce (fun () -> refreshSubscriptions () |> Promise.start) 0
+//
+//        let refreshInternalState getter =
+//            //            if lastAtomPath.IsNone then
+////                lastAtomPath <- Some (Internal.queryAtomPath (AtomReference.Atom atom))
+////
+//            if lastStore.IsNone then lastStore <- Atom.get getter Selectors.store
+//
+//            Logger.State.lastLogger <- Atom.get getter Selectors.logger
+//
+//            lastAlias <- Atom.get getter Selectors.Gun.alias
+//            lastGunOptions <- Some (Atom.get getter Atoms.gunOptions)
+//            lastGunAtomNode <- getGunAtomNode ()
+//
+//            Logger.logTrace
+//                (fun () -> $"Store.atomWithSubscription refreshInternalState. wrapper.get() {getDebugInfo ()} ")
+//
+//            match lastGunAtomNode with
+//            | Some _ ->
+//                printfn $"@@@@ subscription here {getDebugInfo ()}"
+//                debouncedRefreshSubscriptions ()
+//
+//            //                match subscription with
+////                | Some (_, None) ->
+////                    Logger.logTrace
+////                        (fun () ->
+////                            $"Store.atomWithSubscription refreshInternalState. subscription and gun node present but no disposable. subscribing. {getDebugInfo ()}")
+////                    debouncedSubscribe ()
+////                | _ -> Logger.logTrace (fun () -> $"SyncEngine.SetProviders. gun node present. {getDebugInfo ()}")
+//
+//            | _ ->
+//                Logger.logTrace
+//                    (fun () -> $"Store.atomWithSubscription refreshInternalState. empty gun node {getDebugInfo ()} ")
+//
+//        let rec wrapper =
+//            Atom.Primitives.selector
+//                (fun getter ->
+//                    refreshInternalState getter
+//                    let result = Atom.get getter atom
+//
 //                    Logger.logTrace
 //                        (fun () ->
-//                            $"Store.atomWithSubscription refreshInternalState. subscription and gun node present but no disposable. subscribing. {getDebugInfo ()}")
-//                    debouncedSubscribe ()
-//                | _ -> Logger.logTrace (fun () -> $"SyncEngine.SetProviders. gun node present. {getDebugInfo ()}")
-
-            | _ ->
-                Logger.logTrace
-                    (fun () -> $"Store.atomWithSubscription refreshInternalState. empty gun node {getDebugInfo ()} ")
-
-        let rec wrapper =
-            Atom.Primitives.selector
-                (fun getter ->
-                    refreshInternalState getter
-                    let result = Atom.get getter atom
-
-                    Logger.logTrace
-                        (fun () ->
-                            $"Store.atomWithSubscription wrapper.get() wrapper={wrapper} result={result} {getDebugInfo ()} ")
-
-                    result)
-                (fun getter setter newValueFn ->
-                    refreshInternalState getter
-
-                    Atom.set
-                        setter
-                        atom
-                        (unbox
-                            (fun oldValue ->
-                                let newValue = newValueFn |> Object.invokeOrReturnParam oldValue
-
-                                Logger.logTrace
-                                    (fun () ->
-                                        $"Store.atomWithSubscription wrapper.set() oldValue={oldValue} newValue={newValue}
-                                                newValueFn={newValueFn} wrapper={wrapper} {getDebugInfo ()} ")
-
-                                newValue)))
-
-        let internalSubscribe () =
-            Logger.logTrace
-                (fun () -> $"Store.atomWithSubscription. internal subscribe wrapper={wrapper} {getDebugInfo ()} ")
-        //            subscribe ()
-
-        let internalUnsubscribe () =
-            Logger.logTrace
-                (fun () -> $"Store.atomWithSubscription. internal unsubscribe wrapper={wrapper} {getDebugInfo ()} ")
-        //            unsubscribe ()
-
-        wrapper?onMount <- fun (setAtom: 'TValue -> unit) ->
-                               internalSubscribe ()
-                               fun _ -> internalUnsubscribe ()
-
-        Logger.logTrace (fun () -> $"Store.atomWithSubscription constructor wrapper={wrapper} {getDebugInfo ()}")
-
-        wrapper?init <- defaultValue
-
-        wrapper
+//                            $"Store.atomWithSubscription wrapper.get() wrapper={wrapper} result={result} {getDebugInfo ()} ")
+//
+//                    result)
+//                (fun getter setter newValueFn ->
+//                    refreshInternalState getter
+//
+//                    Atom.set
+//                        setter
+//                        atom
+//                        (unbox
+//                            (fun oldValue ->
+//                                let newValue = newValueFn |> Object.invokeOrReturnParam oldValue
+//
+//                                Logger.logTrace
+//                                    (fun () ->
+//                                        $"Store.atomWithSubscription wrapper.set() oldValue={oldValue} newValue={newValue}
+//                                                newValueFn={newValueFn} wrapper={wrapper} {getDebugInfo ()} ")
+//
+//                                newValue)))
+//            |> Atom.wrap
+//                true
+//                (fun _setAtom ->
+//                    promise {
+//                        Logger.logTrace
+//                            (fun () ->
+//                                $"Store.atomWithSubscription. internal subscribe wrapper={wrapper} {getDebugInfo ()} ")
+//                    //            subscribe ()
+//                    })
+//                (fun () ->
+//                    Logger.logTrace
+//                        (fun () ->
+//                            $"Store.atomWithSubscription. internal unsubscribe wrapper={wrapper} {getDebugInfo ()} "))
+//
+//
+//        Logger.logTrace (fun () -> $"Store.atomWithSubscription constructor wrapper={wrapper} {getDebugInfo ()}")
+//
+//        wrapper?init <- defaultValue
+//
+//        wrapper
 
 //    module SyncEngine =
 //        module Store =

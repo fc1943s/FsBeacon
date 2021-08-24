@@ -11,7 +11,6 @@ open FsStore.Hooks
 open FsStore.Bindings.Gun
 open FsStore.Model
 open FsStore.State
-open FsStore.Bindings
 open FsBeacon.Template.State
 open FsBeacon.Template
 open FsUi.Bindings
@@ -31,7 +30,7 @@ module Component =
         let fileId = Store.useValue fileIdAtom
         let progress = Store.useValue (Selectors.File.progress fileId)
 
-        Profiling.addTimestamp $"{nameof FsBeacon} | File [  render ] fileId={fileId} progress={progress}"
+        Profiling.addTimestamp $"{nameof FsBeacon} | File [ render ] fileId={fileId} progress={progress}"
 
 
         //        let valid, setValid = React.useState false
@@ -81,7 +80,7 @@ module Component =
     [<ReactComponent>]
     let Files () =
         Profiling.addTimestamp $"{nameof FsBeacon} | Files [ render ] "
-        let fileIdAtoms = Store.useValue Selectors.asyncFileIdAtoms
+        let fileIdAtoms = Store.useValue Selectors.fileIdAtoms
         //        let fileIdAtoms = Store.useValue State.Selectors.asyncFileIdAtoms
 
         React.fragment [
@@ -93,17 +92,28 @@ module Component =
     let rec HydrateCoreContainer () =
         Profiling.addTimestamp $"{nameof FsBeacon} | HydrateCoreContainer [ render ] hydrate trace from now on "
 
-        Jotai.jotaiUtils.useHydrateAtoms [|
-            unbox Atoms.showDebug, unbox true
-            unbox Atoms.logLevel, unbox Logger.LogLevel.Trace
-        |]
+        //        if Atoms.showDebug?init
+//           |> Option.ofObjUnbox
+//           |> Option.isNone then
+//            failwith "invalid Atoms.showDebug init"
+//
+//        if Atoms.logLevel?init
+//           |> Option.ofObjUnbox
+//           |> Option.isNone then
+//            failwith "invalid Atoms.logLevel init"
 
-        //        Store.useHashedEffectOnce
-//            (nameof HydrateCoreContainer)
-//            (fun _ setter -> promise {
-//            Atom.set setter Atoms.showDebug true
-//            Atom.set setter Atoms.logLevel Logger.LogLevel.Trace
-//        })
+        //        Jotai.jotaiUtils.useHydrateAtoms [|
+//            unbox Atoms.showDebug, unbox true
+//            unbox Atoms.logLevel, unbox Logger.LogLevel.Trace
+//        |]
+
+        Store.useHashedEffectOnce
+            (nameof HydrateCoreContainer)
+            (fun _ setter ->
+                promise {
+                    Atom.set setter Atoms.showDebug true
+                    Atom.set setter Atoms.logLevel Logger.LogLevel.Trace
+                })
 
         nothing
 
@@ -202,7 +212,7 @@ module Component =
         let setSyncHydrateStarted = Store.useSetState Atoms.syncHydrateStarted
 
         Profiling.addTimestamp
-            $"{nameof FsBeacon} | HydrateButton [  render ] syncHydrateCompleted={syncHydrateCompleted}"
+            $"{nameof FsBeacon} | HydrateButton [ render ] syncHydrateCompleted={syncHydrateCompleted}"
 
         Button.Button
             {|
@@ -210,7 +220,15 @@ module Component =
                 Icon = Some (Icons.bi.BiData |> Icons.render, Button.IconPosition.Left)
                 Props =
                     fun x ->
-                        x.onClick <- (fun _ -> promise { setSyncHydrateStarted true })
+                        x.onClick <-
+                            (fun _ ->
+                                promise {
+                                    Profiling.addTimestamp
+                                        $"{nameof FsBeacon} | HydrateButton [ onClick ] syncHydrateCompleted={syncHydrateCompleted}"
+
+                                    setSyncHydrateStarted true
+                                })
+
                         x.disabled <- syncHydrateCompleted
                 Children =
                     [
@@ -233,7 +251,15 @@ module Component =
                 Icon = Some (Icons.io5.IoKey |> Icons.render, Button.IconPosition.Left)
                 Props =
                     fun x ->
-                        x.onClick <- (fun _ -> promise { setSignInStarted true })
+                        x.onClick <-
+                            (fun _ ->
+                                promise {
+                                    Profiling.addTimestamp
+                                        $"{nameof FsBeacon} | SignInButton [ onClick ] syncHydrateCompleted={syncHydrateCompleted}"
+
+                                    setSignInStarted true
+                                })
+
                         x.disabled <- not syncHydrateCompleted || alias.IsSome
                 Children =
                     [
@@ -254,7 +280,11 @@ module Component =
                 Icon = Some (Icons.io5.IoKey |> Icons.render, Button.IconPosition.Left)
                 Props =
                     fun x ->
-                        x.onClick <- (fun _ -> logout ())
+                        x.onClick <-
+                            (fun _ ->
+                                Profiling.addTimestamp $"{nameof FsBeacon} | LogoutButton [ onClick ] alias={alias}"
+                                logout ())
+
                         x.disabled <- alias.IsNone
                 Children =
                     [
@@ -270,7 +300,14 @@ module Component =
             {|
                 Tooltip = None
                 Icon = Some (Icons.md.MdClear |> Icons.render, Button.IconPosition.Left)
-                Props = fun x -> x.onClick <- (fun _ -> promise { Profiling.globalClearProfilingState.Get () () })
+                Props =
+                    fun x ->
+                        x.onClick <-
+                            (fun _ ->
+                                promise {
+                                    Profiling.addTimestamp $"{nameof FsBeacon} | ClearButton [ onClick ]"
+                                    Profiling.globalClearProfilingState.Get () ()
+                                })
                 Children =
                     [
                         str "clear logs"
@@ -298,7 +335,7 @@ module Component =
                         let! hexString = hexStringPromise
                         let fileId = Hydrate.hydrateFile setter (AtomScope.Current, hexString)
 
-                        Profiling.addTimestamp $"{nameof FsBeacon} | addFile fileId={fileId}"
+                        Profiling.addTimestamp $"{nameof FsBeacon} | addFile callback completed. fileId={fileId}"
                     })
 
         Button.Button
@@ -307,7 +344,11 @@ module Component =
                 Icon = Some (Icons.io5.IoAdd |> Icons.render, Button.IconPosition.Left)
                 Props =
                     fun x ->
-                        x.onClick <- (fun _ -> addFile ())
+                        x.onClick <-
+                            (fun _ ->
+                                Profiling.addTimestamp $"{nameof FsBeacon} | AddFileButton [ onClick ]"
+                                addFile ())
+
                         x.disabled <- alias.IsNone
                 Children =
                     [
@@ -325,7 +366,16 @@ module Component =
             {|
                 Tooltip = Some (str "Tooltip test")
                 Icon = Some (Icons.io5.IoRefreshCircle |> Icons.render, Button.IconPosition.Left)
-                Props = fun x -> x.onClick <- (fun _ -> promise { setMounted (not mounted) })
+                Props =
+                    fun x ->
+                        x.onClick <-
+                            (fun _ ->
+                                promise {
+                                    Profiling.addTimestamp
+                                        $"{nameof FsBeacon} | MountButton [ onClick ] mounted={mounted}"
+
+                                    setMounted (not mounted)
+                                })
                 Children =
                     [
                         str (if mounted then "unmount" else "mount")
@@ -418,17 +468,17 @@ module Component =
 
 
     [<ReactComponent>]
-    let CommandConsumer messageIdAtom =
+    let MessageConsumer messageIdAtom =
         let logger = Store.useValue Selectors.logger
         let deviceInfo = Store.useValue Selectors.deviceInfo
-        let appState = Store.useValue (Engine.appState deviceInfo.DeviceId)
+        let appState = Store.useValue (Atoms.Device.appState deviceInfo.DeviceId)
         let consumeCommands = Store.useCallbackRef (Engine.consumeCommands Messaging.appUpdate appState)
         let messageId = Store.useValue messageIdAtom
         let appMessage = Store.useValue (Atoms.Message.appMessage messageId)
         let ack, setAck = Store.useState (Atoms.Message.ack messageId)
 
         Profiling.addTimestamp
-            $"{nameof FsBeacon} | CommandConsumer [ render ] messageId={messageId} ack={ack} appMessage={appMessage}"
+            $"{nameof FsBeacon} | MessageConsumer [ render ] messageId={messageId} ack={ack} appMessage={appMessage}"
 
         React.useEffect (
             (fun () ->
@@ -438,16 +488,16 @@ module Component =
                         match appMessage with
                         | Message.Command command ->
                             Profiling.addTimestamp
-                                $"{nameof FsBeacon} | CommandConsumer [ render ] starting consumeCommands..."
+                                $"{nameof FsBeacon} | MessageConsumer [ render ] starting consumeCommands..."
 
                             let! events = consumeCommands (command |> List.singleton)
 
                             logger.Info
                                 (fun () ->
-                                    $"CommandConsumer. command processed. acked. command={command} events={events} ")
+                                    $"MessageConsumer. command processed. acked. command={command} events={events} ")
 
                             setAck (Some true)
-                        | _ -> failwith "CommandConsumer. invalid command"
+                        | _ -> failwith "MessageConsumer. invalid command"
 
                     | _ -> ()
                 }
@@ -466,10 +516,10 @@ module Component =
     [<ReactComponent>]
     let MessagesListener () =
         Profiling.addTimestamp $"{nameof FsBeacon} | MessagesListener [ render ] "
-        let messageIdAtoms = Store.useValue State.Selectors.asyncMessageIdAtoms
+        let messageIdAtoms = Store.useValue State.Selectors.messageIdAtoms
 
         React.fragment [
-            yield! messageIdAtoms |> Array.map CommandConsumer
+            yield! messageIdAtoms |> Array.map MessageConsumer
         ]
 
     [<ReactComponent>]

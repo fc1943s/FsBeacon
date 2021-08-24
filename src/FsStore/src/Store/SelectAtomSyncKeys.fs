@@ -38,7 +38,7 @@ module SelectAtomSyncKeys =
 //            ]
 
 
-        let inline selectAtomSyncKeys
+        let inline selectAtomSyncKeys2
             storeAtomPath
             //            name
 //            (atomFamily: 'TKey -> Atom<_>)
@@ -50,15 +50,19 @@ module SelectAtomSyncKeys =
 
             let referenceAtom = Atom.Primitives.atom [||]
 
-            let atomWithSubscription =
-                AtomWithSubscription.atomWithSubscription
+            AtomWithSubscription.atomWithSubscription
                     storeAtomPath
                     [||]
-                    (fun () -> printfn $"subscribe")
-                    (fun () -> printfn $"unsubscribe")
+                    (fun () ->
+                        promise {
+                        Profiling.addTimestamp $"@ selectAtomSyncKeys subscribe {storeAtomPath}"
+                        }
+                        )
+                    (fun () ->
+                        Profiling.addTimestamp $"@ selectAtomSyncKeys unsubscribe {storeAtomPath}"
+                        )
                     referenceAtom
-
-            splitAtom atomWithSubscription
+            |> Atom.split
 
 //
 //            let atomKey =

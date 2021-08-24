@@ -1,8 +1,7 @@
 namespace FsBeacon.Template
 
+open FsJs
 open FsStore.Bindings.Jotai
-open FsStore.Store
-open System
 open FsCore
 open FsCore.BaseModel
 open FsStore
@@ -62,10 +61,5 @@ module State =
 
 
     module Selectors =
-        let rec asyncFileIdAtoms =
-            Store.selectAtomSyncKeys (CollectionAtomPath (FsStore.storeRoot, Atoms.File.collection)) (Guid >> FileId)
-
-        let rec asyncMessageIdAtoms =
-            Store.selectAtomSyncKeys
-                (CollectionAtomPath (FsStore.storeRoot, Atoms.Message.collection))
-                (Guid >> MessageId)
+        let fileIdAtoms = Engine.subscribeCollection FsStore.storeRoot Atoms.File.collection FileId
+        let messageIdAtoms = Engine.subscribeCollection FsStore.storeRoot Atoms.Message.collection MessageId

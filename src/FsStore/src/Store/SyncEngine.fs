@@ -3,7 +3,6 @@ namespace FsStore.Store
 open System
 open System.Collections.Generic
 open FsStore
-open FsStore.BaseStore.Store
 open FsStore.Bindings.Gun.Types
 open FsStore.Model
 open FsStore.State
@@ -25,10 +24,10 @@ module SyncEngine =
             | Add
             | Remove
 
-        let adapterValueTimestampMap = Dictionary<AdapterType, int64> ()
-        let adapterValueMap = Dictionary<AdapterType, int64> ()
+        let adapterValueTimestampMap = Dictionary<Atom.AdapterType, int64> ()
+        let adapterValueMap = Dictionary<Atom.AdapterType, int64> ()
 
-        let valueKeyOperation = DateTime.Now.Ticks, AdapterType.Gun, ValueKeyOperation.Add
+        let valueKeyOperation = DateTime.Now.Ticks, Atom.AdapterType.Gun, ValueKeyOperation.Add
 
         type SyncEngine<'T> (defaultValue: 'T, mapGunAtomNode) =
             let internalAtom = Atom.atomFamilyAtom (fun _alias -> defaultValue)

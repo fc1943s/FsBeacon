@@ -28,8 +28,14 @@ module AtomWithSync =
                 AtomWithSubscription.atomWithSubscription
                     storeAtomPath
                     defaultValue
-                    (fun () -> printfn $"subscribe")
-                    (fun () -> printfn $"unsubscribe")
+                    (fun () ->
+                        promise {
+                        Profiling.addTimestamp $"@ atomWithSync subscribe {storeAtomPath}"
+                        }
+                        )
+                    (fun () ->
+                        Profiling.addTimestamp $"@ atomWithSync unsubscribe {storeAtomPath}"
+                        )
                     referenceAtom
 
             atomWithSubscription

@@ -11,14 +11,14 @@ open FsStore.Model
 module rec Device =
     let collection = Collection (nameof Device)
 
-    let inline deviceIdIdentifier deviceId =
+    let deviceIdIdentifier deviceId =
         deviceId
         |> DeviceId.Value
         |> string
         |> List.singleton
 
 
-    let inline deviceAtomFamilyWithAdapters atomName defaultValue =
+    let deviceAtomFamilyWithAdapters atomName defaultValue =
         Atom.Primitives.atomFamily
             (fun (deviceId: DeviceId) ->
                 Atom.createRegistered
@@ -27,3 +27,15 @@ module rec Device =
                 |> Atom.enableAdapters)
 
     let rec devicePing = deviceAtomFamilyWithAdapters (AtomName (nameof devicePing)) (Ping "0")
+
+    let rec appState =
+        Atom.Primitives.atomFamily
+            (fun (deviceId: DeviceId) ->
+                Atom.createRegistered
+                    (IndexedAtomPath (
+                        FsStore.storeRoot,
+                        collection,
+                        deviceIdIdentifier deviceId,
+                        AtomName (nameof appState)
+                    ))
+                    (AtomType.Atom AppEngineState.Default))
