@@ -5,6 +5,7 @@ open FsCore
 open Fable.Core.JsInterop
 open Fable.Extras
 open FsJs
+open FsJs.Bindings
 open FsJs.Bindings.Cypress
 open FsStore.Bindings
 open FsStore
@@ -210,12 +211,16 @@ module Iframe =
 //})
 
 
-                    Cy.window ()
-                    |> Promise.iter
-                        (fun window ->
-                            (expect ((window?_global?get "profilingState")?CallCount?get "App.render"))
-                                .``to``.be.equal 2)
 
+
+                    promise {
+                        let! profilingState = FsJs.Profiling.globalProfilingState.AsyncRead globalGet
+
+                        expect(profilingState.CountMap.["App [ render ] "])
+                            .``to``.be.equal 2
+
+                    }
+                    |> Promise.iter id
 
 
                     //let x = $""""registerAtom FsStore/logLevel": "1""""

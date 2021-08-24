@@ -4,21 +4,22 @@ open FsStore
 open Fable.React
 open Feliz
 open FsJs
+open FsStore.Bindings
 open FsUi.Bindings
 
 
 module RootWrapper =
     [<ReactComponent>]
     let RootWrapper themeAtom children =
-        Profiling.addCount "RootWrapper.render"
+        Profiling.addTimestamp $"{nameof FsUi} | RootWrapper [ render ] "
 
         React.strictMode [
-            Store.provider [
+            Jotai.jotai.provider [
                 React.suspense (
                     [
                         React.ErrorBoundary [
                             GunObserver.GunObserver ()
-                            RouterObserver.RouterWrapper [
+                            RouterObserverWrapper.RouterObserverWrapper [
                                 ThemeWrapper.ThemeWrapper
                                     themeAtom
                                     [

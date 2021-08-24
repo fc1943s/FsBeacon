@@ -3,6 +3,7 @@ namespace FsUi.Components
 open Feliz
 open FsStore
 open FsStore.Hooks
+open FsJs
 open FsStore.Bindings
 open FsStore.State
 open FsUi.Bindings
@@ -16,11 +17,10 @@ module GunObserver =
     let GunObserver () =
         let logger = Store.useValue Selectors.logger
         let gun = Store.useValue Selectors.Gun.gun
-
-        logger.Debug (fun () -> "GunObserver.render: Constructor")
-
         let store = Store.useStore ()
         let isMountedRef = React.useIsMountedRef ()
+
+        Profiling.addTimestamp $"{nameof FsUi} | GunObserver [ render ] isMountedRef={isMountedRef.current}"
 
         // TODO: arr deps warning is not working with files in this package (only on template main)
         React.useEffect (
@@ -75,12 +75,15 @@ module GunObserver =
                                 let! _getter, setter = store ()
                                 //                                ()
 
-                                Atom.change setter Selectors.Gun.gunUser.Trigger ((+) 1)
-                                Atom.change setter Selectors.Hub.hub.Trigger ((+) 1)
+                                Atom.change setter Selectors.Gun.gunTrigger ((+) 1)
+                                Atom.change setter Selectors.Hub.hubTrigger ((+) 1)
+
+                                Profiling.addTimestamp $"{nameof FsUi} | GunObserver [ render / useEffect ] triggered."
+                                logger.Debug (fun () -> "GunObserver.render. triggered.  ")
                             }
                             |> Promise.start
                         else
-                            logger.Debug (fun () -> $"GunObserver.render: already disposed gun={gun}"))
+                            logger.Debug (fun () -> "GunObserver.render. already disposed"))
                 )),
             [|
                 box isMountedRef

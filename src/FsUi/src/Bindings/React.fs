@@ -4,6 +4,7 @@ open Fable.Core
 open Fable.React
 open Browser.Types
 open Feliz
+open FsJs
 
 
 module React =
@@ -62,6 +63,8 @@ module React =
 
     [<ReactComponent>]
     let ErrorBoundary cmp =
+        Profiling.addTimestamp $"{nameof FsUi} | ErrorBoundary [ render ] "
+
         React.strictMode [
             //            Recoil.root [
 //                root.children [

@@ -23,8 +23,6 @@ module Jotai =
 
             [<Emit "write">]
             Write: Write<'A>
-
-            Trigger: AtomConfig<int>
         }
 
     and Getter<'A> = AtomConfig<'A> -> 'A
@@ -52,7 +50,6 @@ module Jotai =
         abstract useAtom : AtomConfig<'A> -> 'A * ('A -> unit)
 
     let jotai: IJotai = importAll "jotai"
-
 
     type IJotaiUtils =
         abstract atomFamily : ('TKey -> AtomConfig<'A>) -> CompareFn<'A> -> ('TKey -> AtomConfig<'A>)

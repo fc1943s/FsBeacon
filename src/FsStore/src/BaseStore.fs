@@ -155,7 +155,6 @@ module BaseStore =
             | Replace
             | Union
 
-        let provider = jotai.provider
 
 
 

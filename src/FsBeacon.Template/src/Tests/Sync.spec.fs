@@ -3,6 +3,7 @@ namespace FsBeacon.Template.Tests
 open Fable.Core.JsInterop
 open Fable.Jester
 open FsJs
+open FsJs.Bindings
 open FsJs.Bindings.Cypress
 open Fable.Jester
 open Fable.ReactTestingLibrary
@@ -13,13 +14,14 @@ open Microsoft.FSharp.Core.Operators
 
 module Sync =
 
-
     describe
         "sync"
         (fun () ->
             let homeUrl = "https://localhost:49212"
 
             before (fun () -> Cy.visit homeUrl)
+
+//            after (fun () -> globalExit.Write globalSet true)
 
             it
                 "all"
@@ -37,7 +39,7 @@ module Sync =
                     // atomWithStorageSync
 
 
-//                    Cy2.clickText "clear logs"
+                    //                    Cy2.clickText "clear logs"
 //                    Cy2.clickText "mount"
 //                    Cy2.clickText "hydrate"
 //                    Cy2.clickText "sign in"
@@ -62,7 +64,4 @@ module Sync =
 //                    Cy2.waitFor "<45>"
                     //                    Cy2.clickText "unmount"
 //                    Cy2.clickText "mount"
-
-                    Cy.window ()
-                    |> Promise.iter (fun window -> window?_global?set Dom.Exit true)
                     ))

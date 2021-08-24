@@ -15,8 +15,6 @@ module ThemeWrapper =
         let theme = Store.useValue (themeAtom |> Option.defaultValue Store.emptyAtom)
         let darkMode = Store.useValue Atoms.Ui.darkMode
 
-        Profiling.addCount "ThemeLoader.render"
-
         let newTheme =
             React.useMemo (
                 (fun () -> Ui.react.extendTheme (JsInterop.toPlainJsObj ({|  |} ++ theme))),
@@ -26,6 +24,8 @@ module ThemeWrapper =
             )
 
         //        printfn $"ThemeLoader newTheme={JS.JSON.stringify newTheme} theme={theme}"
+
+        Profiling.addTimestamp $"{nameof FsUi} | ThemeWrapper [ render ] darkMode={darkMode}"
 
         Ui.provider
             (fun x -> x.theme <- newTheme)

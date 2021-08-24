@@ -25,7 +25,7 @@ module DebugPanel =
     let inline mapDict dict =
         dict
         |> Seq.indexed
-        |> Seq.map (fun (i, KeyValue (k, v)) -> $"<{i}> {k}", v |> string |> box)
+        |> Seq.map (fun (i, KeyValue (k, v)) -> $"{i}. {k}", box $"""{v} call{if v = 1 then "" else "s"}""")
 
     let inline ValueIndicator name atom =
         let value = Store.useValue atom
@@ -69,21 +69,19 @@ module DebugPanel =
         ValueIndicator (nameof Selectors.Gun.privateKeys) Selectors.Gun.privateKeys
 
     let inline getSchedulingInterval (deviceInfo: Dom.DeviceInfo) =
-        if Dom.globalExit.Get () then Int32.MaxValue
-        elif not deviceInfo.IsTesting then 1000
+        if not deviceInfo.IsTesting then 1000
+        elif Dom.globalExit.Get () then 30 * 1000
         else 0
 
     [<ReactComponent>]
     let DebugPanel display =
+        let deviceInfo = Store.useValue Selectors.deviceInfo
+        let showDebug = Store.useValue Atoms.showDebug
+        let interval = (getSchedulingInterval deviceInfo)
+        Profiling.addTimestamp $"{nameof FsUi} | DebugPanel [ render ] showDebug={showDebug} interval={interval}"
+
         let text, setText = React.useState ""
         let oldJson, setOldJson = React.useState ""
-        let showDebug = Store.useValue Atoms.showDebug
-
-        let logger = Store.useValue Selectors.logger
-        let deviceInfo = Store.useValue Selectors.deviceInfo
-
-        let interval = (getSchedulingInterval deviceInfo)
-        logger.Info (fun () -> $"DebugPanel.render. showDebug={showDebug} interval={interval}")
 
         Scheduling.useScheduling
             Scheduling.Interval
@@ -99,7 +97,7 @@ module DebugPanel =
                                     {|
                                         TimestampMap =
                                             Profiling.profilingState.TimestampMap
-                                            |> Seq.map (fun (k, v) -> $"{k} = {v}")
+                                            |> Seq.map (fun (k, v) -> $"{k} = {v}ms")
                                             |> Seq.toArray
                                     |}
                                 Json.encodeWithNullFormatted
@@ -112,7 +110,7 @@ module DebugPanel =
                                 Json.encodeWithNullFormatted
                                     {|
                                         SortedCountMap =
-                                            Profiling.profilingState.CountMap
+                                            Profiling.globalProfilingState.Get().CountMap
                                             |> mapDict
                                             |> Seq.sortByDescending (snd >> string)
                                             |> createObj

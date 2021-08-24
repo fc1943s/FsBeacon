@@ -43,7 +43,7 @@ module rec Join =
                 Atom.Primitives.selector
                     (fun getter ->
                         let value = Atom.get getter atom
-                        Profiling.addCount $"{atomPath} joinAtom get"
+                        Profiling.addCount $"{nameof FsStore} | {atomPath} joinAtom get"
 
                         Logger.logTrace
                             (fun () ->
@@ -56,7 +56,7 @@ module rec Join =
                                 | _, Some value -> value
                                 | _ -> null))
                     (fun _ setter newValue ->
-                        Profiling.addCount $"{atomPath} joinAtom set"
+                        Profiling.addCount $"{nameof FsStore} | {atomPath} joinAtom set"
 
                         let newValueJson =
                             match Json.encode (atomPath, newValue) with

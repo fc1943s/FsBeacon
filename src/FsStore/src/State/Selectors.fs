@@ -39,13 +39,7 @@ module SelectorsMagic =
             let valueAtom = Atom.Primitives.atom lastValue
             let accessorsAtom = Atom.Primitives.atom (None: (Getter<_> * Setter<_>) option)
 
-            let getDebugInfo () =
-                $"
-    | Selectors.store baseInfo:
-    lastValue={lastValue}
-    "
-
-            Logger.logTrace (fun () -> $"Selectors.store constructor {getDebugInfo ()}")
+            Profiling.addTimestamp $"{nameof FsStore} | Selectors.store [ constructor ]"
 
             let rec valueWrapper =
                 Atom.Primitives.selector
@@ -53,30 +47,28 @@ module SelectorsMagic =
                         let logger = Atom.get getter logger
                         let result = Atom.get getter valueAtom
 
-                        logger.Trace (fun () -> $"Selectors.store valueWrapper.get() result={result} {getDebugInfo ()}")
+                        Profiling.addTimestamp $"{nameof FsStore} | Selectors.store [ valueWrapper.read(g) ] result={result}"
 
                         result)
                     (fun getter setter newValue ->
                         let logger = Atom.get getter logger
 
-                        logger.Trace
-                            (fun () -> $"Selectors.store  valueWrapper.set() newValue={newValue} {getDebugInfo ()}")
+                        Profiling.addTimestamp $"{nameof FsStore} | Selectors.store [ valueWrapper.set(g,s,n) ] newValue={newValue}"
 
                         Atom.set setter accessorsAtom (Some (getter, setter))
                         Atom.set setter valueAtom newValue)
 
             valueWrapper?onMount <- fun setAtom ->
-                                        Logger.logTrace
-                                            (fun () ->
-                                                $"Selectors.store valueWrapper.onMount() lastValue={lastValue} {getDebugInfo ()}")
+
+                                        Profiling.addTimestamp
+                                            $"{nameof FsStore} Selectors.store [ valueWrapper.onMount() ] lastValue={lastValue}"
 
                                         lastValue <- lastValue + 1
                                         setAtom lastValue
 
                                         fun () ->
-                                            Logger.logTrace
-                                                (fun () ->
-                                                    $"Selectors.store valueWrapper.onUnmount() lastValue={lastValue} {getDebugInfo ()}")
+                                            Profiling.addTimestamp
+                                                $"{nameof FsStore} Selectors.store [ valueWrapper.onUnmount() ] lastValue={lastValue}"
 
                                             ()
 
@@ -89,9 +81,8 @@ module SelectorsMagic =
                         let value = Atom.get getter valueWrapper
                         let accessors = Atom.get getter accessorsAtom
 
-                        logger.Trace
-                            (fun () ->
-                                $"Selectors.store selfWrapper.get() value={value} accessors={accessors.IsSome} {getDebugInfo ()}")
+                        Profiling.addTimestamp
+                            $"{nameof FsStore} Selectors.store [ wrapper.read(g) ] value={value} accessors={accessors.IsSome}"
 
                         accessors))
 
@@ -148,6 +139,8 @@ module SelectorsMagic =
 
                             gun))
 
+            let rec gunTrigger =
+                Atom.createRegistered (RootAtomPath (FsStore.storeRoot, AtomName (nameof gunTrigger))) (AtomType.Atom 0)
 
             let rec gunUser =
                 Atom.createRegistered
@@ -155,13 +148,12 @@ module SelectorsMagic =
                     (AtomType.ReadSelector
                         (fun getter ->
                             let logger = Atom.get getter logger
-                            let _trigger = Atom.get getter gunUser.Trigger
+                            let _gunTrigger = Atom.get getter gunTrigger
                             let gun = Atom.get getter gun
 
                             logger.Debug (fun () -> $"Selectors.Gun.gunUser. keys={gun.user().__.sea |> Js.objectKeys}")
 
                             gun.user ()))
-                |> Atom.addTrigger
 
             let rec gunNamespace =
                 Atom.createRegistered
@@ -169,7 +161,7 @@ module SelectorsMagic =
                     (AtomType.ReadSelector
                         (fun getter ->
                             let logger = Atom.get getter logger
-                            let _trigger = Atom.get getter gunUser.Trigger
+                            let _gunTrigger = Atom.get getter gunTrigger
                             let gunUser = Atom.get getter gunUser
 
                             logger.Debug
@@ -185,7 +177,7 @@ module SelectorsMagic =
                         (fun getter ->
                             promise {
                                 let logger = Atom.get getter logger
-                                let _trigger = Atom.get getter gunUser.Trigger
+                                let _gunTrigger = Atom.get getter gunTrigger
                                 let gun = Atom.get getter Gun.gun
                                 let user = gun.user ()
 
@@ -226,7 +218,7 @@ module SelectorsMagic =
                         (fun getter ->
                             //                    Atom.value getter asyncAlias
                             let logger = Atom.get getter logger
-                            let _trigger = Atom.get getter gunUser.Trigger
+                            let _gunTrigger = Atom.get getter gunTrigger
                             let gunUser = Atom.get getter Gun.gunUser
 
                             match gunUser.is with
@@ -263,7 +255,7 @@ module SelectorsMagic =
                     (AtomType.ReadSelector
                         (fun getter ->
                             let logger = Atom.get getter logger
-                            let _trigger = Atom.get getter gunUser.Trigger
+                            let _gunTrigger = Atom.get getter gunTrigger
                             let gunUser = Atom.get getter Gun.gunUser
                             logger.Debug (fun () -> $"Selectors.Gun.keys. keys={gunUser.__.sea |> Js.objectKeys}")
                             gunUser.__.sea))
@@ -433,13 +425,16 @@ module SelectorsMagic =
 
 
 
+            let rec hubTrigger =
+                Atom.createRegistered (RootAtomPath (FsStore.storeRoot, AtomName (nameof hubTrigger))) (AtomType.Atom 0)
+
             let rec hub =
                 Atom.createRegistered
                     (RootAtomPath (FsStore.storeRoot, AtomName (nameof hub)))
                     (AtomType.ReadSelector
                         (fun getter ->
                             let logger = Atom.get getter logger
-                            let _hubTrigger = Atom.get getter hub.Trigger
+                            let _hubTrigger = Atom.get getter hubTrigger
                             let hubConnection = Atom.get getter hubConnection
 
                             match hubConnection with
@@ -454,4 +449,3 @@ module SelectorsMagic =
                             //                            Some hubConnection
                             //                        | None -> None
                             | _ -> None))
-                |> Atom.addTrigger

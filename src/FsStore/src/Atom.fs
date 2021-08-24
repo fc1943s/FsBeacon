@@ -2,7 +2,6 @@ namespace FsStore
 
 open System.Collections.Generic
 open Fable.Core
-open FsJs.Dom
 open FsStore.Bindings.Jotai
 open FsStore.Model
 open Microsoft.FSharp.Core.Operators
@@ -17,8 +16,8 @@ module Atom =
     let private atomPathMap<'T> = Dictionary<StoreAtomPath, AtomConfig<'T>> ()
     let private atomIdMap<'T> = Dictionary<AtomInternalKey, StoreAtomPath> ()
 
-    Global.set (nameof atomPathMap) atomPathMap
-    Global.set (nameof atomIdMap) atomIdMap
+    let rec globalAtomPathMap<'T> = Dom.Global.register (nameof globalAtomPathMap) atomPathMap
+    let rec globalAtomIdMap<'T> = Dom.Global.register (nameof globalAtomIdMap) atomIdMap
 
 
     let inline get<'A> (getter: Getter<obj>) (atom: AtomConfig<'A>) : 'A = getter (unbox atom) |> unbox<'A>
@@ -29,24 +28,80 @@ module Atom =
         setter (unbox atom) (unbox value)
 
     let register storeAtomPath atom =
-        Profiling.addCount $"# Atom.register storeAtomPath={storeAtomPath} atom={atom}"
-        let internalKey = AtomInternalKey (atom.ToString ())
-        atomPathMap.[storeAtomPath] <- atom
-        atomIdMap.[internalKey] <- storeAtomPath
+
+        let mutable mounted = false
+
+        let getDebugInfo () =
+            $"storeAtomPath={storeAtomPath |> StoreAtomPath.AtomPath} atom={atom} mounted={mounted} "
+
+        Profiling.addCount $"{nameof FsStore} | Atom.register [ constructor ] {getDebugInfo ()}"
+
+        let debouncedInternalMount _setAtom =
+            promise {
+                mounted <- true
+
+                let internalKey = AtomInternalKey (atom.ToString ())
+                atomPathMap.[storeAtomPath] <- atom
+                atomIdMap.[internalKey] <- storeAtomPath
+
+                Profiling.addCount $"{nameof FsStore} | Atom.register [ debouncedInternalMount ] {getDebugInfo ()}"
+            }
+
+        let debouncedFn = Js.debounce (fun setAtom -> debouncedInternalMount setAtom |> Promise.start) 0
+
+        let internalMount setAtom =
+            //            Profiling.addCount $"{nameof FsStore} | Atom.register. internal mount. {getDebugInfo ()}"
+
+            debouncedFn setAtom
+        //            mount ()
+
+        let internalUnmount () =
+            if mounted then
+                Profiling.addCount $"{nameof FsStore} | Atom.register [ internalUnmount ] will cleanup {getDebugInfo ()}"
+                let internalKey = AtomInternalKey (atom.ToString ())
+                atomPathMap.Remove storeAtomPath |> ignore
+                atomIdMap.Remove internalKey |> ignore
+
+            mounted <- false
+
+        //            unmount ()
+
+        atom?onMount <- fun (setAtom: _ -> unit) ->
+                            internalMount setAtom
+                            fun _ -> internalUnmount ()
+
         atom
+
+    let rec query atomReference =
+        let result =
+            match atomReference with
+            | AtomReference.Atom atom ->
+                let internalKey = AtomInternalKey (atom.ToString ())
+
+                match atomIdMap.TryGetValue internalKey with
+                | true, value -> value
+                | _ -> failwith $"Internal.queryAtomPath query error atomReference={atomReference} "
+            | AtomReference.Path path ->
+                match atomPathMap.TryGetValue path with
+                | true, atom -> query (AtomReference.Atom atom)
+                | _ -> failwith $"Internal.queryAtomPath query error atomReference={atomReference} "
+
+        Logger.logTrace (fun () -> $"Internal.queryAtomPath atomReference={atomReference} result={result}")
+
+        result
 
     module Primitives =
         let inline atom value = jotai.atom value
 
-        let inline selector (read: Read<'A>) (write: Write<'A>) =
+        let inline selector<'A> (read: Read<'A>) (write: Write<'A>) =
             let rec atom =
-                jotai.atom ( //(read, Some write)
+                jotai.atom (
                     (fun getter ->
-                        Profiling.addCount $"# Atom.Primitives.rawSelector get() atom={atom}"
+                        Profiling.addCount $"{nameof FsStore} | Atom.Primitives.selector get()"
                         read getter),
                     Some
                         (fun getter setter value ->
-                            Profiling.addCount $"# Atom.Primitives.rawSelector set() atom={atom}"
+                            Profiling.addCount $"{nameof FsStore} | Atom.Primitives.selector set()"
                             let newValue = value
                             //                        match jsTypeof value with
                             //                         | "function" -> (unbox value) () |> unbox
@@ -59,13 +114,17 @@ module Atom =
         let inline readSelector (read: Read<'A>) =
             selector read (fun _ _ _ -> failwith "Atom.Primitives.readSelector is read only.")
 
-        let inline setSelector (write: Write<'A>) = selector (unbox null) write
+        let inline setSelector (write: Write<'A>) = selector (fun _ -> JS.undefined) write
 
         let inline atomFamily (defaultValueFn: 'TKey -> AtomConfig<'A>) =
-            jotaiUtils.atomFamily defaultValueFn (if true then JS.undefined else Object.compare)
+            jotaiUtils.atomFamily (fun key ->
+                Profiling.addCount $"{nameof FsStore} | Atom.Primitives.atomFamily key={key}"
+                defaultValueFn key) (if true then JS.undefined else Object.compare)
 
         let inline selectAtom atom selector =
-            jotaiUtils.selectAtom atom selector (if true then JS.undefined else Object.compare)
+            jotaiUtils.selectAtom atom (fun getter ->
+                Profiling.addCount $"{nameof FsStore} | Atom.Primitives.selectAtom atom={atom}"
+                selector getter) (if true then JS.undefined else Object.compare)
 
     let inline atomFamilyAtom defaultValueFn =
         Primitives.atomFamily (fun param -> Primitives.atom (defaultValueFn param))
@@ -107,23 +166,6 @@ module Atom =
 
         selectorWrapper |> register storeAtomPath
 
-    let rec query atomReference =
-        let result =
-            match atomReference with
-            | AtomReference.Atom atom ->
-                let internalKey = AtomInternalKey (atom.ToString ())
-
-                match atomIdMap.TryGetValue internalKey with
-                | true, value -> value
-                | _ -> failwith $"Internal.queryAtomPath query error atomReference={atomReference} "
-            | AtomReference.Path path ->
-                match atomPathMap.TryGetValue path with
-                | true, atom -> query (AtomReference.Atom atom)
-                | _ -> failwith $"Internal.queryAtomPath query error atomReference={atomReference} "
-
-        Logger.logTrace (fun () -> $"Internal.queryAtomPath atomReference={atomReference} result={result}")
-
-        result
 
 
     let mutable private keyCount = 0
@@ -151,15 +193,9 @@ module Atom =
                     | AtomType.ReadSelector _ -> JS.undefined
                     | AtomType.Selector (_, write) -> write
                     | AtomType.WriteOnlyAtom write -> write
-                Trigger = JS.undefined
             }
 
         config
-
-    let inline addTrigger (atom: AtomConfig<_>) =
-        { atom with
-            Trigger = create (AtomType.Atom 0)
-        }
 
     let inline enableAdapters (atom: AtomConfig<_>) =
         eprintf "enableAdapters called"

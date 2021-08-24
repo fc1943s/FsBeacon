@@ -15,12 +15,13 @@ open Fable.Core.JsInterop
 open Microsoft.FSharp.Core.Operators
 
 
-module RouterObserver =
+module RouterObserverWrapper =
     [<ReactComponent>]
-    let rec RouterWrapper children =
+    let rec RouterObserverWrapper children =
+        Profiling.addTimestamp $"{nameof FsUi} | RouterObserverWrapper [ render ] "
+
         let logger = Store.useValue Selectors.logger
         let alias = Store.useValue Selectors.Gun.alias
-        logger.Debug (fun () -> "RouterObserver.render: Constructor")
 
         let deviceInfo = Store.useValue Selectors.deviceInfo
         let lastSegments = React.useRef []
@@ -29,6 +30,8 @@ module RouterObserver =
 
         React.useEffect (
             (fun () ->
+                Profiling.addTimestamp $"{nameof FsUi} | RouterObserverWrapper [ render / useEffect ] "
+
                 match Dom.window () with
                 | Some window ->
                     let redirect = window.sessionStorage?redirect
@@ -46,10 +49,12 @@ module RouterObserver =
             Store.useCallbackRef
                 (fun _ setter (newSegments: string list) ->
                     promise {
+                        Profiling.addTimestamp $"{nameof FsUi} | RouterObserverWrapper [ render / onChange ]"
+
                         if newSegments <> lastSegments.current then
                             logger.Debug
                                 (fun () ->
-                                    $"RouterObserver. onChange 1.
+                                    $"RouterObserverWrapper. onChange 1.
 newSegments={JS.JSON.stringify newSegments}
 lastSegments.current={JS.JSON.stringify lastSegments.current} ")
 
@@ -73,7 +78,7 @@ lastSegments.current={JS.JSON.stringify lastSegments.current} ")
                                     | ex ->
                                         logger.Error
                                             (fun () ->
-                                                $"RouterObserver. onChange 3.
+                                                $"RouterObserverWrapper. onChange 3.
 error deserializing. ex={ex}
 newSegments={JS.JSON.stringify newSegments} ")
 
@@ -85,7 +90,7 @@ newSegments={JS.JSON.stringify newSegments} ")
                             | Some messages ->
                                 logger.Debug
                                     (fun () ->
-                                        $"RouterObserver. onChange 2. saving messages.
+                                        $"RouterObserverWrapper. onChange 2. saving messages.
                                                   messages={messages}
                                                   newSegments={JS.JSON.stringify newSegments} ")
 
@@ -97,7 +102,8 @@ newSegments={JS.JSON.stringify newSegments} ")
                                             let messageId = Hydrate.hydrateAppMessage setter message
 
                                             logger.Debug
-                                                (fun () -> $"RouterObserver. message hydrated. messageId={messageId} "))
+                                                (fun () ->
+                                                    $"RouterObserverWrapper. message hydrated. messageId={messageId} "))
                                 | None ->
                                     let commands =
                                         messages
@@ -110,17 +116,19 @@ newSegments={JS.JSON.stringify newSegments} ")
                                     let! events = consumeCommands commands
 
                                     logger.Debug
-                                        (fun () -> $"RouterObserver. no alias. consumed inline. events={events}  ")
+                                        (fun () ->
+                                            $"RouterObserverWrapper. no alias. consumed inline. events={events}  ")
 
                                 Router.navigatePath [||]
                             | None -> Router.navigatePath [||]
                     })
 
         Store.useHashedEffectOnce
-            (nameof RouterWrapper, deviceInfo.DeviceId)
+            (nameof RouterObserverWrapper, deviceInfo.DeviceId)
             (fun _getter _setter ->
                 promise {
-                    logger.Info (fun () -> $"RouterObserver useHashedEffectOnce. {Browser.Dom.window.location.href}")
+                    Profiling.addTimestamp
+                        $"{nameof FsUi} | RouterObserverWrapper [ render / useHashedEffectOnce ] location.href={Browser.Dom.window.location.href}"
 
                     match Browser.Dom.window.location.hash with
                     | null

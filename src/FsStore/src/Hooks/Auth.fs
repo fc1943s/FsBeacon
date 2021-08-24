@@ -16,8 +16,8 @@ module rec Auth =
                     printfn "useLogout(). before leave"
                     let gunUser = Atom.get getter Selectors.Gun.gunUser
                     gunUser.leave ()
-                    Atom.change setter Selectors.Gun.gunUser.Trigger ((+) 1)
-                    Atom.change setter Selectors.Hub.hub.Trigger ((+) 1)
+                    Atom.change setter Selectors.Gun.gunTrigger ((+) 1)
+                    Atom.change setter Selectors.Hub.hubTrigger ((+) 1)
                 })
 
     let inline signIn getter _setter (alias, password) =
@@ -73,8 +73,8 @@ module rec Auth =
                             promise {
                                 match ack with
                                 | { ok = Some 1; err = None } ->
-                                    Atom.change setter Selectors.Gun.gunUser.Trigger ((+) 1)
-                                    Atom.change setter Selectors.Hub.hub.Trigger ((+) 1)
+                                    Atom.change setter Selectors.Gun.gunTrigger ((+) 1)
+                                    Atom.change setter Selectors.Hub.hubTrigger ((+) 1)
                                     return Ok ()
                                 | { err = Some error } -> return Error error
                                 | _ -> return Error $"invalid ack {JS.JSON.stringify ack}"

@@ -103,8 +103,8 @@ module Files =
                     Cy2.waitForRegex
                         """"<30> # Primitives.registerAtom FsStore/Message/00000000-0000-0000-0000-000000000000/ack atom65 AtomWithSync": "1","""
 
-                    Cy2.waitForRegex """"<31> App.render": "2","""
-                    Cy2.waitForRegex """"<32> RootWrapper.render": "2","""
+                    Cy2.waitForRegex """"<31> App [ render ] ": "2","""
+                    Cy2.waitForRegex """"<32> RootWrapper [ render ] ": "2","""
                     Cy2.waitForRegex """"<33> # Primitives.selector get FsStore/logger": "1","""
                     Cy2.waitForRegex """"<34> # Primitives.selector get FsStore/logLevel": "1","""
                     Cy2.waitForRegex """"<35> # Primitives.selector get FsStore/gun": "1","""
@@ -118,7 +118,7 @@ module Files =
                     Cy2.waitForRegex """"<43> # Primitives.selector get FsStore/valueWrapper": "3","""
                     Cy2.waitForRegex """"<44> # Primitives.selector get FsStore/lastSyncValueByTypeAtom": "3","""
                     Cy2.waitForRegex """"<45> FsUi/darkMode get": "2","""
-                    Cy2.waitForRegex """"<46> ThemeLoader.render": "2","""
+                    Cy2.waitForRegex """"<46> ThemeLoader [ render ] ": "2","""
                     Cy2.waitForRegex """"<47> # Primitives.selector set FsStore/valueWrapper": "2","""
                     Cy2.waitForRegex """"<48> # Primitives.selector get FsStore/privateKeys": "1","""
                     Cy2.waitForRegex """"<49> # Primitives.selector get FsStore/hubUrl": "1","""

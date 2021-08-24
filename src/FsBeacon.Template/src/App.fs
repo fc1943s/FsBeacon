@@ -10,8 +10,7 @@ module App =
 
     [<ReactComponent>]
     let App wrap =
-        Profiling.addTimestamp "App.render"
-        Profiling.addCount "App.render"
+        Profiling.addTimestamp $"{nameof FsBeacon} | App [ render ] "
 
         (if wrap then RootWrapper.RootWrapper None else React.fragment)
             [

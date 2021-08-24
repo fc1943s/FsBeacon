@@ -82,7 +82,7 @@ module SyncEngine =
                     subscription <- Some (subscriptionId, disposable)
 
                     if disposable.IsSome then
-                        Profiling.addCount $"@ {lastAtomPath}"
+                        Profiling.addCount $"{nameof FsStore} | @ {lastAtomPath}"
 
                         //                            let! events =
 //                                StoreEngine.consumeMessages
@@ -107,7 +107,7 @@ module SyncEngine =
                             |> Option.defaultValue (AtomPath "")
                             |> AtomPath.Value)
                             .Contains "/pub" then
-                            Profiling.addCount $"@@> {getDebugSummary ()}"
+                            Profiling.addCount $"{nameof FsStore} | @@> {getDebugSummary ()}"
                     else
                         Logger.logTrace
                             (fun () ->
@@ -168,7 +168,7 @@ module SyncEngine =
                             |> Option.defaultValue (AtomPath "")
                             |> AtomPath.Value)
                             .Contains "/pub" then
-                            Profiling.addCount $"@@< {getDebugSummary ()}"
+                            Profiling.addCount $"{nameof FsStore} | @@< {getDebugSummary ()}"
 
                         fn ticksGuid
                     | None ->

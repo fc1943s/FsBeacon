@@ -193,8 +193,7 @@ module Store =
 //        let setter = jotaiUtils.useUpdateAtom<'T> atom
 //        fun (value: 'T -> 'T) -> setter (unbox value)
 
-    let hashCache = Dictionary<obj, bool> ()
-    Dom.Global.set (nameof hashCache) hashCache
+    let rec globalHashCache<'T> = Dom.Global.register (nameof globalHashCache) (Dictionary<obj, bool> ())
 
     let inline useHashedEffectOnce hash fn =
         let store = useStore ()
@@ -202,6 +201,8 @@ module Store =
         React.useEffectOnce
             (fun () ->
                 promise {
+                    let hashCache = globalHashCache.Get ()
+
                     if not (hashCache.ContainsKey hash) then
                         hashCache.[hash] <- true
 

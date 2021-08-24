@@ -6,7 +6,6 @@ open System
 open FsCore
 open FsCore.BaseModel
 open FsStore
-open FsStore.Bindings
 open FsStore.Model
 open FsStore.State
 open FsUi.State

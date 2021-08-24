@@ -9,6 +9,8 @@ open FsJs
 
 module Main =
     exportDefault (
+        Profiling.addTimestamp $"{nameof FsBeacon} | Main body"
+
         let cmp = React.strictMode [ App.App true ]
 
         match Dom.window () with

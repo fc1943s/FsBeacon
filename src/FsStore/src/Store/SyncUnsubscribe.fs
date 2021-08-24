@@ -19,7 +19,7 @@ module SyncUnsubscribe =
                 match gunAtomNode with
                 | Some (key, gunAtomNode: Gun.Types.IGunChainReference) ->
 
-                    Profiling.addCount $"{key} unsubscribe"
+                    Profiling.addCount $"{nameof FsStore} | {key} unsubscribe"
 
                     Logger.logTrace
                         (fun () -> $"Store.syncUnsubscribe. {key} gunAtomNode={gunAtomNode} {getDebugInfo ()} ")

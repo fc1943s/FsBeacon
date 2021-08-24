@@ -31,8 +31,7 @@ module Component =
         let fileId = Store.useValue fileIdAtom
         let progress = Store.useValue (Selectors.File.progress fileId)
 
-        let logger = Store.useValue Selectors.logger
-        logger.Info (fun () -> $"File.render. fileId={fileId} progress={progress}")
+        Profiling.addTimestamp $"{nameof FsBeacon} | File [  render ] fileId={fileId} progress={progress}"
 
 
         //        let valid, setValid = React.useState false
@@ -81,9 +80,8 @@ module Component =
 
     [<ReactComponent>]
     let Files () =
-        let logger = Store.useValue Selectors.logger
+        Profiling.addTimestamp $"{nameof FsBeacon} | Files [ render ] "
         let fileIdAtoms = Store.useValue Selectors.asyncFileIdAtoms
-        logger.Info (fun () -> $"Files.render. fileIdAtoms.Length={fileIdAtoms.Length}")
         //        let fileIdAtoms = Store.useValue State.Selectors.asyncFileIdAtoms
 
         React.fragment [
@@ -93,7 +91,7 @@ module Component =
 
     [<ReactComponent>]
     let rec HydrateCoreContainer () =
-        printfn "HydrateCoreContainer.render"
+        Profiling.addTimestamp $"{nameof FsBeacon} | HydrateCoreContainer [ render ] hydrate trace from now on "
 
         Jotai.jotaiUtils.useHydrateAtoms [|
             unbox Atoms.showDebug, unbox true
@@ -111,7 +109,7 @@ module Component =
 
     [<ReactComponent>]
     let rec HydrateSyncContainer () =
-        printfn "HydrateSyncContainer.render"
+        Profiling.addTimestamp $"{nameof FsBeacon} | HydrateSyncContainer [ render ] "
 
         //        Jotai.jotaiUtils.useHydrateAtoms [|
 //            unbox Atoms.gunOptions,
@@ -134,6 +132,9 @@ module Component =
                             GunPeer "https://localhost:49221/gun"
                          |])
 
+                    Profiling.addTimestamp
+                        $"{nameof FsBeacon} | HydrateSyncContainer [ render / useHashedEffectOnce ] gunOptions set manually "
+
                     Atom.set setter Atoms.syncHydrateCompleted true
                 })
 
@@ -142,8 +143,8 @@ module Component =
 
     [<ReactComponent>]
     let rec SignInContainer () =
+        Profiling.addTimestamp $"{nameof FsBeacon} | SignInContainer [ render ] "
         let logger = Store.useValue Selectors.logger
-        logger.Info (fun () -> "SignInContainer.render")
 
         let signUp = Auth.useSignUp ()
 
@@ -153,6 +154,8 @@ module Component =
             (nameof SignInContainer)
             (fun getter setter ->
                 promise {
+                    Profiling.addTimestamp $"{nameof FsBeacon} | SignInContainer [ render ] starting sign up..."
+
                     let credentials = $"a@{Dom.deviceTag}"
                     //
 //                            match! signIn (credentials, credentials) with
@@ -195,11 +198,11 @@ module Component =
 
     [<ReactComponent>]
     let HydrateButton () =
-        let logger = Store.useValue Selectors.logger
-        logger.Info (fun () -> "HydrateButton.render")
-
         let syncHydrateCompleted = Store.useValue Atoms.syncHydrateCompleted
         let setSyncHydrateStarted = Store.useSetState Atoms.syncHydrateStarted
+
+        Profiling.addTimestamp
+            $"{nameof FsBeacon} | HydrateButton [  render ] syncHydrateCompleted={syncHydrateCompleted}"
 
         Button.Button
             {|
@@ -217,12 +220,12 @@ module Component =
 
     [<ReactComponent>]
     let SignInButton () =
-        let logger = Store.useValue Selectors.logger
-        logger.Info (fun () -> "SignInButton.render")
-
         let alias = Store.useValue Selectors.Gun.alias
         let syncHydrateCompleted = Store.useValue Atoms.syncHydrateCompleted
         let setSignInStarted = Store.useSetState Atoms.signInStarted
+
+        Profiling.addTimestamp
+            $"{nameof FsBeacon} | SignInButton [ render ] alias={alias} syncHydrateCompleted={syncHydrateCompleted}"
 
         Button.Button
             {|
@@ -240,11 +243,10 @@ module Component =
 
     [<ReactComponent>]
     let LogoutButton () =
-        let logger = Store.useValue Selectors.logger
-        logger.Info (fun () -> "LogoutButton.render")
-
         let alias = Store.useValue Selectors.Gun.alias
         let logout = Auth.useLogout ()
+
+        Profiling.addTimestamp $"{nameof FsBeacon} | LogoutButton [ render ] alias={alias}"
 
         Button.Button
             {|
@@ -262,14 +264,13 @@ module Component =
 
     [<ReactComponent>]
     let ClearButton () =
-        let logger = Store.useValue Selectors.logger
-        logger.Info (fun () -> "ClearButton.render")
+        Profiling.addTimestamp $"{nameof FsBeacon} | ClearButton [ render ] "
 
         Button.Button
             {|
                 Tooltip = None
                 Icon = Some (Icons.md.MdClear |> Icons.render, Button.IconPosition.Left)
-                Props = fun x -> x.onClick <- (fun _ -> promise { Profiling.clearProfilingState () })
+                Props = fun x -> x.onClick <- (fun _ -> promise { Profiling.globalClearProfilingState.Get () () })
                 Children =
                     [
                         str "clear logs"
@@ -284,21 +285,20 @@ module Component =
 
     [<ReactComponent>]
     let AddFileButton () =
-        let logger = Store.useValue Selectors.logger
-        logger.Info (fun () -> "AddFileButton.render")
-
         let alias = Store.useValue Selectors.Gun.alias
+
+        Profiling.addTimestamp $"{nameof FsBeacon} | AddFileButton [ render ] alias={alias}"
 
         let addFile =
             Store.useCallbackRef
                 (fun _ setter _ ->
                     promise {
-                        printfn "add file!"
+                        Profiling.addTimestamp $"{nameof FsBeacon} | AddFileButton [ render ] addFile()"
 
                         let! hexString = hexStringPromise
                         let fileId = Hydrate.hydrateFile setter (AtomScope.Current, hexString)
 
-                        Profiling.addCount $"addFile fileId={fileId}"
+                        Profiling.addTimestamp $"{nameof FsBeacon} | addFile fileId={fileId}"
                     })
 
         Button.Button
@@ -317,10 +317,9 @@ module Component =
 
     [<ReactComponent>]
     let MountButton () =
-        let logger = Store.useValue Selectors.logger
-        logger.Info (fun () -> "MountButton.render")
-
         let mounted, setMounted = Store.useState State.Atoms.mounted
+
+        Profiling.addTimestamp $"{nameof FsBeacon} | MountButton [ render ] mounted={mounted}"
 
         Button.Button
             {|
@@ -335,18 +334,17 @@ module Component =
 
     [<ReactComponent>]
     let HrefIndicator () =
-        let logger = Store.useValue Selectors.logger
-        logger.Info (fun () -> "HrefIndicator.render")
-
         let _routeTrigger = Store.useValue Atoms.routeTrigger
+
+        Profiling.addTimestamp $"{nameof FsBeacon} | HrefIndicator [ render ] _routeTrigger={_routeTrigger}"
+
         str $"href: {Browser.Dom.window.location.href}"
 
     [<ReactComponent>]
     let AsyncAliasIndicator () =
-        let logger = Store.useValue Selectors.logger
-        logger.Trace (fun () -> "AsyncAliasIndicator.render")
-
         let asyncAlias = Store.useValue Selectors.Gun.asyncAlias
+
+        Profiling.addTimestamp $"{nameof FsBeacon} | AsyncAliasIndicator [ render ] asyncAlias={asyncAlias}"
 
         Ui.flex
             (fun _ -> ())
@@ -357,8 +355,7 @@ module Component =
 
     [<ReactComponent>]
     let SettingsIndicator () =
-        let logger = Store.useValue Selectors.logger
-        logger.Info (fun () -> "SettingsIndicator.render")
+        Profiling.addTimestamp $"{nameof FsBeacon} | SettingsIndicator [ render ] "
 
         Ui.box
             (fun x ->
@@ -368,8 +365,7 @@ module Component =
 
     [<ReactComponent>]
     let InnerComponent () =
-        let logger = Store.useValue Selectors.logger
-        logger.Trace (fun () -> "InnerComponent.render")
+        Profiling.addTimestamp $"{nameof FsBeacon} | InnerComponent [ render ] "
 
         React.useEffect (
             (fun () ->
@@ -424,13 +420,15 @@ module Component =
     [<ReactComponent>]
     let CommandConsumer messageIdAtom =
         let logger = Store.useValue Selectors.logger
-        logger.Trace (fun () -> "CommandConsumer.render")
         let deviceInfo = Store.useValue Selectors.deviceInfo
         let appState = Store.useValue (Engine.appState deviceInfo.DeviceId)
         let consumeCommands = Store.useCallbackRef (Engine.consumeCommands Messaging.appUpdate appState)
         let messageId = Store.useValue messageIdAtom
         let appMessage = Store.useValue (Atoms.Message.appMessage messageId)
         let ack, setAck = Store.useState (Atoms.Message.ack messageId)
+
+        Profiling.addTimestamp
+            $"{nameof FsBeacon} | CommandConsumer [ render ] messageId={messageId} ack={ack} appMessage={appMessage}"
 
         React.useEffect (
             (fun () ->
@@ -439,6 +437,9 @@ module Component =
                     | Some false ->
                         match appMessage with
                         | Message.Command command ->
+                            Profiling.addTimestamp
+                                $"{nameof FsBeacon} | CommandConsumer [ render ] starting consumeCommands..."
+
                             let! events = consumeCommands (command |> List.singleton)
 
                             logger.Info
@@ -464,8 +465,7 @@ module Component =
 
     [<ReactComponent>]
     let MessagesListener () =
-        let logger = Store.useValue Selectors.logger
-        logger.Trace (fun () -> "MessagesListener.render")
+        Profiling.addTimestamp $"{nameof FsBeacon} | MessagesListener [ render ] "
         let messageIdAtoms = Store.useValue State.Selectors.asyncMessageIdAtoms
 
         React.fragment [
@@ -473,19 +473,19 @@ module Component =
         ]
 
     [<ReactComponent>]
-    let HydrateContainer () =
+    let HydrateSyncContainerWrapper () =
+        Profiling.addTimestamp $"{nameof FsBeacon} | HydrateSyncContainerWrapper [ render ] "
         let syncHydrateStarted = Store.useValue Atoms.syncHydrateStarted
         let syncHydrateCompleted = Store.useValue Atoms.syncHydrateCompleted
 
         React.fragment [
-            if not syncHydrateCompleted then
-                if syncHydrateStarted then HydrateSyncContainer ()
+            if not syncHydrateCompleted && syncHydrateStarted then
+                HydrateSyncContainer ()
         ]
 
     [<ReactComponent>]
     let Component () =
-        let logger = Store.useValue Selectors.logger
-        logger.Trace (fun () -> "Component.render")
+        Profiling.addTimestamp $"{nameof FsBeacon} | Component [ render ] "
         let signInStarted = Store.useValue Atoms.signInStarted
 
         let mounted = Store.useValue State.Atoms.mounted
@@ -498,7 +498,7 @@ module Component =
                 MountButton ()
 
                 if mounted then
-                    HydrateContainer ()
+                    HydrateSyncContainerWrapper ()
                     MessagesListener ()
                     if signInStarted then SignInContainer ()
 
