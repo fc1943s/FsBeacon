@@ -197,8 +197,12 @@ module Atom =
     let inline createRegistered storeAtomPath atomType =
         atomType |> create |> register storeAtomPath
 
+    // TODO: remove
+    let inline formatIfEnum<'T> (value: 'T) =
+        if typeof<'T>.IsEnum then value |> Enum.name |> unbox else value
+
     let inline createRegisteredWithStorage storeAtomPath (defaultValue: 'A) =
-        let defaultValueFormatted = defaultValue |> Enum.formatIfEnum |> unbox<'A>
+        let defaultValueFormatted = defaultValue |> formatIfEnum
 
         let internalAtom =
             jotaiUtils.atomWithStorage
@@ -214,8 +218,7 @@ module Atom =
                     let newValue =
                         argFn
                         |> Object.invokeOrReturn
-                        |> Enum.formatIfEnum
-                        |> unbox<'A>
+                        |> formatIfEnum
 
                     set setter internalAtom newValue)
             )

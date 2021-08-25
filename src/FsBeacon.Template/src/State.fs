@@ -1,6 +1,5 @@
 namespace FsBeacon.Template
 
-open FsJs
 open FsStore.Bindings.Jotai
 open FsCore
 open FsCore.BaseModel
@@ -47,11 +46,6 @@ module State =
         let rec syncHydrateCompleted =
             Atom.createRegistered
                 (RootAtomPath (FsBeacon.storeRoot, AtomName (nameof syncHydrateCompleted)))
-                (AtomType.Atom false)
-
-        let rec signInStarted =
-            Atom.createRegistered
-                (RootAtomPath (FsBeacon.storeRoot, AtomName (nameof signInStarted)))
                 (AtomType.Atom false)
 
         let rec mounted =

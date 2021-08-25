@@ -152,61 +152,6 @@ module Component =
 
 
     [<ReactComponent>]
-    let rec SignInContainer () =
-        Profiling.addTimestamp $"{nameof FsBeacon} | SignInContainer [ render ] "
-        let logger = Store.useValue Selectors.logger
-
-        let signUp = Auth.useSignUp ()
-
-        let toast = Ui.useToast ()
-
-        Store.useHashedEffectOnce
-            (nameof SignInContainer)
-            (fun getter setter ->
-                promise {
-                    Profiling.addTimestamp $"{nameof FsBeacon} | SignInContainer [ render ] starting sign up..."
-
-                    let credentials = $"a@{Dom.deviceTag}"
-                    //
-//                            match! signIn (credentials, credentials) with
-//                            | Ok _ -> ()
-//                            | Error error ->
-//                                toast (fun x -> x.description <- $"1: {error}")
-//
-//                                match! signUp (credentials, credentials) with
-//                                | Ok _ -> ()
-//                                | Error error -> toast (fun x -> x.description <- $"2: {error}")
-
-                    match! signUp (credentials, credentials) with
-                    | Ok _ -> ()
-                    | Error error when error.Contains "User already created" ->
-                        //                                do! Promise.sleep 300
-                        match! Auth.signIn getter setter (credentials, credentials) with
-                        | Ok _ -> ()
-                        | Error error -> toast (fun x -> x.description <- $"1: {error}")
-                    | Error error -> toast (fun x -> x.description <- $"2: {error}")
-
-                    //                            let gun = Atom.value getter Selectors.Gun.gun
-//                            let user = gun.user()
-//                            let! ack = Gun.createUser user (Gun.Alias deviceId) (Gun.Pass deviceId)
-//                            printfn $"ack={ack}"
-
-
-                    //                        let! hexString = hexStringPromise
-//                        let fileId = Hydrate.hydrateFile setter (Model.AtomScope.Current, hexString)
-//
-//                        Atom.set setter (State.Device.fileId deviceInfo.DeviceId) fileId
-
-                    let fileId = null
-
-                    logger.Info
-                        (fun () -> $"Component.HydrateContainer().useEffectOnce() fileId={fileId} (currently null)")
-                })
-
-        nothing
-
-
-    [<ReactComponent>]
     let HydrateButton () =
         let syncHydrateCompleted = Store.useValue Atoms.syncHydrateCompleted
         let setSyncHydrateStarted = Store.useSetState Atoms.syncHydrateStarted
@@ -240,10 +185,59 @@ module Component =
     let SignInButton () =
         let alias = Store.useValue Selectors.Gun.alias
         let syncHydrateCompleted = Store.useValue Atoms.syncHydrateCompleted
-        let setSignInStarted = Store.useSetState Atoms.signInStarted
+
+        let logger = Store.useValue Selectors.logger
+
+        let signUp = Auth.useSignUp ()
+
+        let toast = Ui.useToast ()
 
         Profiling.addTimestamp
             $"{nameof FsBeacon} | SignInButton [ render ] alias={alias} syncHydrateCompleted={syncHydrateCompleted}"
+
+        let signIn =
+            Store.useCallbackRef
+                (fun getter setter _ ->
+                    promise {
+                        Profiling.addTimestamp $"{nameof FsBeacon} | SignInContainer [ render ] starting sign up..."
+
+                        let credentials = $"a@{Dom.deviceTag}"
+                        //
+//                            match! signIn (credentials, credentials) with
+//                            | Ok _ -> ()
+//                            | Error error ->
+//                                toast (fun x -> x.description <- $"1: {error}")
+//
+//                                match! signUp (credentials, credentials) with
+//                                | Ok _ -> ()
+//                                | Error error -> toast (fun x -> x.description <- $"2: {error}")
+
+                        match! signUp (credentials, credentials) with
+                        | Ok _ -> ()
+                        | Error error when error.Contains "User already created" ->
+                            //                                do! Promise.sleep 300
+                            match! Auth.signIn getter setter (credentials, credentials) with
+                            | Ok _ -> ()
+                            | Error error -> toast (fun x -> x.description <- $"1: {error}")
+                        | Error error -> toast (fun x -> x.description <- $"2: {error}")
+
+                        //                            let gun = Atom.value getter Selectors.Gun.gun
+//                            let user = gun.user()
+//                            let! ack = Gun.createUser user (Gun.Alias deviceId) (Gun.Pass deviceId)
+//                            printfn $"ack={ack}"
+
+
+                        //                        let! hexString = hexStringPromise
+//                        let fileId = Hydrate.hydrateFile setter (Model.AtomScope.Current, hexString)
+//
+//                        Atom.set setter (State.Device.fileId deviceInfo.DeviceId) fileId
+
+                        let fileId = null
+
+                        logger.Info
+                            (fun () -> $"Component.HydrateContainer().useEffectOnce() fileId={fileId} (currently null)")
+
+                    })
 
         Button.Button
             {|
@@ -257,7 +251,7 @@ module Component =
                                     Profiling.addTimestamp
                                         $"{nameof FsBeacon} | SignInButton [ onClick ] syncHydrateCompleted={syncHydrateCompleted}"
 
-                                    setSignInStarted true
+                                    do! signIn ()
                                 })
 
                         x.disabled <- not syncHydrateCompleted || alias.IsSome
@@ -536,7 +530,6 @@ module Component =
     [<ReactComponent>]
     let Component () =
         Profiling.addTimestamp $"{nameof FsBeacon} | Component [ render ] "
-        let signInStarted = Store.useValue Atoms.signInStarted
 
         let mounted = Store.useValue State.Atoms.mounted
 
@@ -550,8 +543,6 @@ module Component =
                 if mounted then
                     HydrateSyncContainerWrapper ()
                     MessagesListener ()
-                    if signInStarted then SignInContainer ()
-
                     InnerComponent ()
 
                 ClearButton ()
