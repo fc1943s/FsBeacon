@@ -21,10 +21,9 @@ module rec Device =
     let deviceAtomFamilyWithAdapters atomName defaultValue =
         Atom.Primitives.atomFamily
             (fun (deviceId: DeviceId) ->
-                Atom.createRegistered
+                Engine.createRegisteredAtomWithSubscription
                     (IndexedAtomPath (FsStore.storeRoot, collection, deviceIdIdentifier deviceId, atomName))
-                    (AtomType.Atom defaultValue)
-                |> Atom.enableAdapters)
+                    defaultValue)
 
     let rec devicePing = deviceAtomFamilyWithAdapters (AtomName (nameof devicePing)) (Ping "0")
 

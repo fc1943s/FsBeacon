@@ -43,7 +43,6 @@ module SelectorsMagic =
             let rec valueWrapper =
                 Atom.Primitives.selector
                     (fun getter ->
-                        let logger = Atom.get getter logger
                         let result = Atom.get getter valueAtom
 
                         Profiling.addTimestamp
@@ -51,8 +50,6 @@ module SelectorsMagic =
 
                         result)
                     (fun getter setter newValue ->
-                        let logger = Atom.get getter logger
-
                         Profiling.addTimestamp
                             $"{nameof FsStore} | Selectors.store [ valueWrapper.set(getter,setter,newValue) ] newValue={newValue}"
 
@@ -76,7 +73,6 @@ module SelectorsMagic =
                 (RootAtomPath (FsStore.storeRoot, AtomName (nameof store)))
                 (AtomType.ReadSelector
                     (fun getter ->
-                        let logger = Atom.get getter logger
                         let value = Atom.get getter valueWrapper
                         let accessors = Atom.get getter accessorsAtom
 

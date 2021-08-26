@@ -2,7 +2,6 @@ namespace FsStore.State.Atoms
 
 open FsCore.BaseModel
 open FsStore
-open FsStore.Bindings.Jotai
 open FsStore.Model
 
 #nowarn "40"
@@ -21,10 +20,9 @@ module rec Message =
     let inline messageAtomFamilyWithAdapters atomName defaultValue =
         Atom.Primitives.atomFamily
             (fun (messageId: MessageId) ->
-                Atom.createRegistered
+                Engine.createRegisteredAtomWithSubscription
                     (IndexedAtomPath (FsStore.storeRoot, collection, messageIdIdentifier messageId, atomName))
-                    (AtomType.Atom defaultValue)
-                |> Atom.enableAdapters)
+                    defaultValue)
 
     let rec ack = messageAtomFamilyWithAdapters (AtomName (nameof ack)) (None: bool option)
 

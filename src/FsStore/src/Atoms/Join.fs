@@ -8,7 +8,6 @@ open Microsoft.FSharp.Core.Operators
 open FsCore
 open FsJs
 open FsStore.Bindings
-open FsStore.Bindings.Jotai
 
 
 module rec Join =
@@ -19,7 +18,7 @@ module rec Join =
         let rec internalAtomFamily =
             Atom.Primitives.atomFamily
                 (fun (atomPathGuidHash: Guid) ->
-                    Atom.createRegistered
+                    Engine.createRegisteredAtomWithSubscription
                         (IndexedAtomPath (
                             FsStore.storeRoot,
                             collection,
@@ -28,8 +27,7 @@ module rec Join =
                             ],
                             AtomName name
                         ))
-                        (AtomType.Atom (None: string option))
-                    |> Atom.enableAdapters)
+                        (None: string option) )
 
         Atom.Primitives.atomFamily
             (fun (storeAtomPath: StoreAtomPath) ->

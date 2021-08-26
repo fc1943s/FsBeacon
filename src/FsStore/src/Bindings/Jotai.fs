@@ -16,7 +16,7 @@ module Jotai =
             ToString: unit -> string
 
             [<Emit "init">]
-            DefaultValue: 'A option
+            init: 'A option
 
             [<Emit "read">]
             Read: Read<'A>

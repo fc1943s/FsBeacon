@@ -1,6 +1,5 @@
 namespace FsStore
 
-open Fable.SignalR
 open FsCore
 open System.Collections.Generic
 open Fable.Core
@@ -39,8 +38,6 @@ module Atom =
 
     let private atomPathMap = Dictionary<StoreAtomPath, AtomConfig<obj>> ()
     let private atomIdMap = Dictionary<AtomInternalKey, StoreAtomPath> ()
-    let private atomAdapterSet = HashSet<StoreAtomPath> ()
-    //    let private atomAdapterMap<'T> = Dictionary<AtomInternalKey, Dictionary<AdapterType, IDisposable>> ()
 
     let rec globalAtomPathMap =
         Dom.Global.register (nameof globalAtomPathMap) (Dictionary<StoreAtomPath, AtomConfig<obj>> ())
@@ -182,7 +179,7 @@ module Atom =
                 (fun key ->
                     Profiling.addCount $"{nameof FsStore} | Atom.Primitives.atomFamily key={key}"
                     defaultValueFn key)
-                (if true then JS.undefined else Object.compare)
+                (if false then JS.undefined else Object.compare)
 
         let inline selectAtom atom selector =
             jotaiUtils.selectAtom
@@ -225,7 +222,7 @@ module Atom =
                  |> AtomPath.Value)
                 defaultValueFormatted
 
-        let selectorWrapper =
+        let wrapper =
             AtomType.Selector (
                 (fun getter -> get getter internalAtom),
                 (fun _ setter argFn ->
@@ -234,28 +231,16 @@ module Atom =
                     set setter internalAtom newValue)
             )
             |> create
+            |> register storeAtomPath
 
-        selectorWrapper?init <- defaultValueFormatted
+        //        selectorWrapper?init <- defaultValueFormatted
+//
+//        selectorWrapper |> register storeAtomPath
 
-        selectorWrapper |> register storeAtomPath
 
+        wrapper?init <- defaultValue
 
-    let enableAdapters (atom: AtomConfig<_>) =
-        let storeAtomPath = query (AtomReference.Atom atom)
-
-        atomAdapterSet.Add storeAtomPath |> ignore
-
-        Profiling.addTimestamp
-            $"{nameof FsStore} | Atom.enableAdapters [ constructor ] atom={atom} storeAtomPath={storeAtomPath |> StoreAtomPath.AtomPath}"
-
-        atom
-
-    let hasAdaptersEnabled (atom: AtomConfig<_>) =
-        let internalKey = AtomInternalKey (atom.ToString ())
-
-        match atomIdMap.TryGetValue internalKey with
-        | true, storeAtomPath -> atomAdapterSet.Contains storeAtomPath
-        | _ -> false
+        wrapper
 
 
     let emptyArrayAtom = Primitives.atom ([||]: obj [])
@@ -277,7 +262,7 @@ module Atom =
             let rec config =
                 {
                     ToString = fun () -> key
-                    DefaultValue =
+                    init =
                         match atomType with
                         | AtomType.Atom value -> Some value
                         | _ -> None
