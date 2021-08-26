@@ -19,7 +19,7 @@ module SyncSubscribe =
             getDebugInfo
             (syncEngine: Store.SyncEngine<_>)
             (syncState: SyncState<'TValue>)
-            (trigger: TicksGuid * Atom.AdapterValue<'TValue> option -> unit)
+            (trigger: TicksGuid * Atom.AdapterType * 'TValue option -> unit)
             onError
             atomPath
             =
@@ -76,7 +76,7 @@ module SyncSubscribe =
                                                                         gunKeys
                                                                         (Gun.EncryptedSignedValue result)
 
-                                                            trigger (ticks, (newValue |> Option.map Atom.AdapterValue.Hub))
+                                                            trigger (ticks, Atom.AdapterType.Hub, newValue)
                                                         | _ -> ()
 
                                                         return! newHashedDisposable ticks
@@ -118,7 +118,7 @@ module SyncSubscribe =
                                                 Gun.userDecode<'TValue> gunKeys result
                                             | _ -> unbox null |> Promise.lift
 
-                                        trigger (ticks, (newValue |> Option.map Atom.AdapterValue.Gun))
+                                        trigger (ticks, Atom.AdapterType.Gun, newValue)
 
                                         let hubValue =
                                             match syncState.AdapterValueMapByType with
@@ -159,10 +159,7 @@ module SyncSubscribe =
                                                                         $"Store.syncSubscribe. subscribe() hub set from gun
                                         newValue={newValue} jsTypeof-newValue={jsTypeof newValue} {getDebugInfo ()}")
 
-                                                                trigger (
-                                                                    ticks,
-                                                                    (newValue |> Option.map Atom.AdapterValue.Hub)
-                                                                )
+                                                                trigger (ticks, Atom.AdapterType.Hub, newValue)
                                                         | response ->
                                                             Logger.logError
                                                                 (fun () ->
@@ -186,8 +183,6 @@ module SyncSubscribe =
                         | _ -> Logger.logTrace (fun () -> $"Store.syncSubscribe. skipping. {getDebugInfo ()} ")
                     | _ ->
                         Logger.logTrace (fun () -> $"Store.syncSubscribe. skipping. gun keys empty {getDebugInfo ()} ")
-
-
 
                 | None, _ ->
                     Logger.logTrace

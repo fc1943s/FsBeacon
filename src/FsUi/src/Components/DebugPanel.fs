@@ -70,7 +70,7 @@ module DebugPanel =
 
     let inline getSchedulingInterval (deviceInfo: Dom.DeviceInfo) =
         if not deviceInfo.IsTesting then 1000
-        elif Dom.globalExit.Get () then 4000 // * 30
+        elif Dom.globalExit.Get () then 2000 // * 30
         else 0
 
     [<ReactComponent>]

@@ -97,12 +97,6 @@ module PrimitivesMagic =
         let inline readSelector<'A> (read: Read<'A>) =
             selector<'A> read (fun _ _ _ -> failwith $"Primitives.readSelector is read only.")
 
-        let inline selectorFamily<'TKey, 'A> (read: 'TKey -> Read<'A>) (write: 'TKey -> Write<'A>) =
-            Atom.Primitives.atomFamily (fun param -> Atom.Primitives.selector (read param) (write param))
-
-
-        let inline readSelectorFamily<'TKey, 'A> (read: 'TKey -> Read<'A>) : ('TKey -> AtomConfig<'A>) =
-            selectorFamily read (fun _ _ _ -> failwith $"Primitives.readSelectorFamily is read only.")
 
 
         let inline writeOnlyAtom internalAtom =

@@ -17,7 +17,7 @@ module PutFromUi =
         let inline putFromUi<'TValue>
             (getDebugInfo: unit -> string)
             (syncEngine: Store.SyncEngine<'TValue>)
-            (syncTrigger: TicksGuid * AdapterValue<'TValue> option -> unit)
+            (syncTrigger: TicksGuid * AdapterType * 'TValue option -> unit)
             (ticks, newValue)
             =
             promise {
@@ -85,7 +85,7 @@ module PutFromUi =
                                                     Logger.logError
                                                         (fun () -> "Store.putFromUi. HUB PUT ERROR (backend console)")
                                                 else
-                                                    syncTrigger (ticks, Some (AdapterValue.Hub newValue))
+                                                    syncTrigger (ticks, AdapterType.Hub, Some newValue)
                                             | response ->
                                                 Logger.logError
                                                     (fun () -> $"Store.putFromUi. #90592 response={response}")
@@ -126,7 +126,7 @@ module PutFromUi =
                                             (Gun.GunValue.EncryptedSignedValue (Gun.EncryptedSignedValue newValueJson))
 
                                     if putResult then
-                                        syncTrigger (ticks, Some (AdapterValue.Gun newValue))
+                                        syncTrigger (ticks, AdapterType.Gun, Some newValue)
 
                                         Logger.logTrace
                                             (fun () ->

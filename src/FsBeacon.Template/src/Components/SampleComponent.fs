@@ -19,7 +19,7 @@ open FsUi.State
 open FsUi.Components
 
 
-module Component =
+module SampleComponent =
     let dataChar = "#"
     let dataBlob = Fable.SimpleHttp.Blob.fromText (String.init (Hydrate.fileChunkSize * 1) (fun _ -> dataChar))
     let hexStringPromise = Js.blobToHexString dataBlob
@@ -80,7 +80,7 @@ module Component =
     [<ReactComponent>]
     let Files () =
         Profiling.addTimestamp $"{nameof FsBeacon} | Files [ render ] "
-        let fileIdAtoms = Store.useValue Selectors.fileIdAtoms
+        let fileIdAtoms = Store.useValue Selectors.Sample.fileIdAtoms
         //        let fileIdAtoms = Store.useValue State.Selectors.asyncFileIdAtoms
 
         React.fragment [
@@ -142,10 +142,15 @@ module Component =
                             GunPeer "https://localhost:49221/gun"
                          |])
 
+//                    Atom.set
+//                        setter
+//                        Atoms.hubUrl
+//                        (Some "https://localhost:49211")
+
                     Profiling.addTimestamp
                         $"{nameof FsBeacon} | HydrateSyncContainer [ render / useHashedEffectOnce ] gunOptions set manually "
 
-                    Atom.set setter Atoms.syncHydrateCompleted true
+                    Atom.set setter Atoms.Sample.syncHydrateCompleted true
                 })
 
         nothing
@@ -153,8 +158,8 @@ module Component =
 
     [<ReactComponent>]
     let HydrateButton () =
-        let syncHydrateCompleted = Store.useValue Atoms.syncHydrateCompleted
-        let setSyncHydrateStarted = Store.useSetState Atoms.syncHydrateStarted
+        let syncHydrateCompleted = Store.useValue Atoms.Sample.syncHydrateCompleted
+        let setSyncHydrateStarted = Store.useSetState Atoms.Sample.syncHydrateStarted
 
         Profiling.addTimestamp
             $"{nameof FsBeacon} | HydrateButton [ render ] syncHydrateCompleted={syncHydrateCompleted}"
@@ -184,7 +189,7 @@ module Component =
     [<ReactComponent>]
     let SignInButton () =
         let alias = Store.useValue Selectors.Gun.alias
-        let syncHydrateCompleted = Store.useValue Atoms.syncHydrateCompleted
+        let syncHydrateCompleted = Store.useValue Atoms.Sample.syncHydrateCompleted
 
         let logger = Store.useValue Selectors.logger
 
@@ -352,7 +357,7 @@ module Component =
 
     [<ReactComponent>]
     let MountButton () =
-        let mounted, setMounted = Store.useState State.Atoms.mounted
+        let mounted, setMounted = Store.useState State.Atoms.Sample.mounted
 
         Profiling.addTimestamp $"{nameof FsBeacon} | MountButton [ render ] mounted={mounted}"
 
@@ -510,7 +515,7 @@ module Component =
     [<ReactComponent>]
     let MessagesListener () =
         Profiling.addTimestamp $"{nameof FsBeacon} | MessagesListener [ render ] "
-        let messageIdAtoms = Store.useValue State.Selectors.messageIdAtoms
+        let messageIdAtoms = Store.useValue State.Selectors.Sample.messageIdAtoms
 
         React.fragment [
             yield! messageIdAtoms |> Array.map MessageConsumer
@@ -519,8 +524,8 @@ module Component =
     [<ReactComponent>]
     let HydrateSyncContainerWrapper () =
         Profiling.addTimestamp $"{nameof FsBeacon} | HydrateSyncContainerWrapper [ render ] "
-        let syncHydrateStarted = Store.useValue Atoms.syncHydrateStarted
-        let syncHydrateCompleted = Store.useValue Atoms.syncHydrateCompleted
+        let syncHydrateStarted = Store.useValue Atoms.Sample.syncHydrateStarted
+        let syncHydrateCompleted = Store.useValue Atoms.Sample.syncHydrateCompleted
 
         React.fragment [
             if not syncHydrateCompleted && syncHydrateStarted then
@@ -528,10 +533,10 @@ module Component =
         ]
 
     [<ReactComponent>]
-    let Component () =
+    let SampleComponent () =
         Profiling.addTimestamp $"{nameof FsBeacon} | Component [ render ] "
 
-        let mounted = Store.useValue State.Atoms.mounted
+        let mounted = Store.useValue State.Atoms.Sample.mounted
 
         Ui.stack
             (fun x -> x.padding <- "15px")

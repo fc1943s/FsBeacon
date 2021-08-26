@@ -1,8 +1,10 @@
 namespace FsStore
 
+open Fable.SignalR
 open FsCore
 open System.Collections.Generic
 open Fable.Core
+open FsStore.Bindings
 open FsStore.Bindings.Jotai
 open FsStore.Model
 open Microsoft.FSharp.Core.Operators
@@ -17,21 +19,27 @@ open Fable.Core.JsInterop
 module Atom =
     [<RequireQualifiedAccess>]
     type AdapterType =
-        | Jotai
+        | Memory
         | Gun
         | Hub
 
     [<RequireQualifiedAccess>]
-    type AdapterValue<'T> =
-        | Jotai of 'T
-        | Gun of 'T
-        | Hub of 'T
+    type AdapterOptions =
+        | Memory
+        | Gun of gunPeers: Gun.GunPeer [] * alias: Gun.Alias
+        | Hub of hubUrl: string * alias: Gun.Alias
 
+    //    [<RequireQualifiedAccess>]
+//    type AdapterValue<'T> =
+//        | Memory of 'T
+//        | Gun of 'T
+//        | Hub of 'T
+//
     type AtomInternalKey = AtomInternalKey of key: string
 
     let private atomPathMap = Dictionary<StoreAtomPath, AtomConfig<obj>> ()
     let private atomIdMap = Dictionary<AtomInternalKey, StoreAtomPath> ()
-    let private atomAdapterSet = HashSet<AtomInternalKey> ()
+    let private atomAdapterSet = HashSet<StoreAtomPath> ()
     //    let private atomAdapterMap<'T> = Dictionary<AtomInternalKey, Dictionary<AdapterType, IDisposable>> ()
 
     let rec globalAtomPathMap =
@@ -184,6 +192,12 @@ module Atom =
                     selector getter)
                 (if true then JS.undefined else Object.compare)
 
+        let inline selectorFamily<'TKey, 'A> (read: 'TKey -> Read<'A>) (write: 'TKey -> Write<'A>) =
+            atomFamily (fun param -> selector (read param) (write param))
+
+        let inline readSelectorFamily<'TKey, 'A> (read: 'TKey -> Read<'A>) : ('TKey -> AtomConfig<'A>) =
+            selectorFamily read (fun _ _ _ -> failwith "Atom.Primitives.readSelectorFamily is read only.")
+
     let inline atomFamilyAtom defaultValueFn =
         Primitives.atomFamily (fun param -> Primitives.atom (defaultValueFn param))
 
@@ -215,10 +229,7 @@ module Atom =
             AtomType.Selector (
                 (fun getter -> get getter internalAtom),
                 (fun _ setter argFn ->
-                    let newValue =
-                        argFn
-                        |> Object.invokeOrReturn
-                        |> formatIfEnum
+                    let newValue = argFn |> Object.invokeOrReturn |> formatIfEnum
 
                     set setter internalAtom newValue)
             )
@@ -230,18 +241,21 @@ module Atom =
 
 
     let enableAdapters (atom: AtomConfig<_>) =
-        let internalKey = AtomInternalKey (atom.ToString ())
-        atomAdapterSet.Add internalKey |> ignore
+        let storeAtomPath = query (AtomReference.Atom atom)
 
-        Profiling.addTimestamp $"{nameof FsStore} | Atom.enableAdapters [ constructor ] atom={atom}"
+        atomAdapterSet.Add storeAtomPath |> ignore
+
+        Profiling.addTimestamp
+            $"{nameof FsStore} | Atom.enableAdapters [ constructor ] atom={atom} storeAtomPath={storeAtomPath |> StoreAtomPath.AtomPath}"
 
         atom
 
     let hasAdaptersEnabled (atom: AtomConfig<_>) =
         let internalKey = AtomInternalKey (atom.ToString ())
 
-        atomAdapterSet.Contains internalKey
-        && atomIdMap.ContainsKey internalKey
+        match atomIdMap.TryGetValue internalKey with
+        | true, storeAtomPath -> atomAdapterSet.Contains storeAtomPath
+        | _ -> false
 
 
     let emptyArrayAtom = Primitives.atom ([||]: obj [])

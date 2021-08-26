@@ -4,6 +4,7 @@ open Fable.Core.JsInterop
 open Fable.React
 open Feliz
 open FsBeacon.Template.State
+open FsBeacon.Template.State.Host
 open FsJs
 open FsUi.Bindings
 open FsUi.Components

@@ -72,11 +72,11 @@ module BaseStore =
             | AtomUnmount
             | AdapterEnable
             | AdapterSubscribe
-            | AdapterValue of Atom.AdapterValue<'T>
+            | AdapterValue of Atom.AdapterType * 'T
             | AdapterUnsubscribe
             | AdapterDisable
 
-        let adapterValueMap = Map<TicksGuid, Atom.AdapterValue<'T>>
+        let adapterValueMap = Map<TicksGuid, Atom.AdapterType * 'T>
         type Z = Map<Atom.AdapterType, TicksGuid * Gun.EncryptedSignedValue> //selector, defaultValue
         type R = TicksGuid -> Gun.EncryptedSignedValue
         type F = Gun.EncryptedSignedValue
@@ -113,36 +113,12 @@ module BaseStore =
                 and set value = syncPaused <- value
 
 
-        let inline groupAdapterValueMapByType adapterValueMap =
-            let newMap =
-                adapterValueMap
-                |> Map.toSeq
-                |> Seq.map
-                    (function
-                    | ticks, Atom.AdapterValue.Jotai value -> Atom.AdapterType.Jotai, (ticks, value)
-                    | ticks, Atom.AdapterValue.Gun value -> Atom.AdapterType.Gun, (ticks, value)
-                    | ticks, Atom.AdapterValue.Hub value -> Atom.AdapterType.Hub, (ticks, value))
-                |> Seq.groupBy fst
-                |> Map.ofSeq
-                |> Map.map
-                    (fun _ v ->
-                        v
-                        |> Seq.map snd
-                        |> Seq.sortByDescending fst
-                        |> Seq.head)
-
-            Reflection.unionCases<Atom.AdapterType>
-            |> List.map (fun case -> case, (newMap |> Map.tryFind case))
-            |> Map.ofList
 
 
         [<RequireQualifiedAccess>]
         type BatchKind =
             | Replace
             | Union
-
-
-
 
 
         let inline deleteRoot getter atom =

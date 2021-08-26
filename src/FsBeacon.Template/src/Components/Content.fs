@@ -24,7 +24,7 @@ module Content =
                         if Browser.Dom.window.location.port = "9762" then
                             HostComponent.HostComponent ()
                         else
-                            Component.Component ()
+                            SampleComponent.SampleComponent ()
                     ]
             ],
             LoadingSpinner.LoadingSpinner ()

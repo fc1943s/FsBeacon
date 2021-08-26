@@ -7,7 +7,7 @@
     <ItemGroup>
         <Compile Include="src\State.fs" />
         <Compile Include="src\Components\HostComponent.fs" />
-        <Compile Include="src\Components\Component.fs" />
+        <Compile Include="src\Components\SampleComponent.fs" />
         <Compile Include="src\Components\Content.fs" />
         <Compile Include="src\Tests\Iframe.spec.fs" />
         <Compile Include="src\Tests\Files.spec.fs" />

@@ -16,8 +16,9 @@ module State =
         let storeRoot = StoreRoot (nameof FsBeacon)
 
 
-    [<RequireQualifiedAccess>]
-    type AccordionType = | HostComponent
+    module rec Host =
+        [<RequireQualifiedAccess>]
+        type AccordionType = | HostComponent
 
 
     module Atoms =
@@ -27,7 +28,7 @@ module State =
 
             let rec accordionHiddenFlag =
                 Atom.Primitives.atomFamily
-                    (fun (accordionType: AccordionType) ->
+                    (fun (accordionType: Host.AccordionType) ->
                         Atom.createRegistered
                             (IndexedAtomPath (
                                 FsBeacon.storeRoot,
@@ -38,22 +39,24 @@ module State =
                             (AtomType.Atom ([||]: string [])))
 
 
-        let rec syncHydrateStarted =
-            Atom.createRegistered
-                (RootAtomPath (FsBeacon.storeRoot, AtomName (nameof syncHydrateStarted)))
-                (AtomType.Atom false)
+        module Sample =
+            let rec syncHydrateStarted =
+                Atom.createRegistered
+                    (RootAtomPath (FsBeacon.storeRoot, AtomName (nameof syncHydrateStarted)))
+                    (AtomType.Atom false)
 
-        let rec syncHydrateCompleted =
-            Atom.createRegistered
-                (RootAtomPath (FsBeacon.storeRoot, AtomName (nameof syncHydrateCompleted)))
-                (AtomType.Atom false)
+            let rec syncHydrateCompleted =
+                Atom.createRegistered
+                    (RootAtomPath (FsBeacon.storeRoot, AtomName (nameof syncHydrateCompleted)))
+                    (AtomType.Atom false)
 
-        let rec mounted =
-            Atom.createRegistered (RootAtomPath (FsBeacon.storeRoot, AtomName (nameof mounted))) (AtomType.Atom false)
-
-
+            let rec mounted =
+                Atom.createRegistered
+                    (RootAtomPath (FsBeacon.storeRoot, AtomName (nameof mounted)))
+                    (AtomType.Atom false)
 
 
     module Selectors =
-        let fileIdAtoms = Engine.subscribeCollection FsStore.storeRoot Atoms.File.collection FileId
-        let messageIdAtoms = Engine.subscribeCollection FsStore.storeRoot Atoms.Message.collection MessageId
+        module Sample =
+            let fileIdAtoms = Engine.subscribeCollection FsStore.storeRoot Atoms.File.collection FileId
+            let messageIdAtoms = Engine.subscribeCollection FsStore.storeRoot Atoms.Message.collection MessageId
