@@ -27,7 +27,8 @@ module DebugPanel =
         |> Seq.indexed
         |> Seq.map (fun (i, KeyValue (k, v)) -> $"{i}. {k}", box $"""{v} call{if v = 1 then "" else "s"}""")
 
-    let inline ValueIndicator name atom =
+    [<ReactComponent>]
+    let ValueIndicator name atom =
         let value = Store.useValue atom
 
         Ui.box

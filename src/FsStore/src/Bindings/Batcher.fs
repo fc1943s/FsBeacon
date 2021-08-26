@@ -25,6 +25,11 @@ module Batcher =
         fun (x: 'TKey) ->
             Js.jsCall newFn x lock
             ()
+//
+//    let batcher2<'TKey,'TFnResult> =
+//        batcher
+//        |> unbox<('TKey [] -> unit) -> {| interval: int |} -> ('TKey -> unit)>
+//        : ('TKey [] -> unit) -> {| interval: int |} -> ('TKey -> unit) = unbox batcher
 
     [<RequireQualifiedAccess>]
     type BatchType<'TKey, 'TValue> =
@@ -51,9 +56,9 @@ module Batcher =
             Logger.consoleError [| ex |]
             JS.undefined
 
-    let batch<'TKey, 'TValue> : (BatchType<'TKey, 'TValue> -> unit) =
+    let batchObj =
         let internalBatch =
-            fun (itemsArray: BatchType<'TKey, 'TValue> []) ->
+            fun (itemsArray: BatchType<obj, obj> []) ->
                 promise {
                     let items =
                         itemsArray
@@ -123,7 +128,8 @@ module Batcher =
                 }
                 |> Promise.start
 
-        fun item ->
+//        fun item ->
+
             //            match item with/--
             //            | BatchType.Set _
 //            | BatchType.Subscribe _ -> /--
@@ -131,4 +137,19 @@ module Batcher =
 //                internalBatch [| item |] /--
             //                )
 //            | _ ->/--
-            batcher internalBatch {| interval = interval |} item
+        batcher internalBatch {| interval = interval |} //item
+
+//    let batch2<'TKey,'TFnResult> =
+//        batcher
+//        |> unbox<('TKey [] -> unit) -> {| interval: int |} -> ('TKey -> unit)>
+//        : ('TKey [] -> unit) -> {| interval: int |} -> ('TKey -> unit) = unbox batcher
+
+    let batch<'TKey, 'TValue> =
+        batchObj
+        |> unbox<BatchType<'TKey, 'TValue> -> unit>
+
+    let debouncedBatchObj = Js.debounce (fun (batchType: BatchType<obj, obj>) -> batch batchType) 0
+
+    let debouncedBatch<'TKey, 'TValue> =
+        debouncedBatchObj
+        |> unbox<BatchType<'TKey, 'TValue> -> unit>

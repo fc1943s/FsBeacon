@@ -465,7 +465,7 @@ module Gun =
         let fn ticks =
             subscribe gunAtomNode (fun value -> batchData trigger (ticks, value))
 
-        Batcher.batch (Batcher.BatchType.Subscribe (ticks, fn))
+        Batcher.debouncedBatch (Batcher.BatchType.Subscribe (ticks, fn))
 
     let inline batchSet gunAtomNode (ticks, trigger) =
         let fn ticks =

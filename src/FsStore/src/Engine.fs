@@ -1,5 +1,6 @@
 namespace FsStore
 
+open System.Collections.Generic
 open Fable.Core.JsInterop
 open Fable.Core
 open FsCore.BaseModel
@@ -748,10 +749,20 @@ module Engine =
                     unmount getter setter adapterOptions
                     mounted <- false)
 
-    let collectionSubscriptionFamily =
+    let subscriptionFnMap =
+        Dictionary<StoreAtomPath * Atom.AdapterType, (StoreAtomPath -> Atom.AdapterType -> (Getter<obj> -> (AtomConfig<obj> -> obj -> unit) -> Atom.AdapterOptions -> (System.Guid * obj -> unit) -> unit) * (Getter<obj> -> (AtomConfig<obj> -> obj -> unit) -> Atom.AdapterOptions -> unit)) * obj>
+            ()
+
+    let subscriptionFamily =
         Atom.Primitives.atomFamily
             (fun (storeAtomPath, adapterType) ->
-                createAdapterAtom storeAtomPath adapterType getCollectionAdapter ([||]: obj []))
+                let getAdapter, defaultValue = subscriptionFnMap.[(storeAtomPath, adapterType)]
+                createAdapterAtom storeAtomPath adapterType getAdapter defaultValue)
+
+    //    let collectionSubscriptionFamily =
+//        Atom.Primitives.atomFamily
+//            (fun (storeAtomPath, adapterType) ->
+//                createAdapterAtom storeAtomPath adapterType getCollectionAdapter ([||]: obj []))
 
     let inline subscribeCollection<'T when 'T: comparison>
         (storeRoot: StoreRoot)
@@ -780,7 +791,15 @@ module Engine =
                 let _adapterValues =
                     adapterOptionsList
                     |> List.toArray
-                    |> Array.map (fun (adapterType, _) -> collectionSubscriptionFamily (storeAtomPath, adapterType))
+                    |> Array.map
+                        (fun (adapterType, _) ->
+                            if
+                                subscriptionFnMap.ContainsKey (storeAtomPath, adapterType)
+                                |> not
+                            then
+                                subscriptionFnMap.[(storeAtomPath, adapterType)] <- (getCollectionAdapter, (box [||]))
+
+                            subscriptionFamily (storeAtomPath, adapterType))
                     |> Array.map (Atom.get getter)
 
 
@@ -792,10 +811,10 @@ module Engine =
                 value)
         |> Atom.split
 
-    let atomSubscriptionFamily =
-        Atom.Primitives.atomFamily
-            (fun (storeAtomPath, adapterType, defaultValue: obj) ->
-                createAdapterAtom storeAtomPath adapterType getAtomAdapter defaultValue)
+    //    let atomSubscriptionFamily =
+//        Atom.Primitives.atomFamily
+//            (fun (storeAtomPath, adapterType, defaultValue: obj) ->
+//                createAdapterAtom storeAtomPath adapterType getAtomAdapter defaultValue)
 
     let inline createRegisteredAtomWithSubscription storeAtomPath (defaultValue: 'A) : AtomConfig<'A> =
         //        atomAdapterSet.Add storeAtomPath |> ignore
@@ -915,8 +934,14 @@ module Engine =
                         | None -> None)
                 |> List.map
                     (fun (adapterType, _) ->
+                        if
+                            subscriptionFnMap.ContainsKey (storeAtomPath, adapterType)
+                            |> not
+                        then
+                            subscriptionFnMap.[(storeAtomPath, adapterType)] <- (getAtomAdapter, box defaultValue)
+
                         adapterType,
-                        atomSubscriptionFamily (storeAtomPath, adapterType, defaultValue)
+                        subscriptionFamily (storeAtomPath, adapterType)
                         |> unbox<AtomConfig<TicksGuid * 'A>>)
                 |> List.map
                     (fun (adapterType, adapterOptionsAtom) ->
