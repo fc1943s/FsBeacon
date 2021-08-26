@@ -12,26 +12,32 @@ open FsCore
 module rec File =
     let collection = Collection (nameof File)
 
-    let fileIdIdentifier (fileId: FileId) =
+    let inline fileIdIdentifier (fileId: FileId) =
         fileId |> FileId.Value |> string |> List.singleton
 
-    let atomFamilyWithAdapters keyIdentifierFn atomName (defaultValue: 'A) =
+    let rec chunkCount =
         Atom.Primitives.atomFamily
-            (fun (key: 'TKey) ->
+            (fun fileId ->
                 Engine.createRegisteredAtomWithSubscription
-                    (IndexedAtomPath (FsStore.storeRoot, collection, keyIdentifierFn key, atomName))
-                    defaultValue)
-
-    let fileAtomFamilyWithAdapters = atomFamilyWithAdapters fileIdIdentifier
-
-    let rec chunkCount = fileAtomFamilyWithAdapters (AtomName (nameof chunkCount)) 0
+                    (IndexedAtomPath (
+                        FsStore.storeRoot,
+                        collection,
+                        fileIdIdentifier fileId,
+                        AtomName (nameof chunkCount)
+                    ))
+                    0)
 
     let rec chunk =
-        atomFamilyWithAdapters
+        Atom.Primitives.atomFamily
             (fun (fileId, index: int) ->
-                fileIdIdentifier fileId
-                @ [
-                    string index
-                ])
-            (AtomName (nameof chunk))
-            ""
+                Engine.createRegisteredAtomWithSubscription
+                    (IndexedAtomPath (
+                        FsStore.storeRoot,
+                        collection,
+                        fileIdIdentifier fileId
+                        @ [
+                            string index
+                        ],
+                        AtomName (nameof chunk)
+                    ))
+                    "")

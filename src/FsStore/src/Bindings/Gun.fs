@@ -285,17 +285,20 @@ module Gun =
                 }
 
             let decoded =
-                try
-                    match decrypted with
-                    | Some (DecryptedValue decrypted) -> decrypted |> Json.decode<'TValue option>
-                    | None ->
-                        Logger.logDebug (fun () -> $"userDecode decrypt empty. decrypted={decrypted} data={data}")
+                match decrypted with
+                | Some (DecryptedValue decrypted) ->
+                    try
+                        decrypted |> Json.decode<'TValue option>
+                    with
+                    | ex ->
+                        Logger.logError
+                            (fun () -> $"userDecode decode error. ex={ex} data={data} decrypted={decrypted} typeof decrypted={jsTypeof decrypted}")
 
-                        JS.undefined
-                with
-                | ex ->
-                    Logger.logError (fun () -> $"userDecode decode error. ex={ex} data={data} decrypted={decrypted}")
-                    None
+                        None
+                | None ->
+                    Logger.logDebug (fun () -> $"userDecode decrypt empty. decrypted={decrypted} data={data}")
+
+                    JS.undefined
 
             return decoded
         }
@@ -390,7 +393,8 @@ module Gun =
                             let! putResult = put node (GunValue.NodeReference key)
 
                             Logger.logDebug
-                                (fun () -> $"putPublicHash completed. putResult={putResult} key={key} pub={pub} hash={hash}")
+                                (fun () ->
+                                    $"putPublicHash completed. putResult={putResult} key={key} pub={pub} hash={hash}")
                          }))
             | _ -> eprintfn $"invalid key. user.is={JS.JSON.stringify user.is}"
         }

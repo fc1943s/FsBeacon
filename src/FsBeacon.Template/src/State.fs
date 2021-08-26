@@ -55,6 +55,12 @@ module State =
                     (RootAtomPath (FsBeacon.storeRoot, AtomName (nameof mounted)))
                     (AtomType.Atom false)
 
+            let rec testCounter =
+                Engine.createRegisteredAtomWithSubscriptionStorage
+        //        Atom.createRegisteredWithStorage
+                    (RootAtomPath (FsBeacon.storeRoot, AtomName (nameof testCounter)))
+                    0
+
 
     module Selectors =
         module Sample =

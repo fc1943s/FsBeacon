@@ -5,10 +5,10 @@ open FsCore
 open Fable.Core.JsInterop
 open Fable.Extras
 open FsJs
-open FsJs.Bindings
 open FsJs.Bindings.Cypress
-open FsStore.Bindings
 open FsStore
+open FsStore.Bindings
+open FsStore.Bindings.Jotai
 open FsStore.Model
 
 

@@ -42,6 +42,15 @@ module Batcher =
 
     let inline macroQueue2 fn = JS.setTimeout fn 0 |> ignore
 
+    let wrapTry fn =
+        try
+            fn ()
+        with
+        | ex ->
+            Logger.logError (fun () -> $"wrapTry error: {ex.Message}")
+            Logger.consoleError [| ex |]
+            JS.undefined
+
     let batch<'TKey, 'TValue> : (BatchType<'TKey, 'TValue> -> unit) =
         let internalBatch =
             fun (itemsArray: BatchType<'TKey, 'TValue> []) ->
@@ -59,13 +68,13 @@ module Batcher =
                     let! _disposables =
                         items
                         |> Array.choose (fun (setFn, _, _, _) -> setFn)
-                        |> Array.map (fun (ticks, setFn) -> setFn ticks)
+                        |> Array.map (fun (ticks, setFn) -> wrapTry (fun () -> setFn ticks))
                         |> Promise.all
 
                     let! _disposables =
                         items
                         |> Array.choose (fun (_, subscribeFn, _, _) -> subscribeFn)
-                        |> Array.map (fun (ticks, subscribeFn) -> subscribeFn ticks)
+                        |> Array.map (fun (ticks, subscribeFn) -> wrapTry (fun () -> subscribeFn ticks))
                         |> Promise.all
 
                     let! _disposables =
@@ -85,7 +94,7 @@ module Batcher =
                                 providerData
                                 |> Array.map (fun (data, ticks, _) -> fun () -> trigger (ticks, data))
 
-                            providerData |> Array.map (fun fn -> fn ())
+                            providerData |> Array.map wrapTry
                         |> Promise.all
 
                     let! _disposables =

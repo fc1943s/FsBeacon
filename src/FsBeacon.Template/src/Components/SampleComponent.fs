@@ -298,7 +298,7 @@ module SampleComponent =
         Button.Button
             {|
                 Tooltip = None
-                Icon = Some (Icons.md.MdClear |> Icons.render, Button.IconPosition.Left)
+                Icon = Some (Icons.bi.BiRecycle |> Icons.render, Button.IconPosition.Left)
                 Props =
                     fun x ->
                         x.onClick <-
@@ -352,6 +352,32 @@ module SampleComponent =
                 Children =
                     [
                         str "add file"
+                    ]
+            |}
+
+    [<ReactComponent>]
+    let CounterButton () =
+        let testCounter, setTestCounter = Store.useState State.Atoms.Sample.testCounter
+
+        Profiling.addTimestamp $"{nameof FsBeacon} | CounterButton [ render ] testCounter={testCounter}"
+
+        Button.Button
+            {|
+                Tooltip = Some (str "Tooltip test")
+                Icon = Some (Icons.io5.IoAdd |> Icons.render, Button.IconPosition.Left)
+                Props =
+                    fun x ->
+                        x.onClick <-
+                            (fun _ ->
+                                promise {
+                                    Profiling.addTimestamp
+                                        $"{nameof FsBeacon} | CounterButton [ onClick ] testCounter={testCounter}"
+
+                                    setTestCounter (testCounter + 1)
+                                })
+                Children =
+                    [
+                        str $"counter (+{testCounter})"
                     ]
             |}
 
@@ -544,6 +570,8 @@ module SampleComponent =
                 HydrateCoreContainer ()
 
                 MountButton ()
+
+                CounterButton ()
 
                 if mounted then
                     HydrateSyncContainerWrapper ()
