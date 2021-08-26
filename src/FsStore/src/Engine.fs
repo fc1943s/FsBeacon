@@ -84,7 +84,7 @@ module Engine =
         let getDebugInfo () =
             $" | atom={atom} mounted={mounted} storeAtomPath={storeAtomPath |> Option.map StoreAtomPath.AtomPath} lastState={Json.encodeWithNull lastState} "
 
-        Profiling.addTimestamp $">24e Engine.wrapAtomWithState [ constructor ] {getDebugInfo ()}"
+        Profiling.addTimestamp $"+24e Engine.wrapAtomWithState [ constructor ] {getDebugInfo ()}"
 
         let mutable lastSetAtom = fun _ -> failwith "invalid lastSetAtom"
 
@@ -108,19 +108,19 @@ module Engine =
 
                 match getState () with
                 | Some (getter, setter, state) ->
-                    Profiling.addTimestamp $">23e Engine.wrapAtomWithState newMount(). invoking mount {getDebugInfo ()}"
+                    Profiling.addTimestamp $"+23e Engine.wrapAtomWithState newMount(). invoking mount {getDebugInfo ()}"
                     mounted <- true
                     do! mount getter setter state lastSetAtom
                 | None ->
                     Profiling.addTimestamp
-                        $">23e Engine.wrapAtomWithState newMount(). skipping, no state. {getDebugInfo ()}"
+                        $"+22e Engine.wrapAtomWithState newMount(). skipping, no state. {getDebugInfo ()}"
             }
 
         let newUnmount () =
             if mounted then
                 match getState () with
                 | Some (getter, setter, state) ->
-                    Profiling.addTimestamp $">22e Engine.wrapAtom newUnmount(). invoking unmount {getDebugInfo ()}"
+                    Profiling.addTimestamp $"+21e Engine.wrapAtomWithState newUnmount(). invoking unmount {getDebugInfo ()}"
                     mounted <- false
                     lastState <- None
                     unmount getter setter state
@@ -134,7 +134,7 @@ module Engine =
 //                    |> ignore
                 | None ->
                     Profiling.addTimestamp
-                        $">22e Engine.wrapAtom newUnmount(). skipping, no state. (should unmount here???) {getDebugInfo ()}"
+                        $"+20e Engine.wrapAtomWithState newUnmount(). skipping, no state. (should unmount here???) {getDebugInfo ()}"
 
         let refreshInternalState getter =
             if lastStore.IsNone then lastStore <- Atom.get getter Selectors.store
@@ -145,7 +145,7 @@ module Engine =
             let newState = stateFn getter
 
             Profiling.addTimestamp
-                $">21e Engine.wrapAtomWithState refreshInternalState (get or set). newState={Json.encodeWithNull newState}. will mount or unmount. {getDebugInfo ()}"
+                $"+19e Engine.wrapAtomWithState refreshInternalState (get or set). newState={Json.encodeWithNull newState}. will mount or unmount. {getDebugInfo ()}"
 
             match newState with
             | Some _ ->
@@ -160,14 +160,14 @@ module Engine =
 
                     let result = Atom.get getter atom
 
-                    Profiling.addTimestamp $">20e Engine.wrapAtomWithState wrapper.get() {getDebugInfo ()}"
+                    Profiling.addTimestamp $"+18e Engine.wrapAtomWithState wrapper.get() {getDebugInfo ()}"
 
                     result)
                 (fun getter setter newValue ->
                     refreshInternalState getter
 
                     Profiling.addTimestamp
-                        $">19e Engine.wrapAtomWithState wrapper.set() newValue={newValue} {getDebugInfo ()}"
+                        $"+17e Engine.wrapAtomWithState wrapper.set() newValue={newValue} {getDebugInfo ()}"
 
                     Atom.set setter atom newValue)
             |> Atom.addSubscription
@@ -208,7 +208,7 @@ module Engine =
             (fun getter setter _setAtom ->
                 promise {
                     let logger = Logger.State.lastLogger
-                    Profiling.addTimestamp $">18d Engine.wrapAtomWithInterval. mount. {getDebugInfo ()}"
+                    Profiling.addTimestamp $"+16d Engine.wrapAtomWithInterval. mount. {getDebugInfo ()}"
 
                     let fn () =
                         logger.Trace (fun () -> $"Engine.wrapAtomWithInterval. mount interval fn. {getDebugInfo ()}")
@@ -218,7 +218,7 @@ module Engine =
 
                             if Some atomValue |> Object.compare lastValue |> not then
                                 Profiling.addTimestamp
-                                    $">17d Engine.wrapAtomWithInterval. mount interval fn. atomValue={atomValue}. {getDebugInfo ()}"
+                                    $"+15d Engine.wrapAtomWithInterval. mount interval fn. atomValue={atomValue}. {getDebugInfo ()}"
 
                                 Atom.set setter cache atomValue
                                 lastValue <- Some atomValue
@@ -228,7 +228,7 @@ module Engine =
                 })
             (fun _getter _setter ->
                 //                let logger = Logger.State.lastLogger
-                Profiling.addTimestamp $">16d Engine.wrapAtomWithInterval unmount() {getDebugInfo ()}"
+                Profiling.addTimestamp $"+14d Engine.wrapAtomWithInterval unmount() {getDebugInfo ()}"
 
                 if intervalHandle >= 0 then JS.clearTimeout intervalHandle
                 intervalHandle <- -1)
@@ -280,98 +280,23 @@ module Engine =
 //        |> Promise.lift
 
 
-    let inline groupAdapterValueMapByType adapterValueMap =
+    let inline groupValues groupMap =
         let newMap =
-            adapterValueMap
-            |> Seq.groupBy (fun (_, adapterType, _) -> adapterType)
+            groupMap
+            |> Seq.groupBy (fun (_, group: 'TGroup, _) -> group)
             |> Map.ofSeq
             |> Map.map
                 (fun _ v ->
                     v
                     |> Seq.sortByDescending (fun (ticks, _, _) -> ticks)
-                    |> Seq.map (fun (ticks, _, value) -> ticks, value)
+                    |> Seq.map (fun (ticks: TicksGuid, _, value: 'A) -> ticks, value)
                     |> Seq.head)
 
-        Reflection.unionCases<Atom.AdapterType>
+        Reflection.unionCases<_>
         |> List.map (fun case -> case, (newMap |> Map.tryFind case))
         |> Map.ofList
 
 
-    let inline createRegisteredAtomWithAdapters<'T when 'T: comparison>
-        (storeAtomPath: StoreAtomPath)
-        (defaultValue: 'T)
-        =
-        let getDebugInfo () =
-            $"storeAtomPath={storeAtomPath |> StoreAtomPath.AtomPath} defaultValue={defaultValue}"
-
-        let adapterValueMapAtom =
-            Atom.atomFamilyAtom
-                (fun (_alias: Gun.Alias option) ->
-                    [
-                        Guid.newTicksGuid (), Atom.AdapterType.Memory, defaultValue
-                    ])
-
-        let rec lastSyncValueByTypeAtom =
-            Atom.Primitives.readSelectorFamily
-                (fun (alias: Gun.Alias option) getter ->
-                    let adapterValueMap = Atom.get getter (adapterValueMapAtom alias)
-
-                    groupAdapterValueMapByType adapterValueMap)
-
-        Atom.Primitives.selector
-            (fun getter ->
-                //                        let value = Atom.get getter subscriptions.[adapterType]
-
-                //                        syncEngine.SetProviders getter wrapper
-                let alias = Atom.get getter Selectors.Gun.alias
-
-                let userAtom = lastSyncValueByTypeAtom alias
-                let lastSyncValueByType = Atom.get getter userAtom
-
-                let adapterType, result =
-                    lastSyncValueByType
-                    |> Map.toSeq
-                    |> Seq.choose
-                        (fun (adapterType, values) ->
-                            match values with
-                            | Some (ticks, value) -> Some (ticks, (adapterType, value))
-                            | None -> None)
-                    |> Seq.sortByDescending fst
-                    |> Seq.map snd
-                    |> Seq.head
-
-                Profiling.addTimestamp
-                    $">14c Engine.createRegisteredAtomWithAdapters wrapper.get()  alias={alias} result={result} lastSyncValueByType={Json.encodeWithNull lastSyncValueByType} {getDebugInfo ()}"
-
-                adapterType, result)
-            (fun getter setter (adapterType, newValue) ->
-                let alias = Atom.get getter Selectors.Gun.alias
-
-                Atom.change
-                    setter
-                    (adapterValueMapAtom alias)
-                    (fun oldAdapterValueList ->
-                        let newAdapterValueList =
-                            ((Guid.newTicksGuid ()), adapterType, newValue)
-                            :: oldAdapterValueList
-
-                        Profiling.addTimestamp
-                            $">13c Engine.createRegisteredAtomWithAdapters wrapper.set()  alias={alias} newValue={newValue} newAdapterValueList={newAdapterValueList} oldAdapterValueList={oldAdapterValueList} {getDebugInfo ()}"
-
-                        newAdapterValueList))
-        |> Atom.register storeAtomPath
-
-
-
-    let memoryAdapterOptions = Some Atom.AdapterOptions.Memory
-
-    let getAdapterOptionsMap getter =
-        [
-            Atom.AdapterType.Gun, Atom.get getter Selectors.Gun.adapterOptions
-            Atom.AdapterType.Hub, Atom.get getter Selectors.Hub.adapterOptions
-            Atom.AdapterType.Memory, memoryAdapterOptions
-        ]
-        |> Map.ofList
 
     //    let getHubSubscription storeAtomPath  adapterOptions =
 //                            match storeAtomPath|>StoreAtomPath.AtomPath, adapterOptions with
@@ -463,6 +388,112 @@ module Engine =
 //
 //                                None
 
+    let inline createRegisteredAtomWithSort
+        (storeAtomPath: StoreAtomPath)
+        (defaultGroup: 'TGroup, defaultValue: 'A)
+        : AtomConfig<TicksGuid * 'TGroup * 'A> =
+        let getDebugInfo () =
+            $"storeAtomPath={storeAtomPath |> StoreAtomPath.AtomPath} defaultValue={defaultValue}"
+
+        let groupMapAtom =
+            Atom.atomFamilyAtom
+                (fun (_alias: Gun.Alias option) ->
+                    [
+                        Guid.newTicksGuid (), defaultGroup, defaultValue
+                    ])
+
+        let rec lastSyncValueByTypeAtom =
+            Atom.Primitives.readSelectorFamily
+                (fun (alias: Gun.Alias option) getter ->
+                    let groupMap = Atom.get getter (groupMapAtom alias)
+
+                    groupValues groupMap)
+
+        Atom.Primitives.selector
+            (fun getter ->
+                //                        let value = Atom.get getter subscriptions.[adapterType]
+
+                //                        syncEngine.SetProviders getter wrapper
+                let alias = Atom.get getter Selectors.Gun.alias
+
+                let userAtom = lastSyncValueByTypeAtom alias
+                let lastSyncValueByType = Atom.get getter userAtom
+
+                let ticks, (group: 'TGroup, result) =
+                    lastSyncValueByType
+                    |> Map.toSeq
+                    |> Seq.choose
+                        (fun (group, values) ->
+                            match values with
+                            | Some (ticks, value) -> Some (ticks, (group, value))
+                            | None -> None)
+                    |> Seq.sortByDescending fst
+                    |> Seq.head
+
+                Profiling.addTimestamp
+                    $"+13c Engine.createRegisteredAtomWithSort wrapper.get()  alias={alias} result={result} lastSyncValueByType={Json.encodeWithNull lastSyncValueByType} {getDebugInfo ()}"
+
+                ticks, group, result)
+            (fun getter setter (ticks, group: 'TGroup, newValue) ->
+                let alias = Atom.get getter Selectors.Gun.alias
+
+                Atom.change
+                    setter
+                    (groupMapAtom alias)
+                    (fun oldGroupValueList ->
+                        let newGroupValueList =
+                            (ticks, group, newValue)
+                            :: oldGroupValueList
+
+                        Profiling.addTimestamp
+                            $"+12c Engine.createRegisteredAtomWithSort wrapper.set() ticks={ticks} alias={alias} newValue={newValue} newGroupValueList={newGroupValueList} oldGroupValueList={oldGroupValueList} {getDebugInfo ()}"
+
+                        newGroupValueList))
+        |> Atom.register storeAtomPath
+
+    let memoryAdapterOptions = Some Atom.AdapterOptions.Memory
+
+    let getAdapterOptionsMap getter =
+        [
+            Atom.AdapterType.Gun, Atom.get getter Selectors.Gun.adapterOptions
+            Atom.AdapterType.Hub, Atom.get getter Selectors.Hub.adapterOptions
+            Atom.AdapterType.Memory, memoryAdapterOptions
+        ]
+        |> Map.ofList
+
+    let getCollectionAdapterOptions adapterType getDebugInfo =
+        let getDebugInfo adapterOptions =
+            $"{getDebugInfo ()} adapterOptions={adapterOptions} adapterType={adapterType}"
+
+        match adapterType with
+        | Atom.AdapterType.Gun ->
+            (fun _getter _setter adapterOptions _setValue ->
+                match adapterOptions with
+                | Atom.AdapterOptions.Gun (_alias, _peers) ->
+                    //                let gunAtomNode = Atom.get getter (Selectors.Gun.gunAtomNode (alias, atomPath))
+                    Profiling.addTimestamp $"+11b ----> getCollectionAdapterOptions gun mount {getDebugInfo ()} "
+                | _ -> ()),
+            (fun _getter _setter ->
+                Profiling.addTimestamp $"+10b <---- getCollectionAdapterOptions gun unmount  {getDebugInfo ()}  ")
+        | Atom.AdapterType.Hub ->
+            (fun _getter _setter adapterOptions _setValue ->
+                match adapterOptions with
+                | Atom.AdapterOptions.Hub (_alias, _hubUrl) ->
+                    //                let gunAtomNode = Atom.get getter (Selectors.Gun.gunAtomNode (alias, atomPath))
+                    Profiling.addTimestamp $"+09b ----> getCollectionAdapterOptions hub mount  {getDebugInfo ()}  "
+                | _ -> ()),
+            (fun _getter _setter ->
+                Profiling.addTimestamp $"+08b <---- getCollectionAdapterOptions hub unmount  {getDebugInfo ()}  ")
+        | Atom.AdapterType.Memory ->
+            (fun _getter _setter adapterOptions _setValue ->
+                match adapterOptions with
+                | Atom.AdapterOptions.Memory ->
+                    //                let gunAtomNode = Atom.get getter (Selectors.Gun.gunAtomNode (alias, atomPath))
+                    Profiling.addTimestamp $"+07b  ----> getCollectionAdapterOptions memory mount  {getDebugInfo ()}  "
+                | _ -> ()),
+            (fun _getter _setter ->
+                Profiling.addTimestamp $"+06b <---- getCollectionAdapterOptions memory unmount  {getDebugInfo ()}  ")
+
     let inline subscribeCollection<'T when 'T: comparison>
         (storeRoot: StoreRoot)
         collection
@@ -473,66 +504,25 @@ module Engine =
         let getDebugInfo () =
             $"storeAtomPath={storeAtomPath |> StoreAtomPath.AtomPath}"
 
-        Profiling.addTimestamp $">06a subscribeCollection [ constructor ] {getDebugInfo ()}"
+        Profiling.addTimestamp $"+05a subscribeCollection [ constructor ] {getDebugInfo ()}"
 
+        let atom = createRegisteredAtomWithSort storeAtomPath (Atom.AdapterType.Memory, [||])
 
         let subscriptionHandleMap = Dictionary<Atom.AdapterType, bool> ()
 
-        Reflection.unionCases<Atom.AdapterType>
-        |> List.iter (fun adapterType -> subscriptionHandleMap.Add (adapterType, false))
-
-        let encodeSubscriptions subscriptions =
-            subscriptions
-            |> List.map (fun (adapterType, adapterOptions, _, _) -> adapterType, adapterOptions)
-            |> Json.encodeWithNull
-
-        let getAdapterOptions adapterType =
-            let getDebugInfo adapterOptions =
-                $"{getDebugInfo ()} adapterOptions={adapterOptions} adapterType={adapterType}"
-
-            match adapterType with
-            | Atom.AdapterType.Gun ->
-                (fun _getter _setter adapterOptions _setValue ->
-                    match adapterOptions with
-                    | Atom.AdapterOptions.Gun (_alias, _peers) ->
-                        //                let gunAtomNode = Atom.get getter (Selectors.Gun.gunAtomNode (alias, atomPath))
-                        Profiling.addTimestamp $">12b ----> getAdapterOptions gun mount {getDebugInfo ()} "
-                    | _ -> ()),
-                (fun _getter _setter ->
-                    Profiling.addTimestamp $">11b <---- getAdapterOptions gun unmount  {getDebugInfo ()}  ")
-            | Atom.AdapterType.Hub ->
-                (fun _getter _setter adapterOptions _setValue ->
-                    match adapterOptions with
-                    | Atom.AdapterOptions.Hub (_alias, _hubUrl) ->
-                        //                let gunAtomNode = Atom.get getter (Selectors.Gun.gunAtomNode (alias, atomPath))
-                        Profiling.addTimestamp $">10b ----> getAdapterOptions hub mount  {getDebugInfo ()}  "
-                    | _ -> ()),
-                (fun _getter _setter ->
-                    Profiling.addTimestamp $">09b <---- getAdapterOptions hub unmount  {getDebugInfo ()}  ")
-            | Atom.AdapterType.Memory ->
-                (fun _getter _setter adapterOptions _setValue ->
-                    match adapterOptions with
-                    | Atom.AdapterOptions.Memory ->
-                        //                let gunAtomNode = Atom.get getter (Selectors.Gun.gunAtomNode (alias, atomPath))
-                        Profiling.addTimestamp $">08b  ----> getAdapterOptions memory mount  {getDebugInfo ()}  "
-                    | _ -> ()),
-                (fun _getter _setter ->
-                    Profiling.addTimestamp $">07b <---- getAdapterOptions memory unmount  {getDebugInfo ()}  ")
-
-        let gunAtom =
+        let createAdapterAtom adapterType =
             Atom.create (AtomType.Atom ([||]: 'T []))
             |> wrapAtomWithState
                 (fun getter ->
-                    let adapterType = Atom.AdapterType.Gun
                     let adapterOptionsMap = getAdapterOptionsMap getter
                     let adapterOptions = adapterOptionsMap.[adapterType]
 
                     Profiling.addTimestamp
-                        $">05a *G subscribeCollection [ stateFn ] adapterOptions={Json.encodeWithNull adapterOptions} {getDebugInfo ()}"
+                        $"+04a * subscribeCollection [ stateFn ] adapterType={adapterType} adapterOptions={Json.encodeWithNull adapterOptions} {getDebugInfo ()}"
 
                     match adapterOptions with
                     | Some adapterOptions ->
-                        let mount, unmount = getAdapterOptions adapterType
+                        let mount, unmount = getCollectionAdapterOptions adapterType getDebugInfo
                         // mount adapterOptions
                         Some (adapterType, adapterOptions, mount, unmount)
                     | None -> None)
@@ -540,7 +530,7 @@ module Engine =
                     promise {
                         //                let gunAtomNode = Atom.get getter (Selectors.Gun.gunAtomNode (alias, atomPath))
                         Profiling.addTimestamp
-                            $">04a G@@> subscribeCollection mount adapterType={adapterType} adapterOptions={adapterOptions} {getDebugInfo ()}"
+                            $"+03a @@> subscribeCollection mount adapterType={adapterType} adapterOptions={adapterOptions} {getDebugInfo ()}"
 
                         let setValue value = setAtom value
 
@@ -552,7 +542,7 @@ module Engine =
                     })
                 (fun getter setter (adapterType, adapterOptions, _, unmount) ->
                     Profiling.addTimestamp
-                        $">03a <@@G subscribeCollection unmount adapterType={adapterType} adapterOptions={adapterOptions} {getDebugInfo ()} "
+                        $"+02a <@@ subscribeCollection unmount adapterType={adapterType} adapterOptions={adapterOptions} {getDebugInfo ()} "
 
                     let mounted = subscriptionHandleMap.[adapterType]
 
@@ -560,80 +550,60 @@ module Engine =
                         unmount getter setter
                         subscriptionHandleMap.[adapterType] <- false)
 
-        let memoryAtom =
-            Atom.create (AtomType.Atom ([||]: 'T []))
-            |> wrapAtomWithState
-                (fun getter ->
-                    let adapterType = Atom.AdapterType.Memory
-                    let adapterOptionsMap = getAdapterOptionsMap getter
-                    let adapterOptions = adapterOptionsMap.[adapterType]
+        let adapterAtomMap =
+            Reflection.unionCases<Atom.AdapterType>
+            |> List.map (fun adapterType ->
+                subscriptionHandleMap.Add (adapterType, false)
+                adapterType, createAdapterAtom adapterType)
+            |> Map.ofList
 
-                    Profiling.addTimestamp
-                        $">05a *M subscribeCollection [ stateFn ] adapterOptions={Json.encodeWithNull adapterOptions} {getDebugInfo ()}"
+        //        let atom =
+//            createRegisteredAtomWithAdapters storeAtomPath ([||]: 'T [])
+//            |> wrapAtomWithState
+//                (fun getter ->
+//                    let gunValue = Atom.get getter gunAtom
+//                    let memoryValue = Atom.get getter memoryAtom
+//
+//                    Profiling.addTimestamp
+//                        $">05x * subscribeCollection [ stateFn ] gunValue={gunValue} memoryValue={memoryValue} {getDebugInfo ()}"
+//
+//                    Some ())
+//                (fun getter setter subscriptions setAtom ->
+//                    promise {
+//                        //                let gunAtomNode = Atom.get getter (Selectors.Gun.gunAtomNode (alias, atomPath))
+//                        Profiling.addTimestamp $">04a @@@@> subscribeCollection mount  {getDebugInfo ()}"
+//                    })
+//                (fun _getter _setter subscriptions ->
+//                    Profiling.addTimestamp $">03a <@@@@ subscribeCollection unmount  {getDebugInfo ()} ")
 
-                    match adapterOptions with
-                    | Some adapterOptions ->
-                        let mount, unmount = getAdapterOptions adapterType
-                        // mount adapterOptions
-                        Some (adapterType, adapterOptions, mount, unmount)
-                    | None -> None)
-                (fun getter setter (adapterType, adapterOptions, mount, _) setAtom ->
-                    promise {
-                        //                let gunAtomNode = Atom.get getter (Selectors.Gun.gunAtomNode (alias, atomPath))
-                        Profiling.addTimestamp
-                            $">04a M@@> subscribeCollection mount adapterType={adapterType} adapterOptions={adapterOptions} {getDebugInfo ()}"
-
-                        let setValue value = setAtom value
-
-                        let mounted = subscriptionHandleMap.[adapterType]
-
-                        if not mounted then
-                            mount getter setter adapterOptions setValue
-                            subscriptionHandleMap.[adapterType] <- true
-                    })
-                (fun getter setter (adapterType, adapterOptions, _, unmount) ->
-                    Profiling.addTimestamp
-                        $">03a <@@M subscribeCollection unmount adapterType={adapterType} adapterOptions={adapterOptions} {getDebugInfo ()} "
-
-                    let mounted = subscriptionHandleMap.[adapterType]
-
-                    if mounted then
-                        unmount getter setter
-                        subscriptionHandleMap.[adapterType] <- false)
-
-        let atom =
-            createRegisteredAtomWithAdapters storeAtomPath ([||]: 'T [])
-            |> wrapAtomWithState
-                (fun getter ->
-                    let gunValue = Atom.get getter gunAtom
-                    let memoryValue = Atom.get getter memoryAtom
-
-                    Profiling.addTimestamp
-                        $">05x * subscribeCollection [ stateFn ] gunValue={gunValue} memoryValue={memoryValue} {getDebugInfo ()}"
-
-                    Some ())
-                (fun getter setter subscriptions setAtom ->
-                    promise {
-                        //                let gunAtomNode = Atom.get getter (Selectors.Gun.gunAtomNode (alias, atomPath))
-                        Profiling.addTimestamp $">04a @@@@> subscribeCollection mount  {getDebugInfo ()}"
-                    })
-                (fun _getter _setter subscriptions ->
-                    Profiling.addTimestamp $">03a <@@@@ subscribeCollection unmount  {getDebugInfo ()} ")
-
-        Atom.Primitives.selector
+        Atom.Primitives.readSelector
             (fun getter ->
-                let result = Atom.get getter atom
+                let _adapterValues =
+                    adapterAtomMap
+                    |> Map.values
+                    |> Seq.toArray
+                    |> Atom.waitForAll
+                    |> Atom.get getter
+
+                //                let result = Atom.get getter atom
+                let ticks, adapterType, value = Atom.get getter atom
 
                 Profiling.addTimestamp
-                    $">02a Engine.subscribeCollection wrapper.get() result={Json.encodeWithNull result} {getDebugInfo ()}"
+                    $"+01a Engine.subscribeCollection wrapper.get() ticks={ticks} adapterType={adapterType} result={Json.encodeWithNull value} {getDebugInfo ()}"
 
-                snd result)
-            (fun _getter setter newValue ->
-                Profiling.addTimestamp
-                    $">01a Engine.subscribeCollection wrapper.set() newValue={Json.encodeWithNull newValue} {getDebugInfo ()}"
-
-                Atom.set setter atom (Atom.AdapterType.Memory, newValue))
+                //                snd result
+                value)
         |> Atom.split
+
+
+
+
+
+
+
+
+
+
 //        |> Atom.addSubscription
 //                true
 //                (fun setAtom ->
