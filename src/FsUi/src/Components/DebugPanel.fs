@@ -79,7 +79,9 @@ module DebugPanel =
         let deviceInfo = Store.useValue Selectors.deviceInfo
         let showDebug = Store.useValue Atoms.showDebug
         let interval = (getSchedulingInterval deviceInfo)
-        Profiling.addTimestamp $"{nameof FsUi} | DebugPanel [ render ] showDebug={showDebug} interval={interval}"
+
+        Profiling.addTimestamp
+            (fun () -> $"{nameof FsUi} | DebugPanel [ render ] showDebug={showDebug} interval={interval}")
 
         let text, setText = React.useState ""
         let oldJson, setOldJson = React.useState ""

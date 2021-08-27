@@ -11,7 +11,7 @@ open FsUi.Bindings
 module RootWrapper =
     [<ReactComponent>]
     let RootWrapper themeAtom children =
-        Profiling.addTimestamp $"{nameof FsUi} | RootWrapper [ render ] "
+        Profiling.addTimestamp (fun () -> $"{nameof FsUi} | RootWrapper [ render ] ")
 
         React.strictMode [
             Jotai.jotai.provider [

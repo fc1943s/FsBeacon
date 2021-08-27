@@ -25,7 +25,7 @@ module ThemeWrapper =
 
         //        printfn $"ThemeLoader newTheme={JS.JSON.stringify newTheme} theme={theme}"
 
-        Profiling.addTimestamp $"{nameof FsUi} | ThemeWrapper [ render ] darkMode={darkMode}"
+        Profiling.addTimestamp (fun () -> $"{nameof FsUi} | ThemeWrapper [ render ] darkMode={darkMode}")
 
         Ui.provider
             (fun x -> x.theme <- newTheme)

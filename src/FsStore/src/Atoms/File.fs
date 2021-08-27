@@ -12,7 +12,7 @@ open FsCore
 module rec File =
     let collection = Collection (nameof File)
 
-    let inline fileIdIdentifier (fileId: FileId) =
+    let fileIdIdentifier (fileId: FileId) =
         fileId |> FileId.Value |> string |> List.singleton
 
     let rec chunkCount =

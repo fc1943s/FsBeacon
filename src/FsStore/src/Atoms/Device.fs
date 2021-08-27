@@ -11,7 +11,7 @@ open FsStore.Model
 module rec Device =
     let collection = Collection (nameof Device)
 
-    let inline deviceIdIdentifier deviceId =
+    let deviceIdIdentifier deviceId =
         deviceId
         |> DeviceId.Value
         |> string

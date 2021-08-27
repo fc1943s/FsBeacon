@@ -1,6 +1,5 @@
 namespace FsUi.Components
 
-open Fable.Core
 open Feliz
 open FsStore
 open FsStore.Hooks
@@ -21,7 +20,7 @@ module GunObserver =
         let store = Store.useStore ()
         let isMountedRef = React.useIsMountedRef ()
 
-        Profiling.addTimestamp $"{nameof FsUi} | GunObserver [ render ] isMountedRef={isMountedRef.current}"
+        Profiling.addTimestamp (fun () -> $"{nameof FsUi} | GunObserver [ render ] isMountedRef={isMountedRef.current}")
 
         // TODO: arr deps warning is not working with files in this package (only on template main)
         React.useEffect (
@@ -29,25 +28,26 @@ module GunObserver =
                 gun.on (
                     Gun.GunEvent "auth",
                     (fun () ->
-//                        JS.setTimeout
+                        //                        JS.setTimeout
 //                            (fun () ->
-                                promise {
-                                    if isMountedRef.current then
-                                        let! _getter, setter = store ()
-                                        //                                ()
+                        promise {
+                            if isMountedRef.current then
+                                let! _getter, setter = store ()
+                                //                                ()
 
-                                        Profiling.addTimestamp
-                                            $"{nameof FsUi} | GunObserver [ render / useEffect / setTimeout ] triggering."
+                                Profiling.addTimestamp
+                                    (fun () ->
+                                        $"{nameof FsUi} | GunObserver [ render / useEffect / setTimeout ] triggering.")
 
-                                        Atom.change setter Atoms.gunTrigger ((+) 1)
-                                        Atom.change setter Atoms.hubTrigger ((+) 1)
+                                Atom.change setter Atoms.gunTrigger ((+) 1)
+                                Atom.change setter Atoms.hubTrigger ((+) 1)
 
-                                        logger.Debug (fun () -> "GunObserver.render. triggered.  ")
-                                    else
-                                        logger.Debug (fun () -> "GunObserver.render. already disposed")
-                                }
-                                |> Promise.start
-//                                )
+                                logger.Debug (fun () -> "GunObserver.render. triggered.  ")
+                            else
+                                logger.Debug (fun () -> "GunObserver.render. already disposed")
+                        }
+                        |> Promise.start
+                        //                                )
 //                            0
 //                        |> ignore
                         )

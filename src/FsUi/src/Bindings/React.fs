@@ -63,7 +63,7 @@ module React =
 
     [<ReactComponent>]
     let ErrorBoundary cmp =
-        Profiling.addTimestamp $"{nameof FsUi} | ErrorBoundary [ render ] "
+        Profiling.addTimestamp (fun () -> $"{nameof FsUi} | ErrorBoundary [ render ] ")
 
         React.strictMode [
             //            Recoil.root [

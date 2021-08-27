@@ -49,10 +49,10 @@ module OldPrimitives =
 //
 //        Atom.Primitives.rawSelector
 //            (fun getter ->
-//                Profiling.addCount $"# Primitives.selector get {atomPath}"
+//                Profiling.addCount (fun () -> $"# Primitives.selector get {atomPath}"
 //                read getter)
 //            (fun getter setter value ->
-//                Profiling.addCount $"# Primitives.selector set {atomPath}"
+//                Profiling.addCount (fun () -> $"# Primitives.selector set {atomPath}"
 //                let newValue = value
 //                //                        match jsTypeof value with
 //                //                         | "function" -> (unbox value) () |> unbox

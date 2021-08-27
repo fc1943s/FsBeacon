@@ -38,7 +38,7 @@ module Messaging =
                 //                    | _ -> return failwith "invalid message"
                 }
 
-            Profiling.addCount $"{nameof FsStore} | Messaging.appUpdate. command={command} result={result}"
+            Profiling.addCount (fun () -> $"{nameof FsStore} | Messaging.appUpdate. command={command} result={result}")
             logger.Trace (fun () -> $"Messaging.appUpdate. command={command} result={result}")
             return result
         //                    | _ -> return failwith "invalid message"
@@ -57,7 +57,7 @@ module Messaging =
                 //                    | _ -> return failwith "invalid message"
                 }
 
-            Profiling.addCount $"{nameof FsStore} | Messaging.atomUpdate. command={command} result={result}"
+            Profiling.addCount (fun () -> $"{nameof FsStore} | Messaging.atomUpdate. command={command} result={result}")
             logger.Trace (fun () -> $"Messaging.atomUpdate. command={command} result={result}")
             return result
         //                    | _ -> return failwith "invalid message"

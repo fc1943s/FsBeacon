@@ -13,7 +13,7 @@ open FsJs
 
 module Listener =
     let inline useKeyPress keys (fn: Getter<obj> -> Setter<obj> -> KeyboardEvent -> JS.Promise<unit>) =
-        Profiling.addTimestamp $"{nameof FsUi} | useKeyPress [ render ] "
+        Profiling.addTimestamp (fun () -> $"{nameof FsUi} | useKeyPress [ render ] ")
 
         let keyEvent = Store.useCallbackRef fn
 
@@ -33,7 +33,9 @@ module Listener =
         let refHoveredAtomFamily<'T> =
             Atom.atomFamilyAtom
                 (fun (_elemRef: IRefValue<_>) ->
-                    Profiling.addTimestamp $"{nameof FsUi} | refHoveredAtomFamily [ atomFamily.defaultValueFn(k) ] "
+                    Profiling.addTimestamp
+                        (fun () -> $"{nameof FsUi} | refHoveredAtomFamily [ atomFamily.defaultValueFn(k) ] ")
+
                     printfn "refHoveredAtomFamily. returning defatul"
                     false)
 

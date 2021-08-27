@@ -51,17 +51,12 @@ module SelectAtomSyncKeys =
             let referenceAtom = Atom.Primitives.atom [||]
 
             AtomWithSubscription.atomWithSubscription
-                    storeAtomPath
-                    [||]
-                    (fun () ->
-                        promise {
-                        Profiling.addTimestamp $"@ selectAtomSyncKeys subscribe {storeAtomPath}"
-                        }
-                        )
-                    (fun () ->
-                        Profiling.addTimestamp $"@ selectAtomSyncKeys unsubscribe {storeAtomPath}"
-                        )
-                    referenceAtom
+                storeAtomPath
+                [||]
+                (fun () ->
+                    promise { Profiling.addTimestamp (fun () -> $"@ selectAtomSyncKeys subscribe {storeAtomPath}") })
+                (fun () -> Profiling.addTimestamp (fun () -> $"@ selectAtomSyncKeys unsubscribe {storeAtomPath}"))
+                referenceAtom
             |> Atom.split
 
 //

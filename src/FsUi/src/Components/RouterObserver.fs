@@ -18,7 +18,7 @@ open Microsoft.FSharp.Core.Operators
 module RouterObserverWrapper =
     [<ReactComponent>]
     let rec RouterObserverWrapper children =
-        Profiling.addTimestamp $"{nameof FsUi} | RouterObserverWrapper [ render ] "
+        Profiling.addTimestamp (fun () -> $"{nameof FsUi} | RouterObserverWrapper [ render ] ")
 
         let logger = Store.useValue Selectors.logger
         let alias = Store.useValue Selectors.Gun.alias
@@ -30,7 +30,7 @@ module RouterObserverWrapper =
 
         React.useEffect (
             (fun () ->
-                Profiling.addTimestamp $"{nameof FsUi} | RouterObserverWrapper [ render / useEffect ] "
+                Profiling.addTimestamp (fun () -> $"{nameof FsUi} | RouterObserverWrapper [ render / useEffect ] ")
 
                 match Dom.window () with
                 | Some window ->
@@ -49,7 +49,8 @@ module RouterObserverWrapper =
             Store.useCallbackRef
                 (fun _ setter (newSegments: string list) ->
                     promise {
-                        Profiling.addTimestamp $"{nameof FsUi} | RouterObserverWrapper [ render / onChange ]"
+                        Profiling.addTimestamp
+                            (fun () -> $"{nameof FsUi} | RouterObserverWrapper [ render / onChange ]")
 
                         if newSegments <> lastSegments.current then
                             logger.Debug
@@ -128,7 +129,8 @@ newSegments={JS.JSON.stringify newSegments} ")
             (fun _getter _setter ->
                 promise {
                     Profiling.addTimestamp
-                        $"{nameof FsUi} | RouterObserverWrapper [ render / useHashedEffectOnce ] location.href={Browser.Dom.window.location.href}"
+                        (fun () ->
+                            $"{nameof FsUi} | RouterObserverWrapper [ render / useHashedEffectOnce ] location.href={Browser.Dom.window.location.href}")
 
                     match Browser.Dom.window.location.hash with
                     | null

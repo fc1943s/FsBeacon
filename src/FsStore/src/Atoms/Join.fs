@@ -27,7 +27,7 @@ module rec Join =
                             ],
                             AtomName name
                         ))
-                        (None: string option) )
+                        (None: string option))
 
         Atom.Primitives.atomFamily
             (fun (storeAtomPath: StoreAtomPath) ->
@@ -41,7 +41,7 @@ module rec Join =
                 Atom.Primitives.selector
                     (fun getter ->
                         let value = Atom.get getter atom
-                        Profiling.addCount $"{nameof FsStore} | {atomPath} joinAtom get"
+                        Profiling.addCount (fun () -> $"{nameof FsStore} | {atomPath} joinAtom get")
 
                         Logger.logTrace
                             (fun () ->
@@ -54,7 +54,7 @@ module rec Join =
                                 | _, Some value -> value
                                 | _ -> null))
                     (fun _ setter newValue ->
-                        Profiling.addCount $"{nameof FsStore} | {atomPath} joinAtom set"
+                        Profiling.addCount (fun () -> $"{nameof FsStore} | {atomPath} joinAtom set")
 
                         let newValueJson =
                             match Json.encode (atomPath, newValue) with

@@ -30,11 +30,11 @@ module AtomWithSync =
                     defaultValue
                     (fun () ->
                         promise {
-                        Profiling.addTimestamp $"@ atomWithSync subscribe {storeAtomPath}"
+                        Profiling.addTimestamp (fun () -> $"@ atomWithSync subscribe {storeAtomPath}")
                         }
                         )
                     (fun () ->
-                        Profiling.addTimestamp $"@ atomWithSync unsubscribe {storeAtomPath}"
+                        Profiling.addTimestamp (fun () -> $"@ atomWithSync unsubscribe {storeAtomPath}")
                         )
                     referenceAtom
 
@@ -211,7 +211,7 @@ module AtomWithSync =
 //                            |> Seq.head
 //                            |> snd
 //
-//                        Profiling.addCount $"{atomPath} get"
+//                        Profiling.addCount (fun () -> $"{atomPath} get"
 //
 //                        Logger.logTrace
 //                            (fun () ->
@@ -253,7 +253,7 @@ module AtomWithSync =
 //                        result)
 //                    (fun getter setter newValueFn ->
 //                        syncEngine.SetProviders getter wrapper
-//                        Profiling.addCount $"{atomPath} set"
+//                        Profiling.addCount (fun () -> $"{atomPath} set"
 //
 //                        Store.change
 //                            setter

@@ -115,7 +115,7 @@ module Atom =
         let getDebugInfo () =
             $"atom={atom} storeAtomPath={storeAtomPath |> StoreAtomPath.AtomPath} "
 
-        Profiling.addCount $"{nameof FsStore} | Atom [ register ] {getDebugInfo ()}"
+        Profiling.addCount (fun () -> $"{nameof FsStore} | Atom [ register ] {getDebugInfo ()}")
 
         let internalKey = AtomInternalKey (atom.ToString ())
 
@@ -157,11 +157,11 @@ module Atom =
         let inline selector<'A> (read: Read<'A>) (write: Write<'A>) =
             jotai.atom (
                 (fun getter ->
-                    Profiling.addCount $"{nameof FsStore} | Atom.Primitives.selector get()"
+                    Profiling.addCount (fun () -> $"{nameof FsStore} | Atom.Primitives.selector get()")
                     read getter),
                 Some
                     (fun getter setter value ->
-                        Profiling.addCount $"{nameof FsStore} | Atom.Primitives.selector set()"
+                        Profiling.addCount (fun () -> $"{nameof FsStore} | Atom.Primitives.selector set()")
                         let newValue = value
                         //                        match jsTypeof value with
                         //                         | "function" -> (unbox value) () |> unbox
@@ -177,7 +177,7 @@ module Atom =
         let inline atomFamily (defaultValueFn: 'TKey -> AtomConfig<'A>) =
             jotaiUtils.atomFamily
                 (fun key ->
-                    Profiling.addCount $"{nameof FsStore} | Atom.Primitives.atomFamily key={key}"
+                    Profiling.addCount (fun () -> $"{nameof FsStore} | Atom.Primitives.atomFamily key={key}")
                     defaultValueFn key)
                 (if false then JS.undefined else Object.compare)
 
@@ -185,7 +185,7 @@ module Atom =
             jotaiUtils.selectAtom
                 atom
                 (fun getter ->
-                    Profiling.addCount $"{nameof FsStore} | Atom.Primitives.selectAtom atom={atom}"
+                    Profiling.addCount (fun () -> $"{nameof FsStore} | Atom.Primitives.selectAtom atom={atom}")
                     selector getter)
                 (if true then JS.undefined else Object.compare)
 

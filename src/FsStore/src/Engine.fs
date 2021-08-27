@@ -52,7 +52,7 @@ module Engine =
             let getDebugInfo () =
                 $"commands={commands} newState={newState} processedMessages={processedMessages}"
 
-            Profiling.addTimestamp $">25f Engine.consumeCommands {getDebugInfo ()}"
+            Profiling.addTimestamp (fun () -> $">25f Engine.consumeCommands {getDebugInfo ()}")
 
             return
                 newState,
@@ -85,7 +85,7 @@ module Engine =
         let getDebugInfo () =
             $" | atom={atom} mounted={mounted} storeAtomPath={storeAtomPath |> Option.map StoreAtomPath.AtomPath} lastState={Json.encodeWithNull lastState} "
 
-        Profiling.addTimestamp $"+24e Engine.wrapAtomWithState [ constructor ] {getDebugInfo ()}"
+        Profiling.addTimestamp (fun () -> $"+24e Engine.wrapAtomWithState [ constructor ] {getDebugInfo ()}")
 
         let mutable lastSetAtom = None
 
@@ -109,20 +109,20 @@ module Engine =
 
                 match getState () with
                 | Some (getter, setter, state) ->
-                    Profiling.addTimestamp $"+23e Engine.wrapAtomWithState newMount(). invoking mount {getDebugInfo ()}"
+                    Profiling.addTimestamp (fun () -> $"+23e Engine.wrapAtomWithState newMount(). invoking mount {getDebugInfo ()}")
                     mounted <- true
                     do! mount getter setter state lastSetAtom.Value
                 | None ->
-                    Profiling.addTimestamp
-                        $"+22e Engine.wrapAtomWithState newMount(). skipping, no state. {getDebugInfo ()}"
+                    Profiling.addTimestamp(fun () ->
+                        $"+22e Engine.wrapAtomWithState newMount(). skipping, no state. {getDebugInfo ()}")
             }
 
         let newUnmount () =
             if mounted then
                 match getState () with
                 | Some (getter, setter, state) ->
-                    Profiling.addTimestamp
-                        $"+21e Engine.wrapAtomWithState newUnmount(). invoking unmount {getDebugInfo ()}"
+                    Profiling.addTimestamp (fun () ->
+                        $"+21e Engine.wrapAtomWithState newUnmount(). invoking unmount {getDebugInfo ()}")
 
                     mounted <- false
                     lastState <- None
@@ -130,14 +130,14 @@ module Engine =
 
                 //                    JS.setTimeout
 //                        (fun () ->
-//                            Profiling.addTimestamp $"Engine.wrapAtom onUnmount() clearing lastState {getDebugInfo ()}"
+//                            Profiling.addTimestamp (fun () -> $"Engine.wrapAtom onUnmount() clearing lastState {getDebugInfo ()}"
 //                            lastState <- None
 //                            )
 //                        0
 //                    |> ignore
                 | None ->
-                    Profiling.addTimestamp
-                        $"+20e Engine.wrapAtomWithState newUnmount(). skipping, no state. (should unmount here???) {getDebugInfo ()}"
+                    Profiling.addTimestamp (fun () ->
+                        $"+20e Engine.wrapAtomWithState newUnmount(). skipping, no state. (should unmount here???) {getDebugInfo ()}")
 
         let refreshInternalState getter =
             if lastStore.IsNone then lastStore <- Atom.get getter Selectors.store
@@ -147,12 +147,12 @@ module Engine =
 
             let newState = stateFn getter
 
-            Profiling.addTimestamp
-                $"+19e Engine.wrapAtomWithState refreshInternalState (get or set). newState={Json.encodeWithNull newState}. will mount or unmount. {getDebugInfo ()}"
+            Profiling.addTimestamp(fun () ->
+                $"+19e Engine.wrapAtomWithState refreshInternalState (get or set). newState={Json.encodeWithNull newState}. will mount or unmount. {getDebugInfo ()}")
 
             if lastSetAtom.IsNone then
-                Profiling.addTimestamp
-                    $"+19-1e X Engine.wrapAtomWithState refreshInternalState. skipping mount/unmount. lastSetAtom not found {getDebugInfo ()}"
+                Profiling.addTimestamp(fun () ->
+                    $"+19-1e X Engine.wrapAtomWithState refreshInternalState. skipping mount/unmount. lastSetAtom not found {getDebugInfo ()}")
             else
                 match newState with
                 | Some _ ->
@@ -167,14 +167,13 @@ module Engine =
 
                     let result = Atom.get getter atom
 
-                    Profiling.addTimestamp $"+18e Engine.wrapAtomWithState wrapper.get() {getDebugInfo ()}"
+                    Profiling.addTimestamp (fun () -> $"+18e Engine.wrapAtomWithState wrapper.get() {getDebugInfo ()}")
 
                     result)
                 (fun getter setter newValue ->
                     refreshInternalState getter
 
-                    Profiling.addTimestamp
-                        $"+17e Engine.wrapAtomWithState wrapper.set()  {getDebugInfo ()} newValue={newValue}"
+                    Profiling.addTimestamp(fun () -> $"+17e Engine.wrapAtomWithState wrapper.set()  {getDebugInfo ()} newValue={newValue}")
 
                     Atom.set setter atom newValue)
             |> Atom.addSubscription
@@ -216,7 +215,7 @@ module Engine =
                 (fun getter setter _setAtom ->
                     promise {
                         let logger = Logger.State.lastLogger
-                        Profiling.addTimestamp $"+16d Engine.wrapAtomWithInterval. mount. {getDebugInfo ()}"
+                        Profiling.addTimestamp (fun () -> $"+16d Engine.wrapAtomWithInterval. mount. {getDebugInfo ()}")
 
                         let fn () =
                             logger.Trace
@@ -226,8 +225,8 @@ module Engine =
                                 let atomValue = Atom.get getter atom
 
                                 if Some atomValue |> Object.compare lastValue |> not then
-                                    Profiling.addTimestamp
-                                        $"+15d Engine.wrapAtomWithInterval. mount interval fn. atomValue={atomValue}. {getDebugInfo ()}"
+                                    Profiling.addTimestamp(fun () ->
+                                        $"+15d Engine.wrapAtomWithInterval. mount interval fn. atomValue={atomValue}. {getDebugInfo ()}")
 
                                     Atom.set setter cache atomValue
                                     lastValue <- Some atomValue
@@ -237,7 +236,7 @@ module Engine =
                     })
                 (fun _getter _setter ->
                     //                let logger = Logger.State.lastLogger
-                    Profiling.addTimestamp $"+14d Engine.wrapAtomWithInterval unmount() {getDebugInfo ()}"
+                    Profiling.addTimestamp (fun () -> $"+14d Engine.wrapAtomWithInterval unmount() {getDebugInfo ()}")
 
                     if intervalHandle >= 0 then JS.clearTimeout intervalHandle
                     intervalHandle <- -1)
@@ -263,11 +262,11 @@ module Engine =
 //                newState)
 //            (fun _getter _setter state _setAtom ->
 //                promise {
-//                    Profiling.addTimestamp $"Engine.wrapAtomWithSubscription. onMount(). {getDebugInfo ()}"
+//                    Profiling.addTimestamp (fun () -> $"Engine.wrapAtomWithSubscription. onMount(). {getDebugInfo ()}"
 //                    do! mount state
 //                })
 //            (fun _getter _setter _state ->
-//                Profiling.addTimestamp $"Engine.wrapAtomWithSubscription onUnmount() {getDebugInfo ()}"
+//                Profiling.addTimestamp (fun () -> $"Engine.wrapAtomWithSubscription onUnmount() {getDebugInfo ()}"
 //                unmount ()
 //                ())
 
@@ -430,7 +429,7 @@ module Engine =
         let getDebugInfo () =
             $"storeAtomPath={storeAtomPath |> StoreAtomPath.AtomPath} defaultValue={defaultValue}"
 
-        Profiling.addTimestamp $"+13.1c Engine.createRegisteredAtomWithGroup [ constructor ] {getDebugInfo ()}"
+        Profiling.addTimestamp (fun () -> $"+13.1c Engine.createRegisteredAtomWithGroup [ constructor ] {getDebugInfo ()}")
 
         let defaultValue = System.Guid.Empty, (defaultGroup, defaultValue)
 
@@ -466,8 +465,8 @@ module Engine =
                         |> Seq.sortByDescending fst
                         |> Seq.toList
 
-                    Profiling.addTimestamp
-                        $"+13c Engine.createRegisteredAtomWithSort wrapper.get()  alias={alias} result={result} {getDebugInfo ()}"
+                    Profiling.addTimestamp(fun () ->
+                        $"+13c Engine.createRegisteredAtomWithSort wrapper.get()  alias={alias} result={result} {getDebugInfo ()}")
 
                     result |> unbox<(TicksGuid * ('TGroup * 'A)) list>)
                 (fun getter setter newValueFn ->
@@ -480,8 +479,8 @@ module Engine =
                     then
                         groupAtomDefaultValueMap.[(alias, storeAtomPath)] <- defaultValue
 
-                    Profiling.addTimestamp
-                        $"+12c Engine.createRegisteredAtomWithSort wrapper.set() alias={alias} {getDebugInfo ()}  "
+                    Profiling.addTimestamp (fun () ->
+                        $"+12c Engine.createRegisteredAtomWithSort wrapper.set() alias={alias} {getDebugInfo ()}  ")
 
                     Atom.change setter (groupMapAtom (alias, storeAtomPath)) (unbox newValueFn))
             |> Atom.register storeAtomPath
@@ -497,7 +496,7 @@ module Engine =
         let getDebugInfo () =
             $"storeAtomPath={storeAtomPath |> StoreAtomPath.AtomPath} defaultValue={defaultValue}"
 
-        Profiling.addTimestamp $"+13.1c Engine.createRegisteredAtomWithGroup [ constructor ] {getDebugInfo ()}"
+        Profiling.addTimestamp (fun () -> $"+13.1c Engine.createRegisteredAtomWithGroup [ constructor ] {getDebugInfo ()}")
 
         let defaultValue = System.Guid.Empty, (defaultGroup, defaultValue)
 
@@ -526,8 +525,8 @@ module Engine =
                         |> Seq.sortByDescending fst
                         |> Seq.head
 
-                    Profiling.addTimestamp
-                        $"+13c Engine.createRegisteredAtomWithSort wrapper.get()  alias={alias} result={result} lastSyncValueByType={Json.encodeWithNull lastSyncValueByType} {getDebugInfo ()}"
+                    Profiling.addTimestamp (fun () ->
+                        $"+13c Engine.createRegisteredAtomWithSort wrapper.get()  alias={alias} result={result} lastSyncValueByType={Json.encodeWithNull lastSyncValueByType} {getDebugInfo ()}")
 
                     ticks, group, result)
                 (fun getter setter (ticks, group: 'TGroup, newValue) ->
@@ -539,8 +538,8 @@ module Engine =
                         (fun oldGroupValueList ->
                             let newGroupValueList = (ticks, (group, newValue)) :: oldGroupValueList
 
-                            Profiling.addTimestamp
-                                $"+12c Engine.createRegisteredAtomWithSort wrapper.set() ticks={ticks} alias={alias} newGroupValueList={newGroupValueList} oldGroupValueList={oldGroupValueList} {getDebugInfo ()} newValue={newValue} "
+                            Profiling.addTimestamp (fun () ->
+                                $"+12c Engine.createRegisteredAtomWithSort wrapper.set() ticks={ticks} alias={alias} newGroupValueList={newGroupValueList} oldGroupValueList={oldGroupValueList} {getDebugInfo ()} newValue={newValue} ")
 
                             newGroupValueList))
             |> Atom.register storeAtomPath
@@ -610,7 +609,7 @@ module Engine =
                                 })
                     | _ -> failwith $"invalid gun atom node {getDebugInfo ()}"
 
-                    Profiling.addTimestamp $"+11B ====> getAtomAdapterOptions gun mount {getDebugInfo ()} "
+                    Profiling.addTimestamp (fun () -> $"+11B ====> getAtomAdapterOptions gun mount {getDebugInfo ()} ")
                 | _ -> ()),
             (fun getter _setter adapterOptions ->
                 match adapterOptions with
@@ -621,20 +620,20 @@ module Engine =
                     | Some gunAtomNode -> gunAtomNode.off () |> ignore
                     | _ -> ()
 
-                    Profiling.addTimestamp $"+10B <==== getAtomAdapterOptions gun unmount  {getDebugInfo ()}  "
+                    Profiling.addTimestamp (fun () -> $"+10B <==== getAtomAdapterOptions gun unmount  {getDebugInfo ()}  ")
                 | _ -> ())
         | Atom.AdapterType.Hub ->
             (fun _getter _setter adapterOptions _setValue ->
                 match adapterOptions with
                 | Atom.AdapterOptions.Hub (_alias, _hubUrl) ->
                     //                let gunAtomNode = Atom.get getter (Selectors.Gun.gunAtomNode (alias, atomPath))
-                    Profiling.addTimestamp $"+09B ====> getAtomAdapterOptions hub mount  {getDebugInfo ()}  "
+                    Profiling.addTimestamp (fun () -> $"+09B ====> getAtomAdapterOptions hub mount  {getDebugInfo ()}  ")
                 | _ -> ()),
             (fun _getter _setter adapterOptions ->
                 match adapterOptions with
                 | Atom.AdapterOptions.Hub (_alias, _hubUrl) ->
                     //                let gunAtomNode = Atom.get getter (Selectors.Gun.gunAtomNode (alias, atomPath))
-                    Profiling.addTimestamp $"+08B <==== getAtomAdapterOptions hub unmount  {getDebugInfo ()}  "
+                    Profiling.addTimestamp (fun () -> $"+08B <==== getAtomAdapterOptions hub unmount  {getDebugInfo ()}  ")
                 | _ -> ()
 
                 )
@@ -643,13 +642,13 @@ module Engine =
                 match adapterOptions with
                 | Atom.AdapterOptions.Memory ->
                     //                let gunAtomNode = Atom.get getter (Selectors.Gun.gunAtomNode (alias, atomPath))
-                    Profiling.addTimestamp $"+07B  ====> getAtomAdapterOptions memory mount  {getDebugInfo ()}  "
+                    Profiling.addTimestamp (fun () -> $"+07B  ====> getAtomAdapterOptions memory mount  {getDebugInfo ()}  ")
                 | _ -> ()),
             (fun _getter _setter adapterOptions ->
                 match adapterOptions with
                 | Atom.AdapterOptions.Memory ->
                     //                let gunAtomNode = Atom.get getter (Selectors.Gun.gunAtomNode (alias, atomPath))
-                    Profiling.addTimestamp $"+06B <==== getAtomAdapterOptions memory unmount  {getDebugInfo ()}  "
+                    Profiling.addTimestamp (fun () -> $"+06B <==== getAtomAdapterOptions memory unmount  {getDebugInfo ()}  ")
                 | _ -> ())
 
     let inline getCollectionAdapter storeAtomPath adapterType =
@@ -664,39 +663,39 @@ module Engine =
                 match adapterOptions with
                 | Atom.AdapterOptions.Gun (_alias, _peers) ->
                     //                let gunAtomNode = Atom.get getter (Selectors.Gun.gunAtomNode (alias, atomPath))
-                    Profiling.addTimestamp $"+11b ----> getCollectionAdapterOptions gun mount {getDebugInfo ()} "
+                    Profiling.addTimestamp (fun () -> $"+11b ----> getCollectionAdapterOptions gun mount {getDebugInfo ()} ")
                 | _ -> ()),
             (fun _getter _setter adapterOptions ->
                 match adapterOptions with
                 | Atom.AdapterOptions.Gun (_alias, _peers) ->
                     //                let gunAtomNode = Atom.get getter (Selectors.Gun.gunAtomNode (alias, atomPath))
-                    Profiling.addTimestamp $"+10b <---- getCollectionAdapterOptions gun unmount  {getDebugInfo ()}  "
+                    Profiling.addTimestamp (fun () -> $"+10b <---- getCollectionAdapterOptions gun unmount  {getDebugInfo ()}  ")
                 | _ -> ())
         | Atom.AdapterType.Hub ->
             (fun _getter _setter adapterOptions _setValue ->
                 match adapterOptions with
                 | Atom.AdapterOptions.Hub (_alias, _hubUrl) ->
                     //                let gunAtomNode = Atom.get getter (Selectors.Gun.gunAtomNode (alias, atomPath))
-                    Profiling.addTimestamp $"+09b ----> getCollectionAdapterOptions hub mount  {getDebugInfo ()}  "
+                    Profiling.addTimestamp (fun () -> $"+09b ----> getCollectionAdapterOptions hub mount  {getDebugInfo ()}  ")
                 | _ -> ()),
             (fun _getter _setter adapterOptions ->
                 match adapterOptions with
                 | Atom.AdapterOptions.Hub (_alias, _hubUrl) ->
                     //                let gunAtomNode = Atom.get getter (Selectors.Gun.gunAtomNode (alias, atomPath))
-                    Profiling.addTimestamp $"+08b <---- getCollectionAdapterOptions hub unmount  {getDebugInfo ()}  "
+                    Profiling.addTimestamp (fun () -> $"+08b <---- getCollectionAdapterOptions hub unmount  {getDebugInfo ()}  ")
                 | _ -> ())
         | Atom.AdapterType.Memory ->
             (fun _getter _setter adapterOptions _setValue ->
                 match adapterOptions with
                 | Atom.AdapterOptions.Memory ->
                     //                let gunAtomNode = Atom.get getter (Selectors.Gun.gunAtomNode (alias, atomPath))
-                    Profiling.addTimestamp $"+07b  ----> getCollectionAdapterOptions memory mount  {getDebugInfo ()}  "
+                    Profiling.addTimestamp (fun () -> $"+07b  ----> getCollectionAdapterOptions memory mount  {getDebugInfo ()}  ")
                 | _ -> ()),
             (fun _getter _setter adapterOptions ->
                 match adapterOptions with
                 | Atom.AdapterOptions.Memory ->
                     //                let gunAtomNode = Atom.get getter (Selectors.Gun.gunAtomNode (alias, atomPath))
-                    Profiling.addTimestamp $"+06b <---- getCollectionAdapterOptions memory unmount  {getDebugInfo ()}  "
+                    Profiling.addTimestamp (fun () -> $"+06b <---- getCollectionAdapterOptions memory unmount  {getDebugInfo ()}  ")
                 | _ -> ())
 
     //    let inline createAdapterAtomMap defaultValue getAdapter getDebugInfo =
@@ -763,8 +762,8 @@ module Engine =
             (fun getter ->
                 let adapterOptions = getAdapterOptions getter adapterType
 
-                Profiling.addTimestamp
-                    $"+04a * createAdapterAtom [ stateFn ] adapterType={adapterType} adapterOptions={Json.encodeWithNull adapterOptions} {getDebugInfo ()}"
+                Profiling.addTimestamp (fun () ->
+                    $"+04a * createAdapterAtom [ stateFn ] adapterType={adapterType} adapterOptions={Json.encodeWithNull adapterOptions} {getDebugInfo ()}")
 
                 match adapterOptions with
                 | Some adapterOptions ->
@@ -775,16 +774,16 @@ module Engine =
             (fun getter setter (adapterType, adapterOptions, mount, _) setAtom ->
                 promise {
                     //                let gunAtomNode = Atom.get getter (Selectors.Gun.gunAtomNode (alias, atomPath))
-                    Profiling.addTimestamp
-                        $"+03a @@> createAdapterAtom mount adapterType={adapterType} adapterOptions={adapterOptions} {getDebugInfo ()}"
+                    Profiling.addTimestamp (fun () ->
+                        $"+03a @@> createAdapterAtom mount adapterType={adapterType} adapterOptions={adapterOptions} {getDebugInfo ()}")
 
                     if not mounted then
                         mount getter setter adapterOptions setAtom
                         mounted <- true
                 })
             (fun getter setter (adapterType, adapterOptions, _, unmount) ->
-                Profiling.addTimestamp
-                    $"+02a <@@ createAdapterAtom unmount adapterType={adapterType} adapterOptions={adapterOptions} {getDebugInfo ()} "
+                Profiling.addTimestamp (fun () ->
+                    $"+02a <@@ createAdapterAtom unmount adapterType={adapterType} adapterOptions={adapterOptions} {getDebugInfo ()} ")
 
                 if mounted then
                     unmount getter setter adapterOptions
@@ -812,7 +811,7 @@ module Engine =
         let getDebugInfo () =
             $"storeAtomPath={storeAtomPath |> StoreAtomPath.AtomPath}"
 
-        Profiling.addTimestamp $"+05a subscribeCollection [ constructor ] {getDebugInfo ()}"
+        Profiling.addTimestamp (fun () -> $"+05a subscribeCollection [ constructor ] {getDebugInfo ()}")
 
         let atom = createRegisteredAtomWithGroup storeAtomPath (Atom.AdapterType.Memory, [||])
 
@@ -846,8 +845,8 @@ module Engine =
 
                 let ticks, adapterType, value = Atom.get getter atom
 
-                Profiling.addTimestamp
-                    $"+01a Engine.subscribeCollection wrapper.get() ticks={ticks} adapterType={adapterType} result={Json.encodeWithNull value} {getDebugInfo ()}"
+                Profiling.addTimestamp (fun () ->
+                    $"+01a Engine.subscribeCollection wrapper.get() ticks={ticks} adapterType={adapterType} result={Json.encodeWithNull value} {getDebugInfo ()}")
 
                 value)
         |> Atom.split
@@ -866,8 +865,8 @@ module Engine =
         let getDebugInfo () =
             $"localAdaptersAtom={localAdaptersAtom} atomPath={atomPath}"
 
-        Profiling.addTimestamp
-            $"{nameof FsStore} | Engine.createRegisteredAtomWithSubscription [ constructor ] {getDebugInfo ()}"
+        Profiling.addTimestamp (fun () ->
+            $"{nameof FsStore} | Engine.createRegisteredAtomWithSubscription [ constructor ] {getDebugInfo ()}")
 
         let mutable lastAdapterValues: (Atom.AdapterType * AtomConfig<TicksGuid * 'A> * (TicksGuid * 'A)) list = []
         let mutable lastLocalAdapter: (TicksGuid * (Atom.AdapterType * 'A)) option = None
@@ -903,8 +902,8 @@ module Engine =
                         |> List.map (fun (adapterType, _, ticks, value) -> adapterType, ticks, value)
                     )
 
-                Profiling.addTimestamp
-                    $"{nameof FsStore} | Engine.createRegisteredAtomWithSubscription [ sync ] {getDebugInfo ()} values={valuesfmt} "
+                Profiling.addTimestamp (fun () ->
+                    $"{nameof FsStore} | Engine.createRegisteredAtomWithSubscription [ sync ] {getDebugInfo ()} values={valuesfmt} ")
 
                 let _, lastSetAtom, lastTicks, lastValue = values.Head
 
@@ -1007,8 +1006,8 @@ module Engine =
                     //                let result = Atom.get getter atom
 //                    let ticks, adapterType, value = Atom.get getter adaptersAtom
 
-                    Profiling.addTimestamp
-                        $"+01a Engine.createRegisteredAtomWithSubscription wrapper.get() {getDebugInfo ()} localAdapters={Json.encodeWithNull localAdapters} lastAdapterValues={Json.encodeWithNull lastAdapterValues} "
+                    Profiling.addTimestamp (fun () ->
+                        $"+01a Engine.createRegisteredAtomWithSubscription wrapper.get() {getDebugInfo ()} localAdapters={Json.encodeWithNull localAdapters} lastAdapterValues={Json.encodeWithNull lastAdapterValues} ")
 
                     //                snd result
                     value)
@@ -1019,8 +1018,8 @@ module Engine =
                         setter
                         localAdaptersAtom
                         (fun localAdapters ->
-                            Profiling.addTimestamp
-                                $"+00a Engine.createRegisteredAtomWithSubscription wrapper.set() {getDebugInfo ()} localAdapters={Json.encodeWithNull localAdapters} lastAdapterValues={Json.encodeWithNull lastAdapterValues}  "
+                            Profiling.addTimestamp (fun () ->
+                                $"+00a Engine.createRegisteredAtomWithSubscription wrapper.set() {getDebugInfo ()} localAdapters={Json.encodeWithNull localAdapters} lastAdapterValues={Json.encodeWithNull lastAdapterValues}  ")
 
                             let newTicks = Guid.newTicksGuid ()
                             let newEntry = newTicks, (Atom.AdapterType.Memory, newValue)
@@ -1063,7 +1062,7 @@ module Engine =
                                 || lastValue.IsNone)
                             ->
 
-                            Profiling.addTimestamp "Engine.bindAtom. get(). choosing value2"
+                            Profiling.addTimestamp (fun () -> "Engine.bindAtom. get(). choosing value2")
                             value2
                         | value1, _ ->
                             match lastSetAtom with
@@ -1075,7 +1074,7 @@ module Engine =
                                 lastSetAtom (Some value1)
                             | _ -> ()
 
-                            Profiling.addTimestamp "Engine.bindAtom. get(). choosing value1"
+                            Profiling.addTimestamp (fun () -> "Engine.bindAtom. get(). choosing value1")
                             value1
                     | _ -> failwith $"bindAtom. atoms without default value. atom1={atom1} atom2={atom2}")
                 (fun _get setter newValue ->
@@ -1084,9 +1083,9 @@ module Engine =
                         lastValue <- Some newValue
                         Atom.set setter atom1 newValue
 
-                        Profiling.addTimestamp "Engine.bindAtom. set(). setting value1"
+                        Profiling.addTimestamp (fun () -> "Engine.bindAtom. set(). setting value1")
                     else
-                        Profiling.addTimestamp "Engine.bindAtom. set(). setting value2 only"
+                        Profiling.addTimestamp (fun () -> "Engine.bindAtom. set(). setting value2 only")
 
                     Atom.set setter atom2 newValue)
 
@@ -1168,7 +1167,7 @@ module Engine =
 //                                    Profiling.addTimestamp
 //                                        $"@@> subscribeCollection mount state={state} {getDebugInfo ()}"
 //                                })
-//                            (fun () -> Profiling.addTimestamp $"<@@ subscribeCollection unmount {getDebugInfo ()} ")
+//                            (fun () -> Profiling.addTimestamp (fun () -> $"<@@ subscribeCollection unmount {getDebugInfo ()} ")
 //                        |> Atom.split
 //
 //                    adapterType, atoms)
@@ -1222,7 +1221,7 @@ module Engine =
 //                                    mount' state
 //                                })
 //                            (fun () ->
-//                                Profiling.addTimestamp $"<@@ subscribeCollection unmount {getDebugInfo ()} "
+//                                Profiling.addTimestamp (fun () -> $"<@@ subscribeCollection unmount {getDebugInfo ()} "
 //                                unmount' ()
 //                                unmount ())
 //

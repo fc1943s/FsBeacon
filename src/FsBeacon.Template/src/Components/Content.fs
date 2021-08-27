@@ -12,7 +12,7 @@ open FsUi.Components
 module Content =
     [<ReactComponent>]
     let LoggedContent () =
-        Profiling.addTimestamp $"{nameof FsBeacon} | LoggedContent [ render ] "
+        Profiling.addTimestamp (fun () -> $"{nameof FsBeacon} | LoggedContent [ render ] ")
 
         React.suspense (
             [
@@ -34,7 +34,7 @@ module Content =
     let Content () =
         let deviceInfo = Store.useValue Selectors.deviceInfo
 
-        Profiling.addTimestamp $"{nameof FsBeacon} | Content [ render ] "
+        Profiling.addTimestamp (fun () -> $"{nameof FsBeacon} | Content [ render ] ")
 
         Ui.flex
             (fun x ->

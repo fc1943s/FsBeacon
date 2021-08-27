@@ -237,7 +237,7 @@ module AtomWithSubscription =
 //                        subscription <- Some (subscriptionId, disposable)
 //
 //                        if disposable.IsSome then
-//                            Profiling.addCount $"@ {lastAtomPath}"
+//                            Profiling.addCount (fun () -> $"@ {lastAtomPath}"
 //
 //                            match lastAccessors with
 //                            | Some (getter, setter) ->
@@ -267,7 +267,7 @@ module AtomWithSubscription =
 //                                |> Option.defaultValue (AtomPath "")
 //                                |> AtomPath.Value)
 //                                .Contains "/pub" then
-//                                Profiling.addCount $"@@> {getDebugSummary ()}"
+//                                Profiling.addCount (fun () -> $"@@> {getDebugSummary ()}"
 //                        else
 //                            Logger.logTrace
 //                                (fun () ->
@@ -328,7 +328,7 @@ module AtomWithSubscription =
 //                                |> Option.defaultValue (AtomPath "")
 //                                |> AtomPath.Value)
 //                                .Contains "/pub" then
-//                                Profiling.addCount $"@@< {getDebugSummary ()}"
+//                                Profiling.addCount (fun () -> $"@@< {getDebugSummary ()}"
 //
 //                            fn ticksGuid
 //                        | None ->

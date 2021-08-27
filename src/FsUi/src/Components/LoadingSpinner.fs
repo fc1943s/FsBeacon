@@ -6,7 +6,7 @@ open FsUi.Bindings
 
 module LoadingSpinner =
     let inline LoadingSpinner () =
-        Profiling.addTimestamp $"{nameof FsUi} | LoadingSpinner [ render ] "
+        Profiling.addTimestamp (fun () -> $"{nameof FsUi} | LoadingSpinner [ render ] ")
 
         Ui.center
             (fun x -> x.flex <- "1")
@@ -20,7 +20,7 @@ module LoadingSpinner =
             ]
 
     let inline InlineLoadingSpinner () =
-        Profiling.addTimestamp $"{nameof FsUi} | InlineLoadingSpinner [ render ] "
+        Profiling.addTimestamp (fun () -> $"{nameof FsUi} | InlineLoadingSpinner [ render ] ")
 
         Ui.flex
             (fun x -> x.alignItems <- "center")

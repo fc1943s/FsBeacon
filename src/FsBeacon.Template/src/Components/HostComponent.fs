@@ -13,7 +13,7 @@ module HostComponent =
 
     [<ReactComponent>]
     let HostComponent () =
-        Profiling.addTimestamp $"{nameof FsBeacon} | HostComponent [ render ] "
+        Profiling.addTimestamp (fun () -> $"{nameof FsBeacon} | HostComponent [ render ] ")
 
         Ui.stack
             (fun x -> x.flex <- "1")

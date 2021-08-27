@@ -9,7 +9,7 @@ open FsJs
 
 module Main =
     exportDefault (
-        Profiling.addTimestamp $"{nameof FsBeacon} | Main body"
+        Profiling.addTimestamp (fun () -> $"{nameof FsBeacon} | Main body")
 
         let cmp = React.strictMode [ App.App true ]
 

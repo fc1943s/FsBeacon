@@ -30,7 +30,7 @@ module SampleComponent =
         let fileId = Store.useValue fileIdAtom
         let progress = Store.useValue (Selectors.File.progress fileId)
 
-        Profiling.addTimestamp $"{nameof FsBeacon} | File [ render ] fileId={fileId} progress={progress}"
+        Profiling.addTimestamp (fun () -> $"{nameof FsBeacon} | File [ render ] fileId={fileId} progress={progress}")
 
 
         //        let valid, setValid = React.useState false
@@ -79,7 +79,7 @@ module SampleComponent =
 
     [<ReactComponent>]
     let Files () =
-        Profiling.addTimestamp $"{nameof FsBeacon} | Files [ render ] "
+        Profiling.addTimestamp (fun () -> $"{nameof FsBeacon} | Files [ render ] ")
         let fileIdAtoms = Store.useValue Selectors.Sample.fileIdAtoms
         //        let fileIdAtoms = Store.useValue State.Selectors.asyncFileIdAtoms
 
@@ -90,7 +90,8 @@ module SampleComponent =
 
     [<ReactComponent>]
     let rec HydrateCoreContainer () =
-        Profiling.addTimestamp $"{nameof FsBeacon} | HydrateCoreContainer [ render ] hydrate trace from now on "
+        Profiling.addTimestamp
+            (fun () -> $"{nameof FsBeacon} | HydrateCoreContainer [ render ] hydrate trace from now on ")
 
         //        if Atoms.showDebug?init
 //           |> Option.ofObjUnbox
@@ -119,7 +120,7 @@ module SampleComponent =
 
     [<ReactComponent>]
     let rec HydrateSyncContainer () =
-        Profiling.addTimestamp $"{nameof FsBeacon} | HydrateSyncContainer [ render ] "
+        Profiling.addTimestamp (fun () -> $"{nameof FsBeacon} | HydrateSyncContainer [ render ] ")
 
         //        Jotai.jotaiUtils.useHydrateAtoms [|
 //            unbox Atoms.gunOptions,
@@ -142,13 +143,14 @@ module SampleComponent =
                             GunPeer "https://localhost:49221/gun"
                          |])
 
-//                    Atom.set
+                    //                    Atom.set
 //                        setter
 //                        Atoms.hubUrl
 //                        (Some "https://localhost:49211")
 
                     Profiling.addTimestamp
-                        $"{nameof FsBeacon} | HydrateSyncContainer [ render / useHashedEffectOnce ] gunOptions set manually "
+                        (fun () ->
+                            $"{nameof FsBeacon} | HydrateSyncContainer [ render / useHashedEffectOnce ] gunOptions set manually ")
 
                     Atom.set setter Atoms.Sample.syncHydrateCompleted true
                 })
@@ -162,7 +164,7 @@ module SampleComponent =
         let setSyncHydrateStarted = Store.useSetState Atoms.Sample.syncHydrateStarted
 
         Profiling.addTimestamp
-            $"{nameof FsBeacon} | HydrateButton [ render ] syncHydrateCompleted={syncHydrateCompleted}"
+            (fun () -> $"{nameof FsBeacon} | HydrateButton [ render ] syncHydrateCompleted={syncHydrateCompleted}")
 
         Button.Button
             {|
@@ -174,7 +176,8 @@ module SampleComponent =
                             (fun _ ->
                                 promise {
                                     Profiling.addTimestamp
-                                        $"{nameof FsBeacon} | HydrateButton [ onClick ] syncHydrateCompleted={syncHydrateCompleted}"
+                                        (fun () ->
+                                            $"{nameof FsBeacon} | HydrateButton [ onClick ] syncHydrateCompleted={syncHydrateCompleted}")
 
                                     setSyncHydrateStarted true
                                 })
@@ -198,13 +201,15 @@ module SampleComponent =
         let toast = Ui.useToast ()
 
         Profiling.addTimestamp
-            $"{nameof FsBeacon} | SignInButton [ render ] alias={alias} syncHydrateCompleted={syncHydrateCompleted}"
+            (fun () ->
+                $"{nameof FsBeacon} | SignInButton [ render ] alias={alias} syncHydrateCompleted={syncHydrateCompleted}")
 
         let signIn =
             Store.useCallbackRef
                 (fun getter setter _ ->
                     promise {
-                        Profiling.addTimestamp $"{nameof FsBeacon} | SignInContainer [ render ] starting sign up..."
+                        Profiling.addTimestamp
+                            (fun () -> $"{nameof FsBeacon} | SignInContainer [ render ] starting sign up...")
 
                         let credentials = $"a@{Dom.deviceTag}"
                         //
@@ -254,7 +259,8 @@ module SampleComponent =
                             (fun _ ->
                                 promise {
                                     Profiling.addTimestamp
-                                        $"{nameof FsBeacon} | SignInButton [ onClick ] syncHydrateCompleted={syncHydrateCompleted}"
+                                        (fun () ->
+                                            $"{nameof FsBeacon} | SignInButton [ onClick ] syncHydrateCompleted={syncHydrateCompleted}")
 
                                     do! signIn ()
                                 })
@@ -271,7 +277,7 @@ module SampleComponent =
         let alias = Store.useValue Selectors.Gun.alias
         let logout = Auth.useLogout ()
 
-        Profiling.addTimestamp $"{nameof FsBeacon} | LogoutButton [ render ] alias={alias}"
+        Profiling.addTimestamp (fun () -> $"{nameof FsBeacon} | LogoutButton [ render ] alias={alias}")
 
         Button.Button
             {|
@@ -281,7 +287,9 @@ module SampleComponent =
                     fun x ->
                         x.onClick <-
                             (fun _ ->
-                                Profiling.addTimestamp $"{nameof FsBeacon} | LogoutButton [ onClick ] alias={alias}"
+                                Profiling.addTimestamp
+                                    (fun () -> $"{nameof FsBeacon} | LogoutButton [ onClick ] alias={alias}")
+
                                 logout ())
 
                         x.disabled <- alias.IsNone
@@ -293,7 +301,7 @@ module SampleComponent =
 
     [<ReactComponent>]
     let ClearButton () =
-        Profiling.addTimestamp $"{nameof FsBeacon} | ClearButton [ render ] "
+        Profiling.addTimestamp (fun () -> $"{nameof FsBeacon} | ClearButton [ render ] ")
 
         Button.Button
             {|
@@ -304,7 +312,7 @@ module SampleComponent =
                         x.onClick <-
                             (fun _ ->
                                 promise {
-                                    Profiling.addTimestamp $"{nameof FsBeacon} | ClearButton [ onClick ]"
+                                    Profiling.addTimestamp (fun () -> $"{nameof FsBeacon} | ClearButton [ onClick ]")
                                     Profiling.globalClearProfilingState.Get () ()
                                 })
                 Children =
@@ -323,18 +331,19 @@ module SampleComponent =
     let AddFileButton () =
         let alias = Store.useValue Selectors.Gun.alias
 
-        Profiling.addTimestamp $"{nameof FsBeacon} | AddFileButton [ render ] alias={alias}"
+        Profiling.addTimestamp (fun () -> $"{nameof FsBeacon} | AddFileButton [ render ] alias={alias}")
 
         let addFile =
             Store.useCallbackRef
                 (fun _ setter _ ->
                     promise {
-                        Profiling.addTimestamp $"{nameof FsBeacon} | AddFileButton [ render ] addFile()"
+                        Profiling.addTimestamp (fun () -> $"{nameof FsBeacon} | AddFileButton [ render ] addFile()")
 
                         let! hexString = hexStringPromise
                         let fileId = Hydrate.hydrateFile setter (AtomScope.Current, hexString)
 
-                        Profiling.addTimestamp $"{nameof FsBeacon} | addFile callback completed. fileId={fileId}"
+                        Profiling.addTimestamp
+                            (fun () -> $"{nameof FsBeacon} | addFile callback completed. fileId={fileId}")
                     })
 
         Button.Button
@@ -345,7 +354,7 @@ module SampleComponent =
                     fun x ->
                         x.onClick <-
                             (fun _ ->
-                                Profiling.addTimestamp $"{nameof FsBeacon} | AddFileButton [ onClick ]"
+                                Profiling.addTimestamp (fun () -> $"{nameof FsBeacon} | AddFileButton [ onClick ]")
                                 addFile ())
 
                         x.disabled <- alias.IsNone
@@ -359,7 +368,7 @@ module SampleComponent =
     let CounterButton () =
         let testCounter, setTestCounter = Store.useState State.Atoms.Sample.testCounter
 
-        Profiling.addTimestamp $"{nameof FsBeacon} | CounterButton [ render ] testCounter={testCounter}"
+        Profiling.addTimestamp (fun () -> $"{nameof FsBeacon} | CounterButton [ render ] testCounter={testCounter}")
 
         Button.Button
             {|
@@ -371,7 +380,8 @@ module SampleComponent =
                             (fun _ ->
                                 promise {
                                     Profiling.addTimestamp
-                                        $"{nameof FsBeacon} | CounterButton [ onClick ] testCounter={testCounter}"
+                                        (fun () ->
+                                            $"{nameof FsBeacon} | CounterButton [ onClick ] testCounter={testCounter}")
 
                                     setTestCounter (testCounter + 1)
                                 })
@@ -385,7 +395,7 @@ module SampleComponent =
     let MountButton () =
         let mounted, setMounted = Store.useState State.Atoms.Sample.mounted
 
-        Profiling.addTimestamp $"{nameof FsBeacon} | MountButton [ render ] mounted={mounted}"
+        Profiling.addTimestamp (fun () -> $"{nameof FsBeacon} | MountButton [ render ] mounted={mounted}")
 
         Button.Button
             {|
@@ -397,7 +407,7 @@ module SampleComponent =
                             (fun _ ->
                                 promise {
                                     Profiling.addTimestamp
-                                        $"{nameof FsBeacon} | MountButton [ onClick ] mounted={mounted}"
+                                        (fun () -> $"{nameof FsBeacon} | MountButton [ onClick ] mounted={mounted}")
 
                                     setMounted (not mounted)
                                 })
@@ -411,7 +421,7 @@ module SampleComponent =
     let HrefIndicator () =
         let _routeTrigger = Store.useValue Atoms.routeTrigger
 
-        Profiling.addTimestamp $"{nameof FsBeacon} | HrefIndicator [ render ] _routeTrigger={_routeTrigger}"
+        Profiling.addTimestamp (fun () -> $"{nameof FsBeacon} | HrefIndicator [ render ] _routeTrigger={_routeTrigger}")
 
         str $"href: {Browser.Dom.window.location.href}"
 
@@ -419,7 +429,7 @@ module SampleComponent =
     let AsyncAliasIndicator () =
         let asyncAlias = Store.useValue Selectors.Gun.asyncAlias
 
-        Profiling.addTimestamp $"{nameof FsBeacon} | AsyncAliasIndicator [ render ] asyncAlias={asyncAlias}"
+        Profiling.addTimestamp (fun () -> $"{nameof FsBeacon} | AsyncAliasIndicator [ render ] asyncAlias={asyncAlias}")
 
         Ui.flex
             (fun _ -> ())
@@ -430,7 +440,7 @@ module SampleComponent =
 
     [<ReactComponent>]
     let SettingsIndicator () =
-        Profiling.addTimestamp $"{nameof FsBeacon} | SettingsIndicator [ render ] "
+        Profiling.addTimestamp (fun () -> $"{nameof FsBeacon} | SettingsIndicator [ render ] ")
 
         Ui.box
             (fun x ->
@@ -440,7 +450,7 @@ module SampleComponent =
 
     [<ReactComponent>]
     let InnerComponent () =
-        Profiling.addTimestamp $"{nameof FsBeacon} | InnerComponent [ render ] "
+        Profiling.addTimestamp (fun () -> $"{nameof FsBeacon} | InnerComponent [ render ] ")
 
         React.useEffect (
             (fun () ->
@@ -503,7 +513,8 @@ module SampleComponent =
         let ack, setAck = Store.useState (Atoms.Message.ack messageId)
 
         Profiling.addTimestamp
-            $"{nameof FsBeacon} | MessageConsumer [ render ] messageId={messageId} ack={ack} appMessage={appMessage}"
+            (fun () ->
+                $"{nameof FsBeacon} | MessageConsumer [ render ] messageId={messageId} ack={ack} appMessage={appMessage}")
 
         React.useEffect (
             (fun () ->
@@ -513,7 +524,8 @@ module SampleComponent =
                         match appMessage with
                         | Message.Command command ->
                             Profiling.addTimestamp
-                                $"{nameof FsBeacon} | MessageConsumer [ render ] starting consumeCommands..."
+                                (fun () ->
+                                    $"{nameof FsBeacon} | MessageConsumer [ render ] starting consumeCommands...")
 
                             let! events = consumeCommands (command |> List.singleton)
 
@@ -540,7 +552,7 @@ module SampleComponent =
 
     [<ReactComponent>]
     let MessagesListener () =
-        Profiling.addTimestamp $"{nameof FsBeacon} | MessagesListener [ render ] "
+        Profiling.addTimestamp (fun () -> $"{nameof FsBeacon} | MessagesListener [ render ] ")
         let messageIdAtoms = Store.useValue State.Selectors.Sample.messageIdAtoms
 
         React.fragment [
@@ -549,7 +561,7 @@ module SampleComponent =
 
     [<ReactComponent>]
     let HydrateSyncContainerWrapper () =
-        Profiling.addTimestamp $"{nameof FsBeacon} | HydrateSyncContainerWrapper [ render ] "
+        Profiling.addTimestamp (fun () -> $"{nameof FsBeacon} | HydrateSyncContainerWrapper [ render ] ")
         let syncHydrateStarted = Store.useValue Atoms.Sample.syncHydrateStarted
         let syncHydrateCompleted = Store.useValue Atoms.Sample.syncHydrateCompleted
 
@@ -560,7 +572,7 @@ module SampleComponent =
 
     [<ReactComponent>]
     let SampleComponent () =
-        Profiling.addTimestamp $"{nameof FsBeacon} | Component [ render ] "
+        Profiling.addTimestamp (fun () -> $"{nameof FsBeacon} | Component [ render ] ")
 
         let mounted = Store.useValue State.Atoms.Sample.mounted
 

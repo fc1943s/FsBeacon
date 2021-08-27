@@ -38,7 +38,7 @@ module SelectorsMagic =
             let valueAtom = Atom.Primitives.atom lastValue
             let accessorsAtom = Atom.Primitives.atom (None: (Getter<_> * Setter<_>) option)
 
-            Profiling.addTimestamp $"{nameof FsStore} | Selectors.store [ constructor ]"
+            Profiling.addTimestamp (fun () -> $"{nameof FsStore} | Selectors.store [ constructor ]")
 
             let rec valueWrapper =
                 Atom.Primitives.selector
@@ -46,12 +46,14 @@ module SelectorsMagic =
                         let result = Atom.get getter valueAtom
 
                         Profiling.addTimestamp
-                            $"{nameof FsStore} | Selectors.store [ valueWrapper.read(getter) ] result={result}"
+                            (fun () ->
+                                $"{nameof FsStore} | Selectors.store [ valueWrapper.read(getter) ] result={result}")
 
                         result)
                     (fun getter setter newValue ->
                         Profiling.addTimestamp
-                            $"{nameof FsStore} | Selectors.store [ valueWrapper.set(getter,setter,newValue) ] newValue={newValue}"
+                            (fun () ->
+                                $"{nameof FsStore} | Selectors.store [ valueWrapper.set(getter,setter,newValue) ] newValue={newValue}")
 
                         Atom.set setter accessorsAtom (Some (getter, setter))
                         Atom.set setter valueAtom newValue)
@@ -60,14 +62,16 @@ module SelectorsMagic =
                     (fun setAtom ->
                         promise {
                             Profiling.addTimestamp
-                                $"{nameof FsStore} | Selectors.store [ valueWrapper.onMount() ] lastValue={lastValue}"
+                                (fun () ->
+                                    $"{nameof FsStore} | Selectors.store [ valueWrapper.onMount() ] lastValue={lastValue}")
 
                             lastValue <- lastValue + 1
                             setAtom lastValue
                         })
                     (fun () ->
                         Profiling.addTimestamp
-                            $"{nameof FsStore} | Selectors.store [ valueWrapper.onUnmount() ] lastValue={lastValue}")
+                            (fun () ->
+                                $"{nameof FsStore} | Selectors.store [ valueWrapper.onUnmount() ] lastValue={lastValue}"))
 
             Atom.createRegistered
                 (RootAtomPath (FsStore.storeRoot, AtomName (nameof store)))
@@ -77,7 +81,8 @@ module SelectorsMagic =
                         let accessors = Atom.get getter accessorsAtom
 
                         Profiling.addTimestamp
-                            $"{nameof FsStore} | Selectors.store [ wrapper.read(getter) ] value={value} accessors={accessors.IsSome}"
+                            (fun () ->
+                                $"{nameof FsStore} | Selectors.store [ wrapper.read(getter) ] value={value} accessors={accessors.IsSome}")
 
                         accessors))
 
@@ -308,7 +313,7 @@ module SelectorsMagic =
                         let getDebugInfo () =
                             $"alias={alias} gunOptions={Json.encodeWithNull gunOptions}"
 
-                        Profiling.addTimestamp $"Selectors.Gun.adapterOptions get() {getDebugInfo ()}"
+                        Profiling.addTimestamp (fun () -> $"Selectors.Gun.adapterOptions get() {getDebugInfo ()}")
 
                         match gunOptions, alias with
                         | GunOptions.Sync peers, Some alias -> Some (Atom.AdapterOptions.Gun (peers, alias))
@@ -458,7 +463,7 @@ module SelectorsMagic =
 
                         let getDebugInfo () = $"alias={alias} hubUrl={hubUrl}"
 
-                        Profiling.addTimestamp $"Selectors.Hub.adapterOptions get() {getDebugInfo ()}"
+                        Profiling.addTimestamp (fun () -> $"Selectors.Hub.adapterOptions get() {getDebugInfo ()}")
 
                         match alias, hubUrl with
                         | Some alias, Some (String.Valid hubUrl) -> Some (Atom.AdapterOptions.Hub (hubUrl, alias))

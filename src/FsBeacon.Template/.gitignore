@@ -4,6 +4,7 @@ cypress-examples/
 cypress/videos/
 
 www/
+extensions/
 
 cra_output/
 electron_output/
