@@ -157,11 +157,11 @@ module Atom =
         let inline selector<'A> (read: Read<'A>) (write: Write<'A>) =
             jotai.atom (
                 (fun getter ->
-                    Profiling.addCount (fun () -> $"{nameof FsStore} | Atom.Primitives.selector get()")
+                    Logger.logTrace (fun () -> $"{nameof FsStore} | Atom.Primitives.selector get()")
                     read getter),
                 Some
                     (fun getter setter value ->
-                        Profiling.addCount (fun () -> $"{nameof FsStore} | Atom.Primitives.selector set()")
+                        Logger.logTrace (fun () -> $"{nameof FsStore} | Atom.Primitives.selector set()")
                         let newValue = value
                         //                        match jsTypeof value with
                         //                         | "function" -> (unbox value) () |> unbox

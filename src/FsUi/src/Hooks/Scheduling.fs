@@ -19,7 +19,8 @@ module Scheduling =
         | Timeout -> JS.setTimeout, JS.clearTimeout
         | Interval -> JS.setInterval, JS.clearInterval
 
-    let inline useScheduling schedulingType duration (fn: Getter<obj> -> Setter<obj> -> JS.Promise<unit>) =
+    // TODO: this hook does not work with inline (fable bug?)
+    let rec useScheduling schedulingType delay (fn: Getter<obj> -> Setter<obj> -> JS.Promise<unit>) =
         let fnCallback = React.useCallbackRef (fun (getter, setter) -> fn getter setter)
 
         let savedCallback = React.useRef fnCallback
@@ -52,15 +53,12 @@ module Scheduling =
 
         React.useEffect (
             (fun () ->
-                let id = setFn (fn >> Promise.start) duration
+                let id = setFn (fn >> Promise.start) delay
                 Object.newDisposable (fun () -> clearFn id)),
             [|
                 box clearFn
                 box setFn
                 box fn
-                box isMountedRef
-                box schedulingType
-                box savedCallback
-                box duration
+                box delay
             |]
         )

@@ -6,15 +6,18 @@ open Fable.React
 open Feliz
 open FsJs
 open FsStore
-open FsStore.Hooks
-open FsUi.Bindings
-open FsUi.Hooks
+open FsStore.Bindings.Jotai
 open FsCore
 open FsStore.State
 open FsUi.State
+open FsStore.Hooks
+open FsUi.Bindings
+open FsUi.Hooks
 
 
 module DebugPanel =
+    open System.Text.RegularExpressions
+
 
     [<RequireQualifiedAccess>]
     type DebugPanelDisplay =
@@ -69,22 +72,46 @@ module DebugPanel =
     let PrivateKeysIndicator () =
         ValueIndicator (nameof Selectors.Gun.privateKeys) Selectors.Gun.privateKeys
 
+    let inline naturalSortFn (text: string) =
+        Regex("([0-9]+)").Split text
+        |> Array.map
+            (fun text ->
+                match Int32.TryParse text with
+                | true, i -> Choice1Of2 i
+                | false, _ -> Choice2Of2 text)
+
     let inline getSchedulingInterval (deviceInfo: Dom.DeviceInfo) =
         if not deviceInfo.IsTesting then 1000
         elif Dom.globalExit.Get () then 2000 // * 30
         else 0
 
+    let debugText = Atom.create (AtomType.Atom "")
+    let debugOldJson = Atom.create (AtomType.Atom "")
+
     [<ReactComponent>]
     let DebugPanel display =
         let deviceInfo = Store.useValue Selectors.deviceInfo
         let showDebug = Store.useValue Atoms.showDebug
-        let interval = (getSchedulingInterval deviceInfo)
 
-        Profiling.addTimestamp
-            (fun () -> $"{nameof FsUi} | DebugPanel [ render ] showDebug={showDebug} interval={interval}")
+        let interval, setInterval = React.useState (getSchedulingInterval deviceInfo)
 
-        let text, setText = React.useState ""
-        let oldJson, setOldJson = React.useState ""
+        Scheduling.useScheduling
+            Scheduling.Interval
+            1000
+            (fun _ _ ->
+                promise {
+                    if not showDebug then
+                        ()
+                    else
+                        let newInterval = getSchedulingInterval deviceInfo
+                        if newInterval <> interval then
+                            setInterval newInterval
+                })
+
+        Logger.logTrace (fun () -> $"{nameof FsUi} | DebugPanel [ render ] interval={interval} showDebug={showDebug} ")
+
+        let text, setText = Store.useState debugText
+        let oldJson, setOldJson = Store.useState debugOldJson
 
         Scheduling.useScheduling
             Scheduling.Interval
@@ -108,7 +135,7 @@ module DebugPanel =
                                         SortedCountMap =
                                             Profiling.globalProfilingState.Get().CountMap
                                             |> mapDict
-                                            |> Seq.sortByDescending (snd >> string)
+                                            |> Seq.sortByDescending (snd >> string >> naturalSortFn)
                                             |> createObj
                                     |}
                                 Json.encodeWithNullFormatted
