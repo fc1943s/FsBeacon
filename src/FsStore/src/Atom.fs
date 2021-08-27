@@ -161,7 +161,7 @@ module Atom =
                     read getter),
                 Some
                     (fun getter setter value ->
-                        Logger.logTrace (fun () -> $"{nameof FsStore} | Atom.Primitives.selector set()")
+//                        Logger.logTrace (fun () -> $"{nameof FsStore} | Atom.Primitives.selector set()")
                         let newValue = value
                         //                        match jsTypeof value with
                         //                         | "function" -> (unbox value) () |> unbox

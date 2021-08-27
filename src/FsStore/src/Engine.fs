@@ -916,18 +916,17 @@ module Engine =
 
         let atomPath = storeAtomPath |> StoreAtomPath.AtomPath
 
+        let mutable lastAdapterValues: (Atom.AdapterType * Atom.AdapterOptions * AtomConfig<TicksGuid * 'A> * (TicksGuid * 'A)) list =
+            []
+
         let getDebugInfo () =
-            $"localAdaptersAtom={localAdaptersAtom} atomPath={atomPath}"
+            $"localAdaptersAtom={localAdaptersAtom} atomPath={atomPath} lastAdapterValues={Json.encodeWithNull lastAdapterValues} defaultValue={defaultValue}"
 
         let createRegisteredAtomWithSubscriptionTimestamp fn getDebugInfo =
             Profiling.addTimestamp
                 (fun () -> $"{nameof FsStore} | Engine.createRegisteredAtomWithSubscription {fn ()} {getDebugInfo ()}")
 
         createRegisteredAtomWithSubscriptionTimestamp (fun () -> $" [ constructor ] ") getDebugInfo
-
-        let mutable lastAdapterValues: (Atom.AdapterType * Atom.AdapterOptions * AtomConfig<TicksGuid * 'A> * (TicksGuid * 'A)) list =
-            []
-
 
         let batchPutFromUi (gunAtomNode, privateKeys, setAtom, ticks, newValue) =
             Batcher.batch (
@@ -952,7 +951,8 @@ module Engine =
                                     (Gun.GunValue.EncryptedSignedValue (Gun.EncryptedSignedValue newValueJson))
 
                             createRegisteredAtomWithSubscriptionTimestamp
-                                (fun () -> $" [ sync ] gun ticks={ticks} putResult={putResult}.  ")
+                                (fun () ->
+                                    $" [ sync ] gun batchPutFromUi. newValue={newValue} ticks={ticks} putResult={putResult}.  ")
                                 getDebugInfo
 
                             if putResult then setAtom (ticks, newValue)
@@ -971,33 +971,36 @@ module Engine =
 
                 let (lastTicks: TicksGuid, (lastAdapterType: Atom.AdapterType, lastValue)) = localAdapters |> List.head
 
+                let getDebugInfo () =
+                    $" localAdapters={Json.encodeWithNull localAdapters} {getDebugInfo ()} "
+
                 let values =
                     lastAdapterValues
                     |> List.map
-                        (fun (adapterType, _adapterOptions, adapterAtom, (ticks2, adapterValue)) ->
+                        (fun (adapterType, _adapterOptions, adapterAtom, (adapterTicks, adapterValue)) ->
                             adapterType,
                             (fun (ticks, newValue) ->
                                 createRegisteredAtomWithSubscriptionTimestamp
                                     (fun () ->
-                                        $" [ sync ] gun. adapterType={adapterType} adapter set. on set() newValue={newValue}  ")
+                                        $" [ sync ] gun. adapter set. on set() adapterType={adapterType} adapterTicks={adapterTicks} adapterValue={adapterValue} ticks={ticks} newValue={newValue}  ")
                                     getDebugInfo
 
-                                printfn $""
                                 Atom.set setter adapterAtom (ticks, newValue)),
-                            ticks2,
+                            adapterTicks,
                             adapterValue)
                     |> List.append [
                         lastAdapterType,
                         (fun (ticks, newValue) ->
-                            createRegisteredAtomWithSubscriptionTimestamp
-                                (fun () ->
-                                    $" [ sync ] gun. current adapter set ({lastAdapterType}). on set() newValue={newValue}  ")
-                                getDebugInfo
-
                             Atom.change
                                 setter
                                 localAdaptersAtom
-                                (fun oldValue -> (ticks, (lastAdapterType, newValue)) :: oldValue)),
+                                (fun oldValue ->
+                                    createRegisteredAtomWithSubscriptionTimestamp
+                                        (fun () ->
+                                            $" [ sync ] gun. current adapter set ({lastAdapterType}). on set() oldValue={oldValue} ticks={ticks} newValue={newValue}  ")
+                                        getDebugInfo
+
+                                    (ticks, (lastAdapterType, newValue)) :: oldValue)),
                         lastTicks,
                         lastValue
                        ]
@@ -1012,7 +1015,7 @@ module Engine =
                 let getDebugInfo () =
                     $" {getDebugInfo ()} values={valuesfmt}"
 
-                createRegisteredAtomWithSubscriptionTimestamp (fun () -> $" [ sync ]  ") getDebugInfo
+                createRegisteredAtomWithSubscriptionTimestamp (fun () -> $" |[ sync ]|  ") getDebugInfo
 
                 let lastAdapterType, lastSetAtom, lastTicks, lastValue = values.Head
 
@@ -1026,7 +1029,7 @@ module Engine =
                     (fun (adapterType, setAtom, ticks, value) ->
                         promise {
                             let getDebugInfo () =
-                                $" adapterType={adapterType} adapter lastTicks={lastTicks} ticks={ticks} lastValue={lastValue} value={value} {getDebugInfo ()} "
+                                $" adapterType={adapterType} lastAdapterType={lastAdapterType} lastTicks={lastTicks} ticks={ticks} lastValue={lastValue} value={value} {getDebugInfo ()} "
 
                             if lastTicks = ticks then
                                 createRegisteredAtomWithSubscriptionTimestamp
@@ -1046,8 +1049,14 @@ module Engine =
                                         debouncedPutFromUi (
                                             gunAtomNode,
                                             privateKeys,
-                                            (fun (_ticks, value) -> setAtom (lastTicks, value)),
-                                            ticks,
+                                            (fun (_ticks, value) ->
+                                                createRegisteredAtomWithSubscriptionTimestamp
+                                                    (fun () ->
+                                                        $" [ sync ]¨¨ inside debouncedPutFromUi setAtom. _ticks={_ticks} value={value} lastTicks={lastTicks} lastValue={lastValue} ")
+                                                    getDebugInfo
+
+                                                setAtom (lastTicks, value)),
+                                            lastTicks,
                                             lastValue
                                         )
                                     | _ ->
@@ -1122,7 +1131,7 @@ module Engine =
 
                     Profiling.addTimestamp
                         (fun () ->
-                            $"+01a Engine.createRegisteredAtomWithSubscription wrapper.get() {getDebugInfo ()} localAdapters={Json.encodeWithNull localAdapters} lastAdapterValues={Json.encodeWithNull lastAdapterValues} ")
+                            $"+01a Engine.createRegisteredAtomWithSubscription wrapper.get() {getDebugInfo ()} localAdapters={Json.encodeWithNull localAdapters}  ")
 
                     //                snd result
                     value)
@@ -1135,7 +1144,7 @@ module Engine =
                         (fun localAdapters ->
                             Profiling.addTimestamp
                                 (fun () ->
-                                    $"+00a Engine.createRegisteredAtomWithSubscription wrapper.set() {getDebugInfo ()} localAdapters={Json.encodeWithNull localAdapters} lastAdapterValues={Json.encodeWithNull lastAdapterValues}  ")
+                                    $"+00a Engine.createRegisteredAtomWithSubscription wrapper.set() {getDebugInfo ()} localAdapters={Json.encodeWithNull localAdapters}   ")
 
                             localAdapters
                             |> List.filter (fun (_, (adapterType, _)) -> adapterType <> Atom.AdapterType.Memory)
