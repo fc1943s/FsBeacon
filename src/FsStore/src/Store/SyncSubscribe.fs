@@ -78,8 +78,6 @@ module SyncSubscribe =
 
                                                             trigger (ticks, Atom.AdapterType.Hub, newValue)
                                                         | _ -> ()
-
-                                                        return! newHashedDisposable ticks
                                                     })
                                                 (fun ex ->
                                                     Logger.logError
@@ -108,15 +106,9 @@ module SyncSubscribe =
                                     promise {
                                         let data =
                                             match gunValue with
-                                            | Gun.GunValue.EncryptedSignedValue (Gun.EncryptedSignedValue result) ->
-                                                result
-                                            | _ -> null
+                                            | Gun.EncryptedSignedValue result -> result
 
-                                        let! newValue =
-                                            match gunValue with
-                                            | Gun.GunValue.EncryptedSignedValue result ->
-                                                Gun.userDecode<'TValue> gunKeys result
-                                            | _ -> unbox null |> Promise.lift
+                                        let! newValue = Gun.userDecode<'TValue> gunKeys gunValue
 
                                         trigger (ticks, Atom.AdapterType.Gun, newValue)
 
@@ -175,8 +167,6 @@ module SyncSubscribe =
                                                 Logger.logTrace
                                                     (fun () ->
                                                         $"Store.syncSubscribe. [$$$$ wrapper.on() HUB put] skipping. newValue={newValue}. {getDebugInfo ()} ")
-
-                                        return! newHashedDisposable ticks
                                     })
 
                             syncState.GunSubscription <- Some DateTime.Now.Ticks

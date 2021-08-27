@@ -5,7 +5,6 @@ open FsJs
 open Fable.SignalR
 open Fable.Core
 open Fable.Core.JsInterop
-open System
 
 
 module Gun =
@@ -287,14 +286,7 @@ module Gun =
             let decoded =
                 match decrypted with
                 | Some (DecryptedValue decrypted) ->
-                    try
                         decrypted |> Json.decode<'TValue option>
-                    with
-                    | ex ->
-                        Logger.logError
-                            (fun () -> $"userDecode decode error. ex={ex} data={data} decrypted={decrypted} typeof decrypted={jsTypeof decrypted}")
-
-                        None
                 | None ->
                     Logger.logDebug (fun () -> $"userDecode decrypt empty. decrypted={decrypted} data={data}")
 
@@ -437,24 +429,19 @@ module Gun =
         gun.on
             (fun data (GunNodeSlice key) ->
                 promise {
-                    Logger.logDebug
-                        (fun () ->
-                            if key = "devicePing" then
-                                null
-                            else
-                                $"subscribe.on() data. batching...data={data} key={key}")
+                    Profiling.addTimestamp (fun () -> $"($$) ---- Gun.subscribe.on() data. batching...data={data} key={key} ")
 
-                    fn data
+                    fn (data |> unbox<EncryptedSignedValue>)
                 })
-
         Object.newDisposable
             (fun () ->
-                printfn "subscribe.on() data. Dispose promise observable."
+                Profiling.addTimestamp (fun () -> $"($$) ---- Gun.subscribe.on() data. Dispose promise observable. ")
                 gun.off () |> ignore)
         |> Promise.lift
 
 
-    let inline batchData<'T> (fn: TicksGuid * 'T -> JS.Promise<IDisposable>) (ticks: TicksGuid, data: 'T) =
+    let inline batchData<'T> (fn: TicksGuid * 'T -> JS.Promise<unit>) (ticks: TicksGuid, data: 'T) =
+        Profiling.addTimestamp (fun () -> $"($$) ---- #B subscriptionTicks={ticks} data={data} ")
         Batcher.batch (Batcher.BatchType.Data (data, ticks, fn))
 
     let inline batchKeys map fn (ticks, data) =
@@ -463,9 +450,13 @@ module Gun =
 
     let inline batchSubscribe gunAtomNode ticks trigger =
         let fn ticks =
-            subscribe gunAtomNode (fun value -> batchData trigger (ticks, value))
+            Profiling.addTimestamp (fun () -> $"($$) ---- #1.1 ticks={ticks} gunAtomNode={gunAtomNode} ")
+            subscribe gunAtomNode (fun value ->
+                Profiling.addTimestamp (fun () -> $"($$) ---- #A ticks={ticks} value={value} ")
+                batchData trigger (ticks, value))
 
-        Batcher.debouncedBatch (Batcher.BatchType.Subscribe (ticks, fn))
+        Profiling.addTimestamp (fun () -> $"($$) ---- #1 ticks={ticks} ")
+        Batcher.batch (Batcher.BatchType.Subscribe (ticks, fn))
 
     let inline batchSet gunAtomNode (ticks, trigger) =
         let fn ticks =
