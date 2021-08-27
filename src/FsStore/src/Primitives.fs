@@ -84,12 +84,11 @@ module PrimitivesMagic =
             (defaultValueFn: 'TKey -> 'A)
             keyIdentifier
             =
-            jotaiUtils.atomFamily
+            Atom.Primitives.atomFamily
                 (fun param ->
                     Atom.createRegistered
                         (IndexedAtomPath (storeRoot, collection, keyIdentifier param, AtomName name))
                         (AtomType.Atom (defaultValueFn param)))
-        //                Object.compare
 
 
         let inline selector<'A> (read: Read<'A>) (write: Write<'A>) = Atom.Primitives.selector read write
@@ -172,12 +171,11 @@ module PrimitivesMagic =
 
 
         let inline asyncSelectorFamily<'TKey, 'A> (read: 'TKey -> AsyncRead<'A>) (write: 'TKey -> AsyncWrite<'A>) =
-            jotaiUtils.atomFamily
+            Atom.Primitives.atomFamily
                 (fun param ->
                     OldPrimitives.asyncSelector
                         (read param)
                         (fun getter setter newValue -> promise { do! write param getter setter newValue }))
-        //                Object.compare
 
         let inline asyncReadSelectorFamily<'TKey, 'A> (read: 'TKey -> AsyncRead<'A>) =
             asyncSelectorFamily

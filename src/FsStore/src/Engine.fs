@@ -87,7 +87,7 @@ module Engine =
 
         Profiling.addTimestamp $"+24e Engine.wrapAtomWithState [ constructor ] {getDebugInfo ()}"
 
-        let mutable lastSetAtom = fun _ -> failwith "invalid lastSetAtom"
+        let mutable lastSetAtom = None
 
         let getState () =
             match lastStore with
@@ -111,7 +111,7 @@ module Engine =
                 | Some (getter, setter, state) ->
                     Profiling.addTimestamp $"+23e Engine.wrapAtomWithState newMount(). invoking mount {getDebugInfo ()}"
                     mounted <- true
-                    do! mount getter setter state lastSetAtom
+                    do! mount getter setter state lastSetAtom.Value
                 | None ->
                     Profiling.addTimestamp
                         $"+22e Engine.wrapAtomWithState newMount(). skipping, no state. {getDebugInfo ()}"
@@ -150,11 +150,15 @@ module Engine =
             Profiling.addTimestamp
                 $"+19e Engine.wrapAtomWithState refreshInternalState (get or set). newState={Json.encodeWithNull newState}. will mount or unmount. {getDebugInfo ()}"
 
-            match newState with
-            | Some _ ->
-                lastState <- newState
-                newMount () |> Promise.start
-            | None -> newUnmount ()
+            if lastSetAtom.IsNone then
+                Profiling.addTimestamp
+                    $"+19-1e X Engine.wrapAtomWithState refreshInternalState. skipping mount/unmount. lastSetAtom not found {getDebugInfo ()}"
+            else
+                match newState with
+                | Some _ ->
+                    lastState <- newState
+                    newMount () |> Promise.start
+                | None -> newUnmount ()
 
         let wrapper =
             Atom.Primitives.selector
@@ -176,7 +180,7 @@ module Engine =
             |> Atom.addSubscription
                 true
                 (fun setAtom ->
-                    lastSetAtom <- setAtom
+                    lastSetAtom <- Some setAtom
                     newMount ())
                 (fun () -> newUnmount ())
 
@@ -301,6 +305,7 @@ module Engine =
                     |> Seq.head
 
                 ticks, (group, value))
+        |> Seq.toList
 
 
 
@@ -394,6 +399,30 @@ module Engine =
 //
 //                                None
 
+    let subscriptionAdapterFnMap =
+        Dictionary<Atom.AdapterType * StoreAtomPath, StoreAtomPath
+            -> Atom.AdapterType
+            -> (Getter<obj> -> (AtomConfig<obj> -> obj -> unit) -> Atom.AdapterOptions -> (System.Guid * obj -> unit) -> unit) * (Getter<obj> -> (AtomConfig<obj> -> obj -> unit) -> Atom.AdapterOptions -> unit)>
+            ()
+
+    let atomDefaultValueMap = Dictionary<StoreAtomPath, obj> ()
+    let groupAtomDefaultValueMap = Dictionary<Gun.Alias option * StoreAtomPath, obj> ()
+
+    let groupMapAtom =
+        Atom.atomFamilyAtom
+            (fun (alias: Gun.Alias option, storeAtomPath: StoreAtomPath) ->
+                groupAtomDefaultValueMap.[alias, storeAtomPath]
+                |> List.singleton)
+
+    let lastSyncValueByTypeAtom =
+        Atom.Primitives.readSelectorFamily
+            (fun (alias: Gun.Alias option, storeAtomPath: StoreAtomPath) getter ->
+                let groupMap = Atom.get getter (groupMapAtom (alias, storeAtomPath))
+
+                groupMap
+                |> unbox<(TicksGuid * (obj * obj)) list>
+                |> groupValues)
+
     let inline createRegisteredAtomWithGroupEx
         (storeAtomPath: StoreAtomPath)
         (defaultGroup: 'TGroup, defaultValue: 'A)
@@ -403,18 +432,18 @@ module Engine =
 
         Profiling.addTimestamp $"+13.1c Engine.createRegisteredAtomWithGroup [ constructor ] {getDebugInfo ()}"
 
-        let defaultValue = Guid.newTicksGuid (), (defaultGroup, defaultValue)
+        let defaultValue = System.Guid.Empty, (defaultGroup, defaultValue)
 
 
-        let groupMapAtom = Atom.atomFamilyAtom (fun (_alias: Gun.Alias option) -> defaultValue |> List.singleton)
-
-        let rec lastSyncValueByTypeAtom =
-            Atom.Primitives.readSelectorFamily
-                (fun (alias: Gun.Alias option) getter ->
-                    let groupMap = Atom.get getter (groupMapAtom alias)
-
-                    groupValues groupMap)
-
+        //        let rec lastSyncValueByTypeAtom =
+//            Atom.Primitives.readSelectorFamily
+//                (fun (alias: Gun.Alias option) getter ->
+//                    let groupMap = Atom.get getter (groupMapAtom (alias, storeAtomPath))
+//
+//                    groupMap
+//                    |> unbox<(TicksGuid * ('TGroup * 'A)) list>
+//                    |> groupValues)
+//
         let wrapper =
             Atom.Primitives.selector
                 (fun getter ->
@@ -423,7 +452,13 @@ module Engine =
                     //                        syncEngine.SetProviders getter wrapper
                     let alias = Atom.get getter Selectors.Gun.alias
 
-                    let userAtom = lastSyncValueByTypeAtom alias
+                    if
+                        groupAtomDefaultValueMap.ContainsKey (alias, storeAtomPath)
+                        |> not
+                    then
+                        groupAtomDefaultValueMap.[(alias, storeAtomPath)] <- defaultValue
+
+                    let userAtom = lastSyncValueByTypeAtom (alias, storeAtomPath)
                     let lastSyncValueByType = Atom.get getter userAtom
 
                     let result =
@@ -434,15 +469,21 @@ module Engine =
                     Profiling.addTimestamp
                         $"+13c Engine.createRegisteredAtomWithSort wrapper.get()  alias={alias} result={result} {getDebugInfo ()}"
 
-                    result)
+                    result |> unbox<(TicksGuid * ('TGroup * 'A)) list>)
                 (fun getter setter newValueFn ->
 
                     let alias = Atom.get getter Selectors.Gun.alias
 
+                    if
+                        groupAtomDefaultValueMap.ContainsKey (alias, storeAtomPath)
+                        |> not
+                    then
+                        groupAtomDefaultValueMap.[(alias, storeAtomPath)] <- defaultValue
+
                     Profiling.addTimestamp
                         $"+12c Engine.createRegisteredAtomWithSort wrapper.set() alias={alias} {getDebugInfo ()}  "
 
-                    Atom.change setter (groupMapAtom alias) (unbox newValueFn))
+                    Atom.change setter (groupMapAtom (alias, storeAtomPath)) (unbox newValueFn))
             |> Atom.register storeAtomPath
 
         wrapper?init <- defaultValue
@@ -458,7 +499,7 @@ module Engine =
 
         Profiling.addTimestamp $"+13.1c Engine.createRegisteredAtomWithGroup [ constructor ] {getDebugInfo ()}"
 
-        let defaultValue = Guid.newTicksGuid (), (defaultGroup, defaultValue)
+        let defaultValue = System.Guid.Empty, (defaultGroup, defaultValue)
 
 
         let groupMapAtom = Atom.atomFamilyAtom (fun (_alias: Gun.Alias option) -> defaultValue |> List.singleton)
@@ -749,14 +790,11 @@ module Engine =
                     unmount getter setter adapterOptions
                     mounted <- false)
 
-    let subscriptionFnMap =
-        Dictionary<StoreAtomPath * Atom.AdapterType, (StoreAtomPath -> Atom.AdapterType -> (Getter<obj> -> (AtomConfig<obj> -> obj -> unit) -> Atom.AdapterOptions -> (System.Guid * obj -> unit) -> unit) * (Getter<obj> -> (AtomConfig<obj> -> obj -> unit) -> Atom.AdapterOptions -> unit)) * obj>
-            ()
-
     let subscriptionFamily =
         Atom.Primitives.atomFamily
-            (fun (storeAtomPath, adapterType) ->
-                let getAdapter, defaultValue = subscriptionFnMap.[(storeAtomPath, adapterType)]
+            (fun (_alias, storeAtomPath, adapterType) ->
+                let getAdapter = subscriptionAdapterFnMap.[(adapterType, storeAtomPath)]
+                let defaultValue = atomDefaultValueMap.[storeAtomPath]
                 createAdapterAtom storeAtomPath adapterType getAdapter defaultValue)
 
     //    let collectionSubscriptionFamily =
@@ -780,6 +818,8 @@ module Engine =
 
         Atom.Primitives.readSelector
             (fun getter ->
+                let alias = Atom.get getter Selectors.Gun.alias
+
                 let adapterOptionsList =
                     Reflection.unionCases<Atom.AdapterType>
                     |> List.choose
@@ -794,12 +834,13 @@ module Engine =
                     |> Array.map
                         (fun (adapterType, _) ->
                             if
-                                subscriptionFnMap.ContainsKey (storeAtomPath, adapterType)
+                                subscriptionAdapterFnMap.ContainsKey (adapterType, storeAtomPath)
                                 |> not
                             then
-                                subscriptionFnMap.[(storeAtomPath, adapterType)] <- (getCollectionAdapter, (box [||]))
+                                subscriptionAdapterFnMap.[(adapterType, storeAtomPath)] <- getCollectionAdapter
+                                atomDefaultValueMap.[storeAtomPath] <- box [||]
 
-                            subscriptionFamily (storeAtomPath, adapterType))
+                            subscriptionFamily (alias, storeAtomPath, adapterType))
                     |> Array.map (Atom.get getter)
 
 
@@ -865,14 +906,11 @@ module Engine =
                 Profiling.addTimestamp
                     $"{nameof FsStore} | Engine.createRegisteredAtomWithSubscription [ sync ] {getDebugInfo ()} values={valuesfmt} "
 
-                let lastAdapterType, lastSetAtom, lastTicks, lastValue = values.Head
+                let _, lastSetAtom, lastTicks, lastValue = values.Head
 
                 values
                 |> List.skip 1
-                |> List.filter
-                    (fun (adapterType, _, _, value) ->
-                        adapterType <> lastAdapterType
-                        && value |> Object.compare lastValue |> not)
+                |> List.filter (fun (_, _, _, value) -> value |> Object.compare lastValue |> not)
                 |> List.map
                     (fun (adapterType, setAtom, ticks, value) ->
                         promise {
@@ -910,7 +948,7 @@ module Engine =
                                         if putResult then setAtom newValue
                                     | _ -> ()
                                 | _ -> setAtom newValue
-                            else
+                            elif lastTicks < ticks then
                                 // set local atom from adapter value
                                 lastSetAtom value
 
@@ -925,6 +963,8 @@ module Engine =
         let debouncedSync = Js.debounce sync 0
 
         let refreshAdapterValues getter =
+            let alias = Atom.get getter Selectors.Gun.alias
+
             let result =
                 Reflection.unionCases<Atom.AdapterType>
                 |> List.choose
@@ -935,13 +975,14 @@ module Engine =
                 |> List.map
                     (fun (adapterType, _) ->
                         if
-                            subscriptionFnMap.ContainsKey (storeAtomPath, adapterType)
+                            subscriptionAdapterFnMap.ContainsKey (adapterType, storeAtomPath)
                             |> not
                         then
-                            subscriptionFnMap.[(storeAtomPath, adapterType)] <- (getAtomAdapter, box defaultValue)
+                            subscriptionAdapterFnMap.[(adapterType, storeAtomPath)] <- getAtomAdapter
+                            atomDefaultValueMap.[storeAtomPath] <- defaultValue
 
                         adapterType,
-                        subscriptionFamily (storeAtomPath, adapterType)
+                        subscriptionFamily (alias, storeAtomPath, adapterType)
                         |> unbox<AtomConfig<TicksGuid * 'A>>)
                 |> List.map
                     (fun (adapterType, adapterOptionsAtom) ->

@@ -61,7 +61,7 @@ module Atom =
 
         Logger.logTrace (fun () -> $"{nameof FsStore} | Atom.wrap [ constructor ] {getDebugInfo ()}")
 
-        let internalMount setAtom =
+        let internalMount (setAtom: 'A -> unit) =
             promise {
                 mounted <- true
 
