@@ -1,5 +1,6 @@
 namespace FsBeacon.Template
 
+open Fable.Core
 open FsStore.Bindings.Jotai
 open FsCore
 open FsCore.BaseModel
@@ -57,12 +58,12 @@ module State =
 
             let rec testCounter =
                 Engine.createRegisteredAtomWithSubscriptionStorage
-        //        Atom.createRegisteredWithStorage
+                    //        Atom.createRegisteredWithStorage
                     (RootAtomPath (FsBeacon.storeRoot, AtomName (nameof testCounter)))
                     0
 
 
     module Selectors =
         module Sample =
-            let fileIdAtoms = Engine.subscribeCollection FsStore.storeRoot Atoms.File.collection FileId
-            let messageIdAtoms = Engine.subscribeCollection FsStore.storeRoot Atoms.Message.collection MessageId
+            let fileIdAtoms = Engine.subscribeFamilyKey Atoms.File.chunkCount
+            let messageIdAtoms = Engine.subscribeFamilyKey Atoms.Message.ack
