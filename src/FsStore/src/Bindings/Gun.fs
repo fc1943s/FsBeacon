@@ -262,18 +262,18 @@ module Gun =
                     err ex)
 
 
-    let inline userDecode<'TValue> (keys: GunKeys) data =
+    let inline userDecode<'TValue> (privateKeys: GunKeys) data =
         promise {
             let! decrypted =
                 promise {
-                    match keys with
+                    match privateKeys with
                     | { pub = Some pub } when data |> Option.ofObjUnbox |> Option.isSome ->
                         try
                             let! verified = sea.verify data pub
 
                             match verified with
                             | Some encryptedGunValue ->
-                                let! decrypted = sea.decrypt encryptedGunValue keys
+                                let! decrypted = sea.decrypt encryptedGunValue privateKeys
                                 return Some decrypted
                             | None -> return None
                         with
