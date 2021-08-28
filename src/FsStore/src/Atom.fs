@@ -52,7 +52,7 @@ module Atom =
     let inline change<'A> (setter: Setter<obj>) (atom: AtomConfig<'A>) (value: 'A -> 'A) =
         setter (unbox atom) (unbox value)
 
-    type Subscription<'A> = (('A -> unit) -> JS.Promise<unit>) -> unit -> unit
+//    type Subscription<'A> = (('A -> unit) -> JS.Promise<unit>) -> unit -> unit
 
     let inline addSubscription<'A> (debounce: bool) mount unmount (atom: AtomConfig<'A>) =
         let mutable mounted = false
@@ -161,7 +161,7 @@ module Atom =
                     read getter),
                 Some
                     (fun getter setter value ->
-//                        Logger.logTrace (fun () -> $"{nameof FsStore} | Atom.Primitives.selector set()")
+                        //                        Logger.logTrace (fun () -> $"{nameof FsStore} | Atom.Primitives.selector set()")
                         let newValue = value
                         //                        match jsTypeof value with
                         //                         | "function" -> (unbox value) () |> unbox
@@ -208,12 +208,8 @@ module Atom =
     let inline createRegistered storeAtomPath atomType =
         atomType |> create |> register storeAtomPath
 
-    // TODO: remove
-    let inline formatIfEnum<'T> (value: 'T) =
-        if typeof<'T>.IsEnum then value |> Enum.name |> unbox else value
-
     let inline createRegisteredWithStorage storeAtomPath (defaultValue: 'A) =
-        let defaultValueFormatted = defaultValue |> formatIfEnum
+        let defaultValueFormatted = defaultValue |> Enum.formatIfEnum
 
         let internalAtom =
             jotaiUtils.atomWithStorage
@@ -226,21 +222,18 @@ module Atom =
             AtomType.Selector (
                 (fun getter -> get getter internalAtom),
                 (fun _ setter argFn ->
-                    let newValue = argFn |> Object.invokeOrReturn |> formatIfEnum
+                    let newValue =
+                        argFn
+                        |> Object.invokeOrReturn
+                        |> Enum.formatIfEnum
 
                     set setter internalAtom newValue)
             )
             |> create
-            |> register storeAtomPath
 
-        //        selectorWrapper?init <- defaultValueFormatted
-//
-//        selectorWrapper |> register storeAtomPath
+        wrapper?init <- defaultValueFormatted
 
-
-        wrapper?init <- defaultValue
-
-        wrapper
+        wrapper |> register storeAtomPath
 
 
     let emptyArrayAtom = Primitives.atom ([||]: obj [])

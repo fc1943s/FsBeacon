@@ -4,7 +4,6 @@ open System
 open System.Collections.Generic
 open Fable.Core.JsInterop
 open Fable.Core
-open FsCore.BaseModel
 open FsJs
 open FsStore.Bindings
 open FsStore.Bindings.Jotai
@@ -301,19 +300,6 @@ module Engine =
 //        |> Promise.lift
 
 
-    let inline groupValues groupMap =
-        groupMap
-        |> Seq.groupBy (fun (_, (group: 'TGroup, _)) -> group)
-        |> Seq.map
-            (fun (group, v) ->
-                let ticks, value =
-                    v
-                    |> Seq.sortByDescending fst
-                    |> Seq.map (fun (ticks: TicksGuid, (_, value: 'A)) -> ticks, value)
-                    |> Seq.head
-
-                ticks, (group, value))
-        |> Seq.toList
 
 
 
@@ -407,169 +393,70 @@ module Engine =
 //
 //                                None
 
-    let subscriptionAdapterFnMap =
-        Dictionary<Atom.AdapterType * StoreAtomPath, StoreAtomPath
-            -> Atom.AdapterType
-            -> (Getter<obj> -> (AtomConfig<obj> -> obj -> unit) -> Atom.AdapterOptions -> (Guid * obj -> unit) -> unit) * (Getter<obj> -> (AtomConfig<obj> -> obj -> unit) -> Atom.AdapterOptions -> unit)>
-            ()
-
-    let atomDefaultValueMap = Dictionary<StoreAtomPath, obj> ()
-    let groupAtomDefaultValueMap = Dictionary<Gun.Alias option * StoreAtomPath, obj> ()
-
-    let groupMapAtom =
-        Atom.atomFamilyAtom
-            (fun (alias: Gun.Alias option, storeAtomPath: StoreAtomPath) ->
-                groupAtomDefaultValueMap.[alias, storeAtomPath]
-                |> List.singleton)
-
-    let lastSyncValueByTypeAtom =
-        Atom.Primitives.readSelectorFamily
-            (fun (alias: Gun.Alias option, storeAtomPath: StoreAtomPath) getter ->
-                let groupMap = Atom.get getter (groupMapAtom (alias, storeAtomPath))
-
-                groupMap
-                |> unbox<(TicksGuid * (obj * obj)) list>
-                |> groupValues)
-
-    let inline createRegisteredAtomWithGroupEx
-        (storeAtomPath: StoreAtomPath)
-        (defaultGroup: 'TGroup, defaultValue: 'A)
-        : AtomConfig<(TicksGuid * ('TGroup * 'A)) list> =
-        let getDebugInfo () =
-            $"storeAtomPath={storeAtomPath |> StoreAtomPath.AtomPath} defaultValue={defaultValue}"
-
-        Profiling.addTimestamp
-            (fun () -> $"+13.1c Engine.createRegisteredAtomWithGroup [ constructor ] {getDebugInfo ()}")
-
-        let defaultValue = Guid.Empty, (defaultGroup, defaultValue)
-
-
-        //        let rec lastSyncValueByTypeAtom =
+    //    let inline createRegisteredAtomWithGroup
+//        (storeAtomPath: StoreAtomPath)
+//        (defaultGroup: 'TGroup, defaultValue: 'A)
+//        : AtomConfig<TicksGuid * 'TGroup * 'A> =
+//
+//        let defaultValue = Guid.Empty, (defaultGroup, defaultValue)
+//
+//        let getDebugInfo () =
+//            $"storeAtomPath={storeAtomPath |> StoreAtomPath.AtomPath} defaultValue={defaultValue}"
+//
+//        Profiling.addTimestamp
+//            (fun () -> $"+13.1c Engine.createRegisteredAtomWithGroup [ constructor ] {getDebugInfo ()}")
+//
+//        let groupMapAtom = Atom.atomFamilyAtom (fun (_alias: Gun.Alias option) -> defaultValue |> List.singleton)
+//
+//        let rec lastSyncValueByTypeAtom =
 //            Atom.Primitives.readSelectorFamily
 //                (fun (alias: Gun.Alias option) getter ->
-//                    let groupMap = Atom.get getter (groupMapAtom (alias, storeAtomPath))
+//                    let groupMap = Atom.get getter (groupMapAtom alias)
+//                    groupValues groupMap)
 //
-//                    groupMap
-//                    |> unbox<(TicksGuid * ('TGroup * 'A)) list>
-//                    |> groupValues)
+//        let wrapper =
+//            Atom.Primitives.selector
+//                (fun getter ->
+//                    //                        let value = Atom.get getter subscriptions.[adapterType]
 //
-        let wrapper =
-            Atom.Primitives.selector
-                (fun getter ->
-                    //                        let value = Atom.get getter subscriptions.[adapterType]
-
-                    //                        syncEngine.SetProviders getter wrapper
-                    let alias = Atom.get getter Selectors.Gun.alias
-
-                    if
-                        groupAtomDefaultValueMap.ContainsKey (alias, storeAtomPath)
-                        |> not
-                    then
-                        groupAtomDefaultValueMap.[(alias, storeAtomPath)] <- defaultValue
-
-                    let userAtom = lastSyncValueByTypeAtom (alias, storeAtomPath)
-                    let lastSyncValueByType = Atom.get getter userAtom
-
-                    let result =
-                        lastSyncValueByType
-                        |> Seq.sortByDescending fst
-                        |> Seq.toList
-
-                    Profiling.addTimestamp
-                        (fun () ->
-                            $"+13c Engine.createRegisteredAtomWithSort wrapper.get()  alias={alias} result={result} {getDebugInfo ()}")
-
-                    result
-                    |> List.filter
-                        (fun (_, (group', _)) ->
-                            result.Length = 1
-                            || group' <> (result |> List.head |> snd |> fst))
-                    |> unbox<(TicksGuid * ('TGroup * 'A)) list>)
-                (fun getter setter newValueFn ->
-
-                    let alias = Atom.get getter Selectors.Gun.alias
-
-                    if
-                        groupAtomDefaultValueMap.ContainsKey (alias, storeAtomPath)
-                        |> not
-                    then
-                        groupAtomDefaultValueMap.[(alias, storeAtomPath)] <- defaultValue
-
-                    Profiling.addTimestamp
-                        (fun () ->
-                            $"+12c Engine.createRegisteredAtomWithSort wrapper.set() alias={alias} {getDebugInfo ()}  ")
-
-                    Atom.change setter (groupMapAtom (alias, storeAtomPath)) (unbox newValueFn))
-            |> Atom.register storeAtomPath
-
-        wrapper?init <- defaultValue
-
-        wrapper
-
-    let inline createRegisteredAtomWithGroup
-        (storeAtomPath: StoreAtomPath)
-        (defaultGroup: 'TGroup, defaultValue: 'A)
-        : AtomConfig<TicksGuid * 'TGroup * 'A> =
-        let getDebugInfo () =
-            $"storeAtomPath={storeAtomPath |> StoreAtomPath.AtomPath} defaultValue={defaultValue}"
-
-        Profiling.addTimestamp
-            (fun () -> $"+13.1c Engine.createRegisteredAtomWithGroup [ constructor ] {getDebugInfo ()}")
-
-        let defaultValue = Guid.Empty, (defaultGroup, defaultValue)
-
-
-        let groupMapAtom = Atom.atomFamilyAtom (fun (_alias: Gun.Alias option) -> defaultValue |> List.singleton)
-
-        let rec lastSyncValueByTypeAtom =
-            Atom.Primitives.readSelectorFamily
-                (fun (alias: Gun.Alias option) getter ->
-                    let groupMap = Atom.get getter (groupMapAtom alias)
-                    groupValues groupMap)
-
-        let wrapper =
-            Atom.Primitives.selector
-                (fun getter ->
-                    //                        let value = Atom.get getter subscriptions.[adapterType]
-
-                    //                        syncEngine.SetProviders getter wrapper
-                    let alias = Atom.get getter Selectors.Gun.alias
-
-                    let userAtom = lastSyncValueByTypeAtom alias
-                    let lastSyncValueByType = Atom.get getter userAtom
-
-                    let ticks, (group: 'TGroup, result) =
-                        lastSyncValueByType
-                        |> Seq.sortByDescending fst
-                        |> Seq.head
-
-                    Profiling.addTimestamp
-                        (fun () ->
-                            $"+13c Engine.createRegisteredAtomWithSort wrapper.get()  alias={alias} result={result} lastSyncValueByType={Json.encodeWithNull lastSyncValueByType} {getDebugInfo ()}")
-
-                    ticks, group, result)
-                (fun getter setter (ticks, group: 'TGroup, newValue) ->
-                    let alias = Atom.get getter Selectors.Gun.alias
-
-                    Atom.change
-                        setter
-                        (groupMapAtom alias)
-                        (fun oldGroupValueList ->
-                            let newGroupValueList =
-                                (ticks, (group, newValue))
-                                :: (oldGroupValueList
-                                    |> List.filter (fun (_, (group', _)) -> group' <> group))
-
-                            Profiling.addTimestamp
-                                (fun () ->
-                                    $"+12c Engine.createRegisteredAtomWithSort wrapper.set() ticks={ticks} alias={alias} newGroupValueList={newGroupValueList} oldGroupValueList={oldGroupValueList} {getDebugInfo ()} newValue={newValue} ")
-
-                            newGroupValueList))
-            |> Atom.register storeAtomPath
-
-        wrapper?init <- defaultValue
-
-        wrapper
+//                    //                        syncEngine.SetProviders getter wrapper
+//                    let alias = Atom.get getter Selectors.Gun.alias
+//
+//                    let userAtom = lastSyncValueByTypeAtom alias
+//                    let lastSyncValueByType = Atom.get getter userAtom
+//
+//                    let ticks, (group: 'TGroup, result) =
+//                        lastSyncValueByType
+//                        |> Seq.sortByDescending fst
+//                        |> Seq.head
+//
+//                    Profiling.addTimestamp
+//                        (fun () ->
+//                            $"+13c Engine.createRegisteredAtomWithGroup wrapper.get()  alias={alias} result={result} lastSyncValueByType={Json.encodeWithNull lastSyncValueByType} {getDebugInfo ()}")
+//
+//                    ticks, group, result)
+//                (fun getter setter (ticks, group: 'TGroup, newValue) ->
+//                    let alias = Atom.get getter Selectors.Gun.alias
+//
+//                    Atom.change
+//                        setter
+//                        (groupMapAtom alias)
+//                        (fun oldGroupValueList ->
+//                            let newGroupValueList =
+//                                (ticks, (group, newValue))
+//                                :: (oldGroupValueList
+//                                    |> List.filter (fun (_, (group', _)) -> group' <> group))
+//
+//                            Profiling.addTimestamp
+//                                (fun () ->
+//                                    $"+12c Engine.createRegisteredAtomWithGroup wrapper.set() ticks={ticks} alias={alias} newGroupValueList={newGroupValueList} oldGroupValueList={oldGroupValueList} {getDebugInfo ()} newValue={newValue} ")
+//
+//                            newGroupValueList))
+//            |> Atom.register storeAtomPath
+//
+//        wrapper?init <- defaultValue
+//
+//        wrapper
 
     let memoryAdapterOptions = Some Atom.AdapterOptions.Memory
 
@@ -801,6 +688,58 @@ module Engine =
 //                adapterType, wrapper)
 //        |> Map.ofList
 
+
+    //    let inline subscribeCollection<'T when 'T: comparison>
+//        (storeRoot: StoreRoot)
+//        collection
+//        (_onFormat: TicksGuid -> 'T)
+//        : AtomConfig<AtomConfig<'T> []> =
+//        let storeAtomPath = CollectionAtomPath (storeRoot, collection)
+//
+//        let getDebugInfo () =
+//            $"storeAtomPath={storeAtomPath |> StoreAtomPath.AtomPath}"
+//
+//        Profiling.addTimestamp (fun () -> $"+05a subscribeCollection [ constructor ] {getDebugInfo ()}")
+//
+//        let atom = createRegisteredAtomWithGroup storeAtomPath (Atom.AdapterType.Memory, [||])
+//
+//        Atom.Primitives.readSelector
+//            (fun getter ->
+//                let alias = Atom.get getter Selectors.Gun.alias
+//
+//                let adapterOptionsList =
+//                    Reflection.unionCases<Atom.AdapterType>
+//                    |> List.choose
+//                        (fun adapterType ->
+//                            match getAdapterOptions getter adapterType with
+//                            | Some adapterOptions -> Some (adapterType, adapterOptions)
+//                            | None -> None)
+//
+//                let _adapterValues =
+//                    adapterOptionsList
+//                    |> List.toArray
+//                    |> Array.map
+//                        (fun (adapterType, _) ->
+//                            if
+//                                subscriptionAdapterFnMap.ContainsKey (adapterType, storeAtomPath)
+//                                |> not
+//                            then
+//                                subscriptionAdapterFnMap.[(adapterType, storeAtomPath)] <- getCollectionAdapter
+//                                atomDefaultValueMap.[storeAtomPath] <- box [||]
+//
+//                            subscriptionFamily (alias, storeAtomPath, adapterType))
+//                    |> Array.map (Atom.get getter)
+//
+//
+//                let ticks, adapterType, value = Atom.get getter atom
+//
+//                Profiling.addTimestamp
+//                    (fun () ->
+//                        $"+01a Engine.subscribeCollection wrapper.get() ticks={ticks} adapterType={adapterType} result={Json.encodeWithNull value} {getDebugInfo ()}")
+//
+//                value)
+//        |> Atom.split
+
     let inline createAdapterAtom storeAtomPath adapterType getAdapter (defaultValue: 'b) : AtomConfig<TicksGuid * 'b> =
         let mutable mounted = false
 
@@ -842,6 +781,19 @@ module Engine =
                     unmount getter setter adapterOptions
                     mounted <- false)
 
+
+
+    let subscriptionAdapterFnMap =
+        Dictionary<Atom.AdapterType * StoreAtomPath, StoreAtomPath
+            -> Atom.AdapterType
+            -> (Getter<obj> -> (AtomConfig<obj> -> obj -> unit) -> Atom.AdapterOptions -> (Guid * obj -> unit) -> unit) * (Getter<obj> -> (AtomConfig<obj> -> obj -> unit) -> Atom.AdapterOptions -> unit)>
+            ()
+
+    let atomDefaultValueMap = Dictionary<StoreAtomPath, obj> ()
+    let groupAtomDefaultValueMap = Dictionary<Gun.Alias option * StoreAtomPath, obj> ()
+
+
+
     let subscriptionFamily =
         Atom.Primitives.atomFamily
             (fun (_alias, storeAtomPath, adapterType) ->
@@ -849,70 +801,106 @@ module Engine =
                 let defaultValue = atomDefaultValueMap.[storeAtomPath]
                 createAdapterAtom storeAtomPath adapterType getAdapter defaultValue)
 
-    //    let collectionSubscriptionFamily =
-//        Atom.Primitives.atomFamily
-//            (fun (storeAtomPath, adapterType) ->
-//                createAdapterAtom storeAtomPath adapterType getCollectionAdapter ([||]: obj []))
+    let subscribeFamilyKey<'TKey, 'A> (_atomFamily: 'TKey -> AtomConfig<'A>) =
+        let result: AtomConfig<AtomConfig<'TKey> []> = Atom.create (AtomType.Atom [||])
+        result
 
-    let inline subscribeCollection<'T when 'T: comparison>
-        (storeRoot: StoreRoot)
-        collection
-        (_onFormat: TicksGuid -> 'T)
-        : AtomConfig<AtomConfig<'T> []> =
-        let storeAtomPath = CollectionAtomPath (storeRoot, collection)
+
+    let inline groupValues groupMap =
+        groupMap
+        |> Seq.groupBy (fun (_, (group: 'TGroup, _)) -> group)
+        |> Seq.map
+            (fun (group, v) ->
+                let ticks, value =
+                    v
+                    |> Seq.sortByDescending fst
+                    |> Seq.map (fun (ticks: TicksGuid, (_, value: 'A)) -> ticks, value)
+                    |> Seq.head
+
+                ticks, (group, value))
+        |> Seq.toList
+
+    let groupMapAtom =
+        Atom.atomFamilyAtom
+            (fun (alias: Gun.Alias option, storeAtomPath: StoreAtomPath) ->
+                groupAtomDefaultValueMap.[alias, storeAtomPath]
+                |> List.singleton)
+
+
+    let lastSyncValueByTypeAtom =
+        Atom.Primitives.readSelectorFamily
+            (fun (alias: Gun.Alias option, storeAtomPath: StoreAtomPath) getter ->
+                let groupMap = Atom.get getter (groupMapAtom (alias, storeAtomPath))
+
+                groupMap
+                |> unbox<(TicksGuid * (obj * obj)) list>
+                |> groupValues)
+
+    let inline createRegisteredAtomWithGroup
+        (storeAtomPath: StoreAtomPath)
+        (defaultGroup: 'TGroup, defaultValue: 'A)
+        : AtomConfig<(TicksGuid * ('TGroup * 'A)) list> =
+
+        let defaultValue = Guid.Empty, (defaultGroup, defaultValue)
 
         let getDebugInfo () =
-            $"storeAtomPath={storeAtomPath |> StoreAtomPath.AtomPath}"
+            $"storeAtomPath={storeAtomPath |> StoreAtomPath.AtomPath} defaultValue={defaultValue}"
 
-        Profiling.addTimestamp (fun () -> $"+05a subscribeCollection [ constructor ] {getDebugInfo ()}")
+        Profiling.addTimestamp
+            (fun () -> $"+13.1c Engine.createRegisteredAtomWithGroup [ constructor ] {getDebugInfo ()}")
 
-        let atom = createRegisteredAtomWithGroup storeAtomPath (Atom.AdapterType.Memory, [||])
+        let wrapper =
+            Atom.Primitives.selector
+                (fun getter ->
+                    let alias = Atom.get getter Selectors.Gun.alias
 
-        Atom.Primitives.readSelector
-            (fun getter ->
-                let alias = Atom.get getter Selectors.Gun.alias
+                    if
+                        groupAtomDefaultValueMap.ContainsKey (alias, storeAtomPath)
+                        |> not
+                    then
+                        groupAtomDefaultValueMap.[(alias, storeAtomPath)] <- defaultValue
 
-                let adapterOptionsList =
-                    Reflection.unionCases<Atom.AdapterType>
-                    |> List.choose
-                        (fun adapterType ->
-                            match getAdapterOptions getter adapterType with
-                            | Some adapterOptions -> Some (adapterType, adapterOptions)
-                            | None -> None)
+                    let userAtom = lastSyncValueByTypeAtom (alias, storeAtomPath)
+                    let lastSyncValueByType = Atom.get getter userAtom
 
-                let _adapterValues =
-                    adapterOptionsList
-                    |> List.toArray
-                    |> Array.map
-                        (fun (adapterType, _) ->
-                            if
-                                subscriptionAdapterFnMap.ContainsKey (adapterType, storeAtomPath)
-                                |> not
-                            then
-                                subscriptionAdapterFnMap.[(adapterType, storeAtomPath)] <- getCollectionAdapter
-                                atomDefaultValueMap.[storeAtomPath] <- box [||]
+                    let result =
+                        lastSyncValueByType
+                        |> Seq.sortByDescending fst
+                        |> Seq.toList
 
-                            subscriptionFamily (alias, storeAtomPath, adapterType))
-                    |> Array.map (Atom.get getter)
+                    Profiling.addTimestamp
+                        (fun () ->
+                            $"+13c Engine.createRegisteredAtomWithGroup wrapper.get()  alias={alias} result={result} {getDebugInfo ()}")
 
+                    result
+                    |> List.filter
+                        (fun (_, (group', _)) ->
+                            result.Length = 1
+                            || group' <> (result |> List.head |> snd |> fst))
+                    |> unbox<(TicksGuid * ('TGroup * 'A)) list>)
+                (fun getter setter newValueFn ->
 
-                let ticks, adapterType, value = Atom.get getter atom
+                    let alias = Atom.get getter Selectors.Gun.alias
 
-                Profiling.addTimestamp
-                    (fun () ->
-                        $"+01a Engine.subscribeCollection wrapper.get() ticks={ticks} adapterType={adapterType} result={Json.encodeWithNull value} {getDebugInfo ()}")
+                    if
+                        groupAtomDefaultValueMap.ContainsKey (alias, storeAtomPath)
+                        |> not
+                    then
+                        groupAtomDefaultValueMap.[(alias, storeAtomPath)] <- defaultValue
 
-                value)
-        |> Atom.split
+                    Profiling.addTimestamp
+                        (fun () ->
+                            $"+12c Engine.createRegisteredAtomWithGroup wrapper.set() alias={alias} {getDebugInfo ()}  ")
 
-    //    let atomSubscriptionFamily =
-//        Atom.Primitives.atomFamily
-//            (fun (storeAtomPath, adapterType, defaultValue: obj) ->
-//                createAdapterAtom storeAtomPath adapterType getAtomAdapter defaultValue)
+                    Atom.change setter (groupMapAtom (alias, storeAtomPath)) (unbox newValueFn))
+            |> Atom.register storeAtomPath
+
+        wrapper?init <- defaultValue
+
+        wrapper
 
     let inline createRegisteredAtomWithSubscription storeAtomPath (defaultValue: 'A) : AtomConfig<'A> =
-        //        atomAdapterSet.Add storeAtomPath |> ignore
-        let localAdaptersAtom = createRegisteredAtomWithGroupEx storeAtomPath (Atom.AdapterType.Memory, defaultValue)
+        let localAdaptersAtom = createRegisteredAtomWithGroup storeAtomPath (Atom.AdapterType.Memory, defaultValue)
 
         let atomPath = storeAtomPath |> StoreAtomPath.AtomPath
 
@@ -1120,20 +1108,13 @@ module Engine =
             Atom.Primitives.selector
                 (fun getter ->
                     refreshAdapterValues getter
-
                     let localAdapters = Atom.get getter localAdaptersAtom
-                    //                    lastLocalAdapters <- Some localAdapters
-
                     let _ticks, (_adapterType, value) = localAdapters |> List.head
-
-                    //                let result = Atom.get getter atom
-//                    let ticks, adapterType, value = Atom.get getter adaptersAtom
 
                     Profiling.addTimestamp
                         (fun () ->
                             $"+01a Engine.createRegisteredAtomWithSubscription wrapper.get() {getDebugInfo ()} localAdapters={Json.encodeWithNull localAdapters}  ")
 
-                    //                snd result
                     value)
                 (fun getter setter newValue ->
                     refreshAdapterValues getter
@@ -1150,19 +1131,7 @@ module Engine =
                             |> List.filter (fun (_, (adapterType, _)) -> adapterType <> Atom.AdapterType.Memory)
                             |> List.append [
                                 Guid.newTicksGuid (), (Atom.AdapterType.Memory, newValue)
-                               ])
-
-                    //                    _adapterValues
-//                    |> Map.iter
-//                        (fun currentAdapterType currentValue ->
-//                            if (unbox newValue)
-//                               |> Object.compare (unbox currentValue)
-//                               |> not then
-//                                Atom.set setter atom (newTicks, currentAdapterType, newValue)
-                    )
-
-
-        //        wrapper?init <- defaultValue
+                               ]))
 
         wrapper?init <- defaultValue
 
@@ -1220,135 +1189,7 @@ module Engine =
 
 
     let inline createRegisteredAtomWithSubscriptionStorage storeAtomPath (defaultValue: 'A) =
+        //        let storageAtom = Atom.createRegisteredWithStorage storeAtomPath (Guid.Empty, defaultValue)
         let storageAtom = Atom.createRegisteredWithStorage storeAtomPath defaultValue
         let syncAtom = createRegisteredAtomWithSubscription storeAtomPath defaultValue
         bindAtom syncAtom storageAtom
-
-
-
-
-
-
-
-//        |> Atom.addSubscription
-//                true
-//                (fun setAtom ->
-//                    lastSetAtom <- setAtom
-//                    newMount ())
-//                (fun () -> newUnmount ())
-
-
-
-//                Reflection.unionCases<Atom.AdapterType>
-//                |> List.toArray
-//                |> Array.iter
-//                    (fun adapterType ->
-//
-//                        Atom.set setter subscriptions.[adapterType] (Guid.newTicksGuid (), newValue)
-//
-//                        //                        atomArray
-////                        |> Array.map
-////                            (fun atom ->
-////                                //                         let storeAtomPath = Atom.query (AtomReference.Atom atom)
-//////                         storeAtomPath
-////                                atom)
-//                        )
-
-
-
-//        let subscriptions =
-//            Reflection.unionCases<Atom.AdapterType>
-//            |> List.map
-//                (fun adapterType ->
-//                    let adapterCollection, mount, unmount = getAdapterCollection adapterType
-//
-//                    let storeAtomPath =
-//                        IndexedAtomPath (
-//                            FsStore.storeRoot,
-//                            adapterCollection,
-//                            [
-//                                storeRoot |> StoreRoot.Value
-//                            ],
-//                            collection |> Collection.Value |> AtomName
-//                        )
-//
-//                    let atomPath = storeAtomPath |> StoreAtomPath.AtomPath
-//                    let getDebugInfo () = $"atomPath={atomPath}"
-//
-//                    let atoms =
-//                        Atom.createRegistered storeAtomPath (AtomType.Atom ([||]: 'T []))
-//                        |> wrapAtomWithSubscription
-//                            (fun getter ->
-//                                let adapterOptionsMap = getAdapterOptionsMap getter
-//                                let adapterOptions = adapterOptionsMap.[adapterType]
-//
-//                                Profiling.addTimestamp
-//                                    $"* subscribeCollection stateFn adapterOptions={adapterOptions} {getDebugInfo ()}"
-//
-//                                adapterOptions)
-//                            (fun state ->
-//                                promise {
-//                                    //                let gunAtomNode = Atom.get getter (Selectors.Gun.gunAtomNode (alias, atomPath))
-//                                    Profiling.addTimestamp
-//                                        $"@@> subscribeCollection mount state={state} {getDebugInfo ()}"
-//                                })
-//                            (fun () -> Profiling.addTimestamp (fun () -> $"<@@ subscribeCollection unmount {getDebugInfo ()} ")
-//                        |> Atom.split
-//
-//                    adapterType, atoms)
-//            |> Map.ofList
-//
-//        Atom.Primitives.selector
-//            (fun getter ->
-//                Reflection.unionCases<Atom.AdapterType>
-//                |> List.toArray
-//                |> Array.collect
-//                    (fun adapterType ->
-//                        let atomArray = Atom.get getter subscriptions.[adapterType]
-//
-//                        atomArray
-//                        |> Array.map
-//                            (fun atom ->
-//                                //                         let storeAtomPath = Atom.query (AtomReference.Atom atom)
-////                         storeAtomPath
-//                                atom)))
-//            (fun getter setter newValue -> ())
-
-
-
-
-
-//        let subscriptions =
-//            Reflection.unionCases<Atom.AdapterType>
-//            |> List.map
-//                (fun adapterType ->
-//                    let mount', unmount' = getAdapterOptions adapterType
-//
-//
-//                    let atoms =
-//                        Atom.createRegistered storeAtomPath (AtomType.Atom defaultValue)
-//                        |> wrapAtomWithSubscription
-//                            (fun getter ->
-//                                let adapterOptionsMap = getAdapterOptionsMap getter
-//                                let adapterOptions = adapterOptionsMap.[adapterType]
-//
-//                                Profiling.addTimestamp
-//                                    $"* subscribeCollection stateFn adapterOptions={adapterOptions} {getDebugInfo ()}"
-//
-//                                adapterOptions)
-//                            (fun state ->
-//                                promise {
-//                                    //                let gunAtomNode = Atom.get getter (Selectors.Gun.gunAtomNode (alias, atomPath))
-//                                    Profiling.addTimestamp
-//                                        $"@@> subscribeCollection mount state={state} {getDebugInfo ()}"
-//
-//                                    mount state
-//                                    mount' state
-//                                })
-//                            (fun () ->
-//                                Profiling.addTimestamp (fun () -> $"<@@ subscribeCollection unmount {getDebugInfo ()} "
-//                                unmount' ()
-//                                unmount ())
-//
-//                    adapterType, atoms)
-//            |> Map.ofList

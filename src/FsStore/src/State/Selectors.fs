@@ -32,7 +32,6 @@ module SelectorsMagic =
                         let logLevel = Atom.get getter Atoms.logLevel
                         Logger.Logger.Create logLevel))
 
-
         let rec store =
             let mutable lastValue = 0
             let valueAtom = Atom.Primitives.atom lastValue
@@ -91,7 +90,7 @@ module SelectorsMagic =
         module rec Gun =
             let collection = Collection (nameof Gun)
 
-            let readSelector name fn =
+            let inline readSelector name fn =
                 Atom.createRegistered
                     (IndexedAtomPath (FsStore.storeRoot, collection, [], AtomName name))
                     (AtomType.ReadSelector fn)
@@ -256,7 +255,7 @@ module SelectorsMagic =
                         gunUser.__.sea)
 
 
-            let getRecursiveNode (gunNode: Types.IGunNode) (nodes: GunNodeSlice list) getter alias =
+            let inline getRecursiveNode (gunNode: Types.IGunNode) (nodes: GunNodeSlice list) getter alias =
                 match nodes with
                 | [] -> None
                 | [ root ] -> Some (gunNode.get root)
@@ -325,7 +324,7 @@ module SelectorsMagic =
 
             let collection = Collection (nameof Hub)
 
-            let readSelector name fn =
+            let inline readSelector name fn =
                 Atom.createRegistered
                     (IndexedAtomPath (FsStore.storeRoot, collection, [], AtomName name))
                     (AtomType.ReadSelector fn)
