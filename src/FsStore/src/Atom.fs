@@ -52,7 +52,7 @@ module Atom =
     let inline change<'A> (setter: Setter<obj>) (atom: AtomConfig<'A>) (value: 'A -> 'A) =
         setter (unbox atom) (unbox value)
 
-//    type Subscription<'A> = (('A -> unit) -> JS.Promise<unit>) -> unit -> unit
+    //    type Subscription<'A> = (('A -> unit) -> JS.Promise<unit>) -> unit -> unit
 
     let inline addSubscription<'A> (debounce: bool) mount unmount (atom: AtomConfig<'A>) =
         let mutable mounted = false
@@ -194,6 +194,16 @@ module Atom =
 
         let inline readSelectorFamily<'TKey, 'A> (read: 'TKey -> Read<'A>) : ('TKey -> AtomConfig<'A>) =
             selectorFamily read (fun _ _ _ -> failwith "Atom.Primitives.readSelectorFamily is read only.")
+
+    let inline map<'A, 'B> readFn writeFn atom =
+        Primitives.selector
+            (fun getter ->
+                let value = get getter atom
+                let newValue: 'B = readFn value
+                newValue)
+            (fun _getter setter newValue ->
+                let newValue : 'A = writeFn newValue
+                set setter atom newValue)
 
     let inline atomFamilyAtom defaultValueFn =
         Primitives.atomFamily (fun param -> Primitives.atom (defaultValueFn param))
