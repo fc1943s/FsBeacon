@@ -2,7 +2,6 @@ namespace FsStore
 
 open System.Collections.Generic
 open Fable.Extras
-open Fable.Core
 open System
 open FsStore.Model
 open FsBeacon.Shared
@@ -106,7 +105,7 @@ module BaseStore =
 
             member this.HubSubscription
                 with get () = lastHubSubscription
-                and set (value: unit option) = lastHubSubscription <- value
+                and set (value: IDisposable option) = lastHubSubscription <- value
 
             member this.SyncPaused
                 with get () = syncPaused

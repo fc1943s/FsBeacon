@@ -1,16 +1,8 @@
 namespace FsStore.Store
 
 open FsStore
-open Fable.Core.JsInterop
-open Fable.Core
-open System
-open FsStore.BaseStore.Store
-open FsStore.Model
-open FsBeacon.Shared
 open Microsoft.FSharp.Core.Operators
-open FsCore
 open FsJs
-open FsStore.Bindings
 open FsStore.Bindings.Jotai
 
 #nowarn "40"
@@ -43,7 +35,7 @@ module SelectAtomSyncKeys =
             //            name
 //            (atomFamily: 'TKey -> Atom<_>)
 //            (key: 'TKey)
-            (onFormat: string -> 'TKey)
+            (_onFormat: string -> 'TKey)
             : AtomConfig<AtomConfig<'TKey> []> =
 
 

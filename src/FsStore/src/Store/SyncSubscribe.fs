@@ -51,17 +51,16 @@ module SyncSubscribe =
                                         Logger.logError (fun () -> "Store.syncSubscribe. alias is none (subscription)")
                                     | None, Some (Gun.Alias alias) ->
 
-                                        let subscription =
-                                            Gun.batchHubSubscribe
+                                        let! subscription =
+                                            Gun.hubSubscribe
                                                 hub
                                                 (Sync.Request.Get (alias, atomPath |> AtomPath.Value))
-                                                (Guid.newTicksGuid ())
-                                                (fun (ticks, msg: Sync.Response) ->
-                                                    Logger.logTrace
-                                                        (fun () ->
-                                                            $"Store.syncSubscribe. wrapper.next() HUB stream subscribe] msg={msg} {getDebugInfo ()} ")
-
+                                                (fun (msg: Sync.Response) ->
                                                     promise {
+                                                        Logger.logTrace
+                                                            (fun () ->
+                                                                $"Store.syncSubscribe. wrapper.next() HUB stream subscribe] msg={msg} {getDebugInfo ()} ")
+
                                                         match msg with
                                                         | Sync.Response.GetResult result ->
                                                             Logger.logTrace
@@ -72,19 +71,30 @@ module SyncSubscribe =
                                                                 match result |> Option.defaultValue null with
                                                                 | null -> unbox null |> Promise.lift
                                                                 | result ->
-                                                                    Gun.userDecode<'TValue>
+                                                                    Gun.userDecode<TicksGuid * 'TValue>
                                                                         gunKeys
                                                                         (Gun.EncryptedSignedValue result)
 
-                                                            trigger (ticks, Atom.AdapterType.Hub, newValue)
+                                                            match newValue with
+                                                            | Some (ticks, newValue) ->
+                                                                trigger (
+                                                                    ticks,
+                                                                    Atom.AdapterType.Hub,
+                                                                    (newValue |> Option.ofObjUnbox)
+                                                                )
+                                                            | None ->
+                                                                failwith
+                                                                    $"invalid data: newValue={newValue} result={result}"
                                                         | _ -> ()
-                                                    })
+                                                    }
+                                                    |> Promise.start)
                                                 (fun ex ->
                                                     Logger.logError
                                                         (fun () ->
                                                             $"Store.syncSubscribe. onError... ex={ex} {getDebugInfo ()} ")
 
                                                     onError ())
+
 
                                         syncState.HubSubscription <- Some subscription
                                 with

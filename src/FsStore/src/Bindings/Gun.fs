@@ -440,7 +440,7 @@ module Gun =
         |> Promise.lift
 
 
-    let inline batchData<'T> (fn: TicksGuid * 'T -> JS.Promise<unit>) (ticks: TicksGuid, data: 'T) =
+    let inline batchData (fn: TicksGuid * EncryptedSignedValue -> JS.Promise<unit>) (ticks: TicksGuid, data: EncryptedSignedValue) =
         Profiling.addTimestamp (fun () -> $"($$) ---- #B subscriptionTicks={ticks} data={data} ")
         Batcher.batch (Batcher.BatchType.Data (data, ticks, fn))
 
@@ -487,9 +487,3 @@ module Gun =
 
             return subscription
         }
-
-    let inline batchHubSubscribe (hub: HubConnection<'A, 'A, _, 'R, 'R>) action ticks trigger onError =
-        let fn ticks =
-            hubSubscribe hub action (fun value -> batchData trigger (ticks, value)) onError
-
-        Batcher.batch (Batcher.BatchType.Subscribe (ticks, fn))

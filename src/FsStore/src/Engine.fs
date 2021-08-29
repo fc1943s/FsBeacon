@@ -1,6 +1,7 @@
 namespace FsStore
 
 open System
+open System.Collections.Generic
 open Fable.Core.JsInterop
 open Fable.Core
 open FsJs
@@ -16,6 +17,8 @@ open FsStore.State
 module Engine =
     type UpdateFn<'State, 'Command, 'Event> =
         Getter<obj> -> Setter<obj> -> 'State -> 'Command -> JS.Promise<'State * Message<'Command, 'Event> list>
+
+    let inline getDebugInfo () = ""
 
     let inline consumeCommands (updateFn: UpdateFn<_, _, _>) state getter setter commands =
         promise {
@@ -49,7 +52,7 @@ module Engine =
 
 
             let getDebugInfo () =
-                $"commands={commands} newState={newState} processedMessages={processedMessages}"
+                $"commands={commands} newState={newState} processedMessages={processedMessages} {getDebugInfo ()}"
 
             let addTimestamp fn getDebugInfo =
                 Profiling.addTimestamp
@@ -86,7 +89,7 @@ module Engine =
         let mutable mounted = false
 
         let getDebugInfo () =
-            $" | atom={atom} mounted={mounted} storeAtomPath={storeAtomPath |> Option.map StoreAtomPath.AtomPath} lastState.IsSome={lastState.IsSome} "
+            $" | atom={atom} mounted={mounted} storeAtomPath={storeAtomPath |> Option.map StoreAtomPath.AtomPath} lastState.IsSome={lastState.IsSome}  {getDebugInfo ()}"
 
         let addTimestamp fn getDebugInfo =
             Profiling.addTimestamp
@@ -212,7 +215,7 @@ module Engine =
         let mutable lastValue = None
 
         let getDebugInfo () =
-            $" interval={interval} defaultValue={defaultValue} lastValue={lastValue} timeout={intervalHandle} "
+            $"interval={interval} defaultValue={defaultValue} lastValue={lastValue} timeout={intervalHandle}  {getDebugInfo ()}"
 
         let addTimestamp fn getDebugInfo =
             Profiling.addTimestamp
@@ -640,10 +643,18 @@ module Engine =
     //    type AdapterValue<'A> = AdapterValue of ticks: TicksGuid * value: 'A
 
 
+    let typeMetadataMap =
+        Dictionary<Type, {| DefaultValue: obj
+                            Decode: Gun.GunKeys -> Gun.EncryptedSignedValue -> JS.Promise<(TicksGuid * obj) option>
+                            Encode: Gun.GunKeys -> TicksGuid * obj -> JS.Promise<Gun.EncryptedSignedValue> |}>
+            ()
 
 
-    let inline batchPutFromUi<'A when 'A: equality> (gunAtomNode, privateKeys, ticks, newValue, onPut) =
-        let getDebugInfo () = $" ticks={ticks} newValue={newValue}  "
+    let inline batchPutFromUi<'A when 'A: equality> (gunAtomNode, privateKeys, ticks, newValue: 'A, onPut) =
+        let getDebugInfo () =
+            $" ticks={ticks} newValue={newValue}  {getDebugInfo ()}"
+
+        let typeMetadata = typeMetadataMap.[typeof<'A>]
 
         let addTimestamp fn getDebugInfo =
             Profiling.addTimestamp (fun () -> $"{nameof FsStore} | Engine.batchPutFromUi {fn ()} | {getDebugInfo ()}")
@@ -659,7 +670,7 @@ module Engine =
                                     return null
                                 else
                                     let! (Gun.EncryptedSignedValue encrypted) =
-                                        Gun.userEncode<TicksGuid * 'A> privateKeys (ticks, newValue)
+                                        typeMetadata.Encode privateKeys (ticks, box newValue)
 
                                     return encrypted
                             }
@@ -680,11 +691,11 @@ module Engine =
             )
         )
 
-    let inline getAdapterSubscription<'A when 'A: equality> storeAtomPath adapterType =
-        let atomPath = storeAtomPath |> StoreAtomPath.AtomPath
+    let inline getAdapterSubscription<'A when 'A: equality> adapterType =
+        let typeMetadata = typeMetadataMap.[typeof<'A>]
 
         let getDebugInfo () =
-            $"atomPath={atomPath} adapterType={adapterType}"
+            $"adapterType={adapterType} {getDebugInfo ()}"
 
         let addTimestamp fn getDebugInfo =
             Profiling.addTimestamp
@@ -692,7 +703,12 @@ module Engine =
 
         match adapterType with
         | Atom.AdapterType.Gun ->
-            (fun getter _setter adapterOptions adapterSetAtom ->
+            (fun getter _setter adapterOptions adapterSetAtom storeAtomPath ->
+                let atomPath = storeAtomPath |> StoreAtomPath.AtomPath
+
+                let getDebugInfo () =
+                    $"atomPath={atomPath}  {getDebugInfo ()}"
+
                 match adapterOptions with
                 | Atom.AdapterOptions.Gun (_peers, alias) ->
                     let gunAtomNode = Atom.get getter (Selectors.Gun.gunAtomNode (Some alias, atomPath))
@@ -725,14 +741,19 @@ module Engine =
                             (fun (subscriptionTicks, gunValue) ->
                                 promise {
                                     try
-                                        let! newValue = Gun.userDecode<TicksGuid * 'A> privateKeys gunValue
+                                        let! newValue = typeMetadata.Decode privateKeys gunValue
 
                                         addTimestamp
                                             (fun () ->
                                                 "[ ||==> setAdapterValue ](j4-1) invoking debouncedSetAtom. inside gun.on() ")
                                             getDebugInfo
 
-                                        debouncedAdapterSetAtom (false, newValue |> Option.defaultValue (unbox null))
+                                        debouncedAdapterSetAtom (
+                                            false,
+                                            newValue
+                                            |> unbox
+                                            |> Option.defaultValue (unbox null)
+                                        )
                                     with
                                     | ex ->
                                         Logger.logError
@@ -771,7 +792,12 @@ module Engine =
                         Some setAdapterValue
                     | _ -> failwith $"invalid gun atom node {getDebugInfo ()}"
                 | _ -> None),
-            (fun getter _setter adapterOptions ->
+            (fun getter _setter adapterOptions storeAtomPath ->
+                let atomPath = storeAtomPath |> StoreAtomPath.AtomPath
+
+                let getDebugInfo () =
+                    $"atomPath={atomPath} {getDebugInfo ()}"
+
                 match adapterOptions with
                 | Atom.AdapterOptions.Gun (_peers, alias) ->
                     let gunAtomNode = Atom.get getter (Selectors.Gun.gunAtomNode (Some alias, atomPath))
@@ -787,7 +813,7 @@ module Engine =
 
                 | _ -> ())
         | Atom.AdapterType.Hub ->
-            (fun _getter _setter adapterOptions _setValue ->
+            (fun _getter _setter adapterOptions _setValue _storeAtomPath ->
                 match adapterOptions with
                 | Atom.AdapterOptions.Hub (_alias, _hubUrl) ->
                     //                let gunAtomNode = Atom.get getter (Selectors.Gun.gunAtomNode (alias, atomPath))
@@ -798,7 +824,7 @@ module Engine =
                             Profiling.addTimestamp
                                 (fun () -> $"+09-1B ====> getAtomAdapter hub setAdapterValue  {getDebugInfo ()}  "))
                 | _ -> None),
-            (fun _getter _setter adapterOptions ->
+            (fun _getter _setter adapterOptions _storeAtomPath ->
                 match adapterOptions with
                 | Atom.AdapterOptions.Hub (_alias, _hubUrl) ->
                     //                let gunAtomNode = Atom.get getter (Selectors.Gun.gunAtomNode (alias, atomPath))
@@ -807,7 +833,7 @@ module Engine =
 
                 )
         | Atom.AdapterType.Memory ->
-            (fun _getter _setter adapterOptions _setValue ->
+            (fun _getter _setter adapterOptions _setValue _storeAtomPath ->
                 match adapterOptions with
                 | Atom.AdapterOptions.Memory ->
                     //                let gunAtomNode = Atom.get getter (Selectors.Gun.gunAtomNode (alias, atomPath))
@@ -826,7 +852,7 @@ module Engine =
                                 (fun () -> "[ ¨¨ setAdapterValue ](j8) memory inside debouncedPutFromUi setAtom ")
                                 getDebugInfo)
                 | _ -> None),
-            (fun _getter _setter adapterOptions ->
+            (fun _getter _setter adapterOptions _storeAtomPath ->
                 match adapterOptions with
                 | Atom.AdapterOptions.Memory ->
                     //                let gunAtomNode = Atom.get getter (Selectors.Gun.gunAtomNode (alias, atomPath))
@@ -853,7 +879,7 @@ module Engine =
         let mutable setAdapterValue: (bool * (TicksGuid * 'A) -> unit) option = None
 
         let getDebugInfo () =
-            $" adapterType={adapterType} atom={atom} setAdapterValue.IsSome={setAdapterValue.IsSome} "
+            $" adapterType={adapterType} atom={atom} setAdapterValue.IsSome={setAdapterValue.IsSome}  {getDebugInfo ()}"
 
         let addTimestamp fn getDebugInfo =
             Profiling.addTimestamp
@@ -905,7 +931,7 @@ module Engine =
 
                 match adapterOptions with
                 | Some adapterOptions ->
-                    let mount, unmount = (getAdapterSubscription<'A> storeAtomPath) adapterType
+                    let mount, unmount = getAdapterSubscription<'A> adapterType
                     // mount adapterOptions
                     Some (adapterOptions, mount, unmount)
                 | None -> None)
@@ -919,7 +945,7 @@ module Engine =
                     addTimestamp (fun () -> "[ @@> mount ](f6)") getDebugInfo
 
                     if setAdapterValue.IsNone then
-                        setAdapterValue <- mount getter setter adapterOptions setAtom
+                        setAdapterValue <- mount getter setter adapterOptions setAtom storeAtomPath
                 })
             (fun getter setter (adapterOptions, _, unmount) ->
                 let getDebugInfo () =
@@ -928,7 +954,7 @@ module Engine =
                 addTimestamp (fun () -> "[ <@@ unmount ](f7)") getDebugInfo
 
                 if setAdapterValue.IsSome then
-                    unmount getter setter adapterOptions
+                    unmount getter setter adapterOptions storeAtomPath
                     setAdapterValue <- None)
 
     let inline userAdapterFamily<'A when 'A: equality> defaultValue =
@@ -938,7 +964,7 @@ module Engine =
 //                let defaultValue: 'A = atomDefaultValueMap<'A>.[storeAtomPath]
 
                 let getDebugInfo () =
-                    $"_alias={_alias} storeAtomPath={StoreAtomPath.AtomPath} adapterType={adapterType} defaultValue={defaultValue}"
+                    $"_alias={_alias} storeAtomPath={StoreAtomPath.AtomPath} adapterType={adapterType} defaultValue={defaultValue} {getDebugInfo ()}"
 
                 let addTimestamp fn getDebugInfo =
                     Profiling.addTimestamp
@@ -980,7 +1006,7 @@ module Engine =
         let defaultValue = Guid.Empty, (defaultGroup, defaultValue)
 
         let getDebugInfo () =
-            $"atomPath={storeAtomPath |> StoreAtomPath.AtomPath} defaultValue={defaultValue}"
+            $"atomPath={storeAtomPath |> StoreAtomPath.AtomPath} defaultValue={defaultValue} {getDebugInfo ()}"
 
         let addTimestamp fn getDebugInfo =
             Profiling.addTimestamp
@@ -992,7 +1018,7 @@ module Engine =
             Atom.atomFamilyAtom
                 (fun (alias: Gun.Alias option, storeAtomPath: StoreAtomPath) ->
                     let getDebugInfo () =
-                        $"alias={alias} storeAtomPath={storeAtomPath |> StoreAtomPath.AtomPath}"
+                        $"alias={alias} storeAtomPath={storeAtomPath |> StoreAtomPath.AtomPath} {getDebugInfo ()}"
 
                     let addTimestamp fn getDebugInfo =
                         Profiling.addTimestamp
@@ -1008,7 +1034,7 @@ module Engine =
                     let groupMap = Atom.get getter (groupMapFamily (alias, storeAtomPath))
 
                     let getDebugInfo () =
-                        $"alias={alias} storeAtomPath={storeAtomPath |> StoreAtomPath.AtomPath}"
+                        $"alias={alias} storeAtomPath={storeAtomPath |> StoreAtomPath.AtomPath} {getDebugInfo ()}"
 
                     let addTimestamp fn getDebugInfo =
                         Profiling.addTimestamp
@@ -1070,7 +1096,7 @@ module Engine =
         let alias = Atom.get getter Selectors.Gun.alias
 
         let getDebugInfo () =
-            $"alias={alias} storeAtomPath={storeAtomPath |> StoreAtomPath.AtomPath} defaultValue={defaultValue}"
+            $"alias={alias} storeAtomPath={storeAtomPath |> StoreAtomPath.AtomPath} defaultValue={defaultValue} {getDebugInfo ()}"
 
         let addTimestamp fn getDebugInfo =
             Profiling.addTimestamp (fun () -> $"{nameof FsStore} | Engine.getAdapterValues {fn ()} | {getDebugInfo ()}")
@@ -1096,11 +1122,11 @@ module Engine =
     let inline sync<'A when 'A: equality>
         (adapterValues: (Atom.AdapterType * Atom.AdapterOptions * AtomConfig<bool * (TicksGuid * 'A)> * (bool * (TicksGuid * 'A))) list)
         (atom: AtomConfig<((Atom.AdapterType * bool) * (TicksGuid * 'A)) list>)
-        =
+        : unit =
         match lastStore with
         | Some (getter, setter) ->
             let getDebugInfo () =
-                $"atom={atom} adapterValues={Json.encodeWithNull adapterValues}"
+                $"atom={atom} adapterValues={Json.encodeWithNull adapterValues} {getDebugInfo ()}"
 
             let addTimestamp fn getDebugInfo =
                 Profiling.addTimestamp (fun () -> $"{nameof FsStore} | Engine.sync {fn ()} | {getDebugInfo ()}")
@@ -1168,7 +1194,7 @@ module Engine =
                 )
 
             let getDebugInfo () =
-                $" {getDebugInfo ()} values={valuesfmt}"
+                $" {getDebugInfo ()} values={valuesfmt} {getDebugInfo ()}"
 
             let lastAdapterSetAtom, (lastAdapterType, lastFromUi), (lastTicks, lastValue) = values.Head
 
@@ -1213,6 +1239,14 @@ module Engine =
         storeAtomPath
         (defaultValue: 'A)
         : AtomConfig<'A> =
+
+        typeMetadataMap.[typeof<'A>] <-
+            {|
+                DefaultValue = defaultValue
+                Decode = unbox Gun.userDecode<TicksGuid * 'A>
+                Encode = unbox Gun.userEncode<TicksGuid * 'A>
+            |}
+
         let localAdaptersAtom =
             createRegisteredAtomWithGroup<Atom.AdapterType * bool, 'A>
                 storeAtomPath
@@ -1221,7 +1255,7 @@ module Engine =
         let atomPath = storeAtomPath |> StoreAtomPath.AtomPath
 
         let getDebugInfo () =
-            $"localAdaptersAtom={localAdaptersAtom} atomPath={atomPath} defaultValue={defaultValue}"
+            $"localAdaptersAtom={localAdaptersAtom} atomPath={atomPath} defaultValue={defaultValue} {getDebugInfo ()}"
 
         let addTimestamp fn getDebugInfo =
             Profiling.addTimestamp
@@ -1270,7 +1304,7 @@ module Engine =
 
         let inline refreshAdapterValues getter =
             addTimestamp (fun () -> "[ refreshAdapterValues ](a3)") getDebugInfo
-            let adapterValues = getAdapterValues getter storeAtomPath defaultValue
+            let adapterValues = getAdapterValues<'A> getter storeAtomPath defaultValue
             debouncedSync adapterValues
 
         let rec wrapper =
@@ -1315,7 +1349,7 @@ module Engine =
         let storeAtomPath = Atom.query (AtomReference.Atom atom1)
 
         let getDebugInfo () =
-            $"atom1={atom1} atom2={atom2} atomPath={storeAtomPath |> StoreAtomPath.AtomPath} lastValue={lastValue}"
+            $"atom1={atom1} atom2={atom2} atomPath={storeAtomPath |> StoreAtomPath.AtomPath} lastValue={lastValue} {getDebugInfo ()}"
 
         let addTimestamp fn getDebugInfo =
             Profiling.addTimestamp (fun () -> $"{nameof FsStore} | Engine.bindAtom {fn ()} | {getDebugInfo ()}")
