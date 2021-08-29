@@ -1,16 +1,7 @@
 namespace FsStore.Store
 
-open Fable.Core.JsInterop
-open Fable.Core
-open System
 open FsStore
-open FsStore.BaseStore.Store
-open FsStore.Model
-open Microsoft.FSharp.Core.Operators
-open FsCore
 open FsJs
-open FsStore.Bindings
-open FsStore.Bindings.Jotai
 
 #nowarn "40"
 
@@ -20,7 +11,7 @@ module AtomWithSync =
     module Store =
         //        let inline atomWithReducer<'TKey, 'TValue> atomkey (defaultValue: 'TValue) = ()
 
-        let inline atomWithSync<'TKey, 'TValue> storeAtomPath (defaultValue: 'TValue) =
+        let inline atomWithSync<'TKey, 'TValue  when 'TValue: equality> storeAtomPath (defaultValue: 'TValue) =
 
             let referenceAtom = Atom.Primitives.atom defaultValue
 
@@ -374,5 +365,5 @@ module AtomWithSync =
 //
 //            wrapper
 
-        let inline atomFamilyWithSync<'TKey, 'TValue> storeAtomPath (defaultValueFn: 'TKey -> 'TValue) =
+        let inline atomFamilyWithSync<'TKey, 'TValue  when 'TValue: equality> storeAtomPath (defaultValueFn: 'TKey -> 'TValue) =
             Atom.Primitives.atomFamily (fun param -> atomWithSync<'TKey, 'TValue> storeAtomPath (defaultValueFn param))

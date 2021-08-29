@@ -69,7 +69,7 @@ module Engine =
 
     let mutable lastStore: (Getter<obj> * Setter<obj>) option = None
 
-    let inline wrapAtomWithState<'A, 'S>
+    let inline wrapAtomWithState<'A, 'S when 'A: equality>
         (stateFn: Getter<obj> -> 'S option)
         (mount: Getter<obj> -> Setter<obj> -> 'S -> ('A -> unit) -> JS.Promise<unit>)
         (unmount: Getter<obj> -> Setter<obj> -> 'S -> unit)
@@ -195,7 +195,7 @@ module Engine =
         | None -> wrapper
 
 
-    let inline wrapAtom<'A>
+    let inline wrapAtom<'A when 'A: equality>
         (mount: Getter<obj> -> Setter<obj> -> ('A -> unit) -> JS.Promise<unit>)
         (unmount: Getter<obj> -> Setter<obj> -> unit)
         (atom: AtomConfig<'A>)
@@ -465,7 +465,7 @@ module Engine =
 
 
 
-//    let inline newHashedDisposable (ticks: TicksGuid) =
+    //    let inline newHashedDisposable (ticks: TicksGuid) =
 //        promise {
 //            Logger.logDebug (fun () -> $"BaseStore.newHashedDisposable constructor ticks={ticks}")
 //
@@ -742,7 +742,7 @@ module Engine =
                                         Logger.consoleError [| ex |]
                                 })
 
-                        let debouncedBatchPutFromUi = Js.debounce batchPutFromUi 0
+                        let debouncedBatchPutFromUi = Js.debounce batchPutFromUi<'A> 0
 
                         let setAdapterValue (fromUi: bool, (lastTicks, lastValue)) =
                             let getDebugInfo () =
@@ -846,9 +846,8 @@ module Engine =
         | Atom.AdapterType.Memory -> memoryAdapterOptions
 
     let inline wrapAtomWithAdapter<'A when 'A: equality>
+        storeAtomPath
         adapterType
-        (getAdapter: Atom.AdapterType
-                         -> (Getter<obj> -> Setter<obj> -> Atom.AdapterOptions -> (bool * (TicksGuid * 'A) -> unit) -> (bool * (TicksGuid * 'A) -> unit) option) * (Getter<obj> -> Setter<obj> -> Atom.AdapterOptions -> unit))
         atom
         : AtomConfig<bool * (TicksGuid * 'A)> =
         let mutable setAdapterValue: (bool * (TicksGuid * 'A) -> unit) option = None
@@ -906,7 +905,7 @@ module Engine =
 
                 match adapterOptions with
                 | Some adapterOptions ->
-                    let mount, unmount = getAdapter adapterType
+                    let mount, unmount = (getAdapterSubscription<'A> storeAtomPath) adapterType
                     // mount adapterOptions
                     Some (adapterOptions, mount, unmount)
                 | None -> None)
@@ -949,7 +948,7 @@ module Engine =
 
                 Atom.create (AtomType.Atom (false, ((Guid.Empty: TicksGuid), (defaultValue: 'A))))
                 //                atom
-                |> wrapAtomWithAdapter<'A> adapterType (getAdapterSubscription storeAtomPath)
+                |> wrapAtomWithAdapter<'A> storeAtomPath adapterType
                 |> Atom.register storeAtomPath)
 
     let inline subscribeFamilyKey<'TKey, 'A when 'TKey: equality and 'A: equality>
@@ -973,38 +972,6 @@ module Engine =
         |> Seq.sortByDescending fst
         |> Seq.toList
 
-    let inline lastSyncValueByTypeAtom<'TGroup, 'A when 'TGroup: comparison and 'A: equality> defaultValue =
-        let groupMapFamily =
-            Atom.atomFamilyAtom
-                (fun (alias: Gun.Alias option, storeAtomPath: StoreAtomPath) ->
-                    let getDebugInfo () =
-                        $"alias={alias} storeAtomPath={storeAtomPath |> StoreAtomPath.AtomPath}"
-
-                    let addTimestamp fn getDebugInfo =
-                        Profiling.addTimestamp
-                            (fun () -> $"{nameof FsStore} | Engine.groupMapAtom {fn ()} | {getDebugInfo ()}")
-
-                    addTimestamp (fun () -> "[ constructor ](e3)") getDebugInfo
-
-                    defaultValue |> List.singleton)
-
-        Atom.Primitives.readSelectorFamily
-            (fun (alias: Gun.Alias option, storeAtomPath: StoreAtomPath) getter ->
-                let groupMap = Atom.get getter (groupMapFamily (alias, storeAtomPath))
-
-                let getDebugInfo () =
-                    $"alias={alias} storeAtomPath={storeAtomPath |> StoreAtomPath.AtomPath}"
-
-                let addTimestamp fn getDebugInfo =
-                    Profiling.addTimestamp
-                        (fun () -> $"{nameof FsStore} | Engine.lastSyncValueByTypeAtom {fn ()} | {getDebugInfo ()}")
-
-                addTimestamp (fun () -> "[ constructor ](e2)") getDebugInfo
-
-                groupMap
-                //                |> unbox<(TicksGuid * (obj * obj)) list>
-                |> groupValues<'TGroup, 'A>)
-
     let inline createRegisteredAtomWithGroup<'TGroup, 'A when 'TGroup: comparison and 'A: equality>
         (storeAtomPath: StoreAtomPath)
         (defaultGroup: 'TGroup, defaultValue: 'A)
@@ -1021,7 +988,37 @@ module Engine =
 
         addTimestamp (fun () -> "[ constructor ](d1)") getDebugInfo
 
-        let userAtomFamily = lastSyncValueByTypeAtom defaultValue
+        let groupMapFamily =
+            Atom.atomFamilyAtom
+                (fun (alias: Gun.Alias option, storeAtomPath: StoreAtomPath) ->
+                    let getDebugInfo () =
+                        $"alias={alias} storeAtomPath={storeAtomPath |> StoreAtomPath.AtomPath}"
+
+                    let addTimestamp fn getDebugInfo =
+                        Profiling.addTimestamp
+                            (fun () -> $"{nameof FsStore} | Engine.groupMapAtom {fn ()} | {getDebugInfo ()}")
+
+                    addTimestamp (fun () -> "[ constructor ](e3)") getDebugInfo
+
+                    defaultValue |> List.singleton)
+
+        let userAtomFamily =
+            Atom.Primitives.readSelectorFamily
+                (fun (alias: Gun.Alias option, storeAtomPath: StoreAtomPath) getter ->
+                    let groupMap = Atom.get getter (groupMapFamily (alias, storeAtomPath))
+
+                    let getDebugInfo () =
+                        $"alias={alias} storeAtomPath={storeAtomPath |> StoreAtomPath.AtomPath}"
+
+                    let addTimestamp fn getDebugInfo =
+                        Profiling.addTimestamp
+                            (fun () -> $"{nameof FsStore} | Engine.lastSyncValueByTypeAtom {fn ()} | {getDebugInfo ()}")
+
+                    addTimestamp (fun () -> "[ constructor ](e2)") getDebugInfo
+
+                    groupMap
+                    //                |> unbox<(TicksGuid * (obj * obj)) list>
+                    |> groupValues<'TGroup, 'A>)
 
         let wrapper =
             Atom.Primitives.selector
@@ -1212,7 +1209,10 @@ module Engine =
         | _ -> ()
 
 
-    let inline createRegisteredAtomWithSubscription<'A when 'A: equality> storeAtomPath (defaultValue: 'A) : AtomConfig<'A> =
+    let inline createRegisteredAtomWithSubscription<'A when 'A: equality>
+        storeAtomPath
+        (defaultValue: 'A)
+        : AtomConfig<'A> =
         let localAdaptersAtom =
             createRegisteredAtomWithGroup<Atom.AdapterType * bool, 'A>
                 storeAtomPath

@@ -27,12 +27,12 @@ module AtomWithSubscription =
         lastGunOptions={lastGunOptions}
         lastGunAtomNode={lastGunAtomNode} """
 
-        let getGunAtomNode () = ()
+        let _getGunAtomNode () = ()
         //            Atom.get getter (Selectors.Gun.gunAtomNode (lastAlias, atomPath))
 
         atom
         |> Engine.wrapAtom
-            (fun getter setter _setAtom ->
+            (fun getter _setter _setAtom ->
                 promise {
                     let logger = Logger.State.lastLogger
                     logger.Trace (fun () -> $"Store.wrapAtomWithSubscription. onMount() {getDebugInfo ()}")
@@ -53,14 +53,14 @@ module AtomWithSubscription =
                 ())
 
 
-    let inline atomWithSubscription<'TValue>
+    let inline atomWithSubscription<'TValue  when 'TValue: equality>
         storeAtomPath
         (defaultValue: 'TValue)
         mount
         unmount
         atom
         : AtomConfig<'TValue> =
-        let atomPath = storeAtomPath |> StoreAtomPath.AtomPath
+        let _atomPath = storeAtomPath |> StoreAtomPath.AtomPath
 
         atom
             |> wrapAtomWithSubscription defaultValue mount unmount

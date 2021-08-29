@@ -10,7 +10,7 @@ open FsCore
 [<AutoOpen>]
 module AtomWithStorageSync =
     module Store =
-        let inline atomWithStorageSync<'TKey, 'TValue> storeAtomPath defaultValue =
+        let inline atomWithStorageSync<'TKey, 'TValue when 'TValue: equality> storeAtomPath defaultValue =
             let storageAtom = Atom.createRegisteredWithStorage storeAtomPath defaultValue
             let syncAtom = Store.atomWithSync<'TKey, 'TValue> storeAtomPath defaultValue
 
