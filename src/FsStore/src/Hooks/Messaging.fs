@@ -29,12 +29,6 @@ module Messaging =
                                 state,
                                 Message.Event (AppEvent.Error error)
                                 |> List.singleton
-                    | AppCommand.RegisterAdapter adapter ->
-                        return
-                            { state with
-                                Adapters = adapter :: state.Adapters
-                            },
-                            []
                 //                    | _ -> return failwith "invalid message"
                 }
 
@@ -44,7 +38,7 @@ module Messaging =
         //                    | _ -> return failwith "invalid message"
         }
 
-    let inline atomUpdate getter setter state command =
+    let inline atomUpdate getter _setter state command =
         promise {
             let logger = Atom.get getter Selectors.logger
 

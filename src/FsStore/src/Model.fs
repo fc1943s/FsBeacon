@@ -55,13 +55,12 @@ module Model =
         | Temp of Gun.Serializer<'A>
 
 
-    [<RequireQualifiedAccess>]
+    [<StructuralComparison; StructuralEquality; RequireQualifiedAccess>]
     type AppCommand =
         | Init of state: AppEngineState
         | SignInPair of keys: Gun.GunKeys
-        | RegisterAdapter of adapter: (unit -> unit)
 
-    and AppEngineState = { Adapters: (unit -> unit) list }
+    and AppEngineState = { Adapters: unit list }
 
     [<RequireQualifiedAccess>]
     type AppEvent =

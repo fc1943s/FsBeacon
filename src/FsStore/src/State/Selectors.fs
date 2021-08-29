@@ -90,7 +90,7 @@ module SelectorsMagic =
         module rec Gun =
             let collection = Collection (nameof Gun)
 
-            let inline readSelector name fn =
+            let readSelector name fn =
                 Atom.createRegistered
                     (IndexedAtomPath (FsStore.storeRoot, collection, [], AtomName name))
                     (AtomType.ReadSelector fn)
@@ -255,7 +255,7 @@ module SelectorsMagic =
                         gunUser.__.sea)
 
 
-            let inline getRecursiveNode (gunNode: Types.IGunNode) (nodes: GunNodeSlice list) getter alias =
+            let getRecursiveNode (gunNode: Types.IGunNode) (nodes: GunNodeSlice list) getter alias =
                 match nodes with
                 | [] -> None
                 | [ root ] -> Some (gunNode.get root)

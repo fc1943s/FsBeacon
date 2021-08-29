@@ -111,7 +111,7 @@ module Atom =
 //        atom
 //        |> wrap (fun setAtom -> promise { () }, unmount)
 
-    let register storeAtomPath (atom: AtomConfig<'A>) =
+    let register<'A> storeAtomPath (atom: AtomConfig<'A>) =
         let getDebugInfo () =
             $"atom={atom} storeAtomPath={storeAtomPath |> StoreAtomPath.AtomPath} "
 
@@ -208,7 +208,7 @@ module Atom =
     let inline createRegistered storeAtomPath atomType =
         atomType |> create |> register storeAtomPath
 
-    let inline createRegisteredWithStorage storeAtomPath (defaultValue: 'A) =
+    let inline createRegisteredWithStorage<'A> storeAtomPath (defaultValue: 'A) =
         let defaultValueFormatted = defaultValue |> Enum.formatIfEnum
 
         let internalAtom =
