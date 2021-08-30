@@ -60,14 +60,10 @@ module OldPrimitives =
 //                write getter setter newValue)
 
 
-    let inline selectAtom atom selector =
-        jotaiUtils.selectAtom atom selector JS.undefined
+    //    let inline selectAtom atom selector =
+//        jotaiUtils.selectAtom atom selector JS.undefined
 
-    let inline asyncSelector<'A> (read: AsyncRead<'A>) (write: AsyncWrite<'A>) =
-        jotai.atom (
-            (fun getter -> promise { return! read getter }),
-            Some (fun getter setter newValue -> promise { do! write getter setter newValue })
-        )
+    ()
 
 
 [<AutoOpen>]
@@ -165,7 +161,7 @@ module PrimitivesMagic =
 
 
         let inline asyncReadSelector<'A> (read: AsyncRead<'A>) =
-            OldPrimitives.asyncSelector
+            Atom.Primitives.asyncSelector
                 read
                 (fun _ _ _newValue -> promise { failwith "Primitives.asyncReadSelector is read only." })
 
@@ -173,7 +169,7 @@ module PrimitivesMagic =
         let inline asyncSelectorFamily<'TKey, 'A> (read: 'TKey -> AsyncRead<'A>) (write: 'TKey -> AsyncWrite<'A>) =
             Atom.Primitives.atomFamily
                 (fun param ->
-                    OldPrimitives.asyncSelector
+                    Atom.Primitives.asyncSelector
                         (read param)
                         (fun getter setter newValue -> promise { do! write param getter setter newValue }))
 

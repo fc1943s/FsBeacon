@@ -1,6 +1,5 @@
 namespace FsBeacon.Template
 
-open Fable.Core
 open FsStore.Bindings.Jotai
 open FsCore
 open FsCore.BaseModel
@@ -56,11 +55,46 @@ module State =
                     (RootAtomPath (FsBeacon.storeRoot, AtomName (nameof mounted)))
                     (AtomType.Atom false)
 
-            let rec testCounter =
-                Engine.createRegisteredAtomWithSubscriptionStorage
-                    //        Atom.createRegisteredWithStorage
-                    (RootAtomPath (FsBeacon.storeRoot, AtomName (nameof testCounter)))
-                    0
+
+            module Operation =
+                [<RequireQualifiedAccess>]
+                type Operation<'T> =
+                    | Waiting
+                    | Ok of 'T
+                    | Progress of int
+                    | Error of exn
+
+                let asyncOperationAtom fn =
+                    let operationAtom = Atom.Primitives.atom Operation.Waiting
+
+                    let asyncWriteAtom =
+                        Atom.Primitives.asyncSelector
+                            (fun _ -> promise { return () })
+                            (fun _ setter _ ->
+                                promise {
+                                    Atom.set setter operationAtom (Operation.Progress 0)
+
+                                    try
+                                        let! result = fn ()
+                                        Atom.set setter operationAtom (Operation.Ok result)
+                                    with
+                                    | ex -> Atom.set setter operationAtom (Operation.Error ex)
+                                })
+
+                    Atom.Primitives.selector
+                        (fun getter -> Atom.get getter operationAtom)
+                        (fun _ setter _ -> Atom.set setter asyncWriteAtom ())
+
+                let createFileDownloadAtom url =
+                    asyncOperationAtom
+                        (fun () ->
+                            promise {
+                                do! Promise.sleep 1000
+                                return $"downloaded after 1s. url: {url}"
+                            })
+
+            let rec upvote = Atoms.Join.createJoinAtom (nameof upvote)
+            let rec downvote = Atoms.Join.createJoinAtom (nameof downvote)
 
 
     module Selectors =

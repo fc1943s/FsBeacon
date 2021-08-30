@@ -170,7 +170,7 @@ module Atom =
             )
 
         let inline readSelector (read: Read<'A>) =
-            selector read (fun _ _ _ -> failwith "Atom.Primitives.readSelector is read only.")
+            selector read (fun _ _ _ -> failwith "Atom.Primitives.readSelector is read only. (5)")
 
         let inline setSelector (write: Write<'A>) = selector (fun _ -> JS.undefined) write
 
@@ -194,6 +194,12 @@ module Atom =
 
         let inline readSelectorFamily<'TKey, 'A> (read: 'TKey -> Read<'A>) : ('TKey -> AtomConfig<'A>) =
             selectorFamily read (fun _ _ _ -> failwith "Atom.Primitives.readSelectorFamily is read only.")
+
+        let inline asyncSelector<'A> (read: AsyncRead<'A>) (write: AsyncWrite<'A>) =
+            jotai.atom (
+                (fun getter -> promise { return! read getter }),
+                Some (fun getter setter newValue -> promise { do! write getter setter newValue })
+            )
 
     let inline map<'A, 'B> readFn writeFn atom =
         Primitives.selector

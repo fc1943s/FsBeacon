@@ -6,6 +6,7 @@
     </PropertyGroup>
     <ItemGroup>
         <Compile Include="src\State.fs" />
+        <Compile Include="src\StateTemp.fs" />
         <Compile Include="src\Components\HostComponent.fs" />
         <Compile Include="src\Components\SampleComponent.fs" />
         <Compile Include="src\Components\Content.fs" />
