@@ -650,6 +650,34 @@ module Engine =
     [<Erase>]
     type AtomValueRef = AtomValueRef of obj
 
+    type Encodable =
+        {
+            GetValue: unit -> AtomValueRef
+            Encode: Gun.GunKeys -> TicksGuid * AtomValueRef -> JS.Promise<Gun.EncryptedSignedValue>
+            Decode: Gun.GunKeys -> Gun.EncryptedSignedValue -> JS.Promise<(TicksGuid * AtomValueRef) option>
+        }
+
+    let inline createEncodable<'A11> (value: 'A11) =
+        let encode keys (ticks, value: AtomValueRef) =
+            Gun.userEncode<TicksGuid * 'A11> keys (ticks, value |> unbox<'A11>)
+
+        let decode keys value =
+            promise {
+                let! result = Gun.userDecode<TicksGuid * 'A11> keys value
+
+                return
+                    match result with
+                    | Some (ticks, value) -> Some (ticks, AtomValueRef (box value))
+                    | None -> None
+            }
+
+        {
+            GetValue = fun () -> AtomValueRef (box value)
+            Encode = encode
+            Decode = decode
+        }
+
+
     //    let typeMetadataMap =
 //        Dictionary<Type, {| DefaultValue: AtomValueRef
 //                            Decode: Gun.GunKeys
@@ -659,7 +687,7 @@ module Engine =
 //            ()
 
 
-    let inline batchPutFromUi<'A when 'A: equality> (gunAtomNode, privateKeys, ticks, newValue: 'A, onPut) =
+    let inline batchPutFromUi (gunAtomNode, privateKeys, ticks, newValue: 'A1, onPut) =
         let getDebugInfo () =
             $" ticks={ticks} newValue={newValue}  {getDebugInfo ()}"
 
@@ -679,7 +707,7 @@ module Engine =
                                     return null
                                 else
                                     let! (Gun.EncryptedSignedValue encrypted) =
-                                        Gun.userEncode<TicksGuid * 'A> privateKeys (ticks, newValue)
+                                        Gun.userEncode<TicksGuid * 'A1> privateKeys (ticks, newValue)
 
                                     return encrypted
                             }
@@ -709,7 +737,7 @@ module Engine =
         | Atom.AdapterType.Hub -> Atom.get getter Selectors.Hub.adapterOptions
         | Atom.AdapterType.Memory -> memoryAdapterOptions
 
-    let inline getAdapterSubscription<'A when 'A: equality> adapterType =
+    let inline getAdapterSubscription adapterType =
         let getDebugInfo () =
             $"adapterType={adapterType} {getDebugInfo ()}"
 
@@ -720,7 +748,7 @@ module Engine =
         let mount, unmount =
             match adapterType with
             | Atom.AdapterType.Gun ->
-                (fun storeAtomPath getter _setter adapterOptions adapterSetAtom ->
+                (fun storeAtomPath getter (_setter: Setter<obj>) adapterOptions adapterSetAtom ->
                     let atomPath = storeAtomPath |> StoreAtomPath.AtomPath
 
                     let getDebugInfo () =
@@ -758,7 +786,7 @@ module Engine =
                                 (fun (subscriptionTicks, gunValue) ->
                                     promise {
                                         try
-                                            let! newValue = Gun.userDecode<TicksGuid * 'A> privateKeys gunValue
+                                            let! newValue = Gun.userDecode<TicksGuid * 'A2> privateKeys gunValue
 
                                             addTimestamp
                                                 (fun () ->
@@ -768,7 +796,7 @@ module Engine =
                                             debouncedAdapterSetAtom (
                                                 false,
                                                 newValue
-                                                |> unbox
+                                                |> unbox<(TicksGuid * 'A2) option>
                                                 |> Option.defaultValue (unbox null)
                                             )
                                         with
@@ -780,7 +808,7 @@ module Engine =
                                             Logger.consoleError [| ex |]
                                     })
 
-                            let debouncedBatchPutFromUi = Js.debounce batchPutFromUi<'A> 0
+                            let debouncedBatchPutFromUi = Js.debounce batchPutFromUi 0
 
                             let setAdapterValue (fromUi: bool, (lastTicks, lastValue)) =
                                 let getDebugInfo () =
@@ -809,7 +837,7 @@ module Engine =
                             Some setAdapterValue
                         | _ -> failwith $"invalid gun atom node {getDebugInfo ()}"
                     | _ -> None),
-                (fun storeAtomPath getter _setter adapterOptions ->
+                (fun storeAtomPath getter (_setter: Setter<obj>) adapterOptions ->
                     let atomPath = storeAtomPath |> StoreAtomPath.AtomPath
 
                     let getDebugInfo () =
@@ -888,11 +916,7 @@ module Engine =
 //        member _.Put () = failwith ""
 
 
-    let inline createAtomWithAdapter<'A when 'A: equality>
-        adapterType
-        mount
-        unmount
-        : AtomConfig<(bool * (TicksGuid * 'A)) option> =
+    let inline createAtomWithAdapter adapterType mount unmount : AtomConfig<(bool * (TicksGuid * 'A3)) option> =
         let atom = Atom.create (AtomType.Atom None)
 
         let mutable setAdapterValue = None
@@ -914,7 +938,7 @@ module Engine =
                 result)
             (fun _ setter newValue ->
                 match newValue with
-                | Some (newFromUi, (newTicks, newValue)) ->
+                | Some (newFromUi, (newTicks, newValue: 'A3)) ->
                     let getDebugInfo () =
                         $" newTicks={newTicks} newValue={newValue} newFromUi={newFromUi} {getDebugInfo ()}"
 
@@ -981,8 +1005,8 @@ module Engine =
                     unmount getter setter adapterOptions
                     setAdapterValue <- None)
 
-    let inline subscribeFamilyKey<'TKey, 'A when 'TKey: equality and 'A: equality>
-        (_atomFamily: 'TKey -> AtomConfig<'A>)
+    let inline subscribeFamilyKey<'TKey, 'A4 when 'TKey: equality and 'A4: equality>
+        (_atomFamily: 'TKey -> AtomConfig<'A4>)
         =
         let result: AtomConfig<AtomConfig<'TKey> []> = Atom.create (AtomType.Atom [||])
         result
@@ -995,7 +1019,7 @@ module Engine =
                 let newItem =
                     values
                     |> Seq.sortByDescending fst
-                    |> Seq.map (fun (ticks: TicksGuid, (_, value: 'A)) -> ticks, value)
+                    |> Seq.map (fun (ticks: TicksGuid, (_, value: 'A5)) -> ticks, value)
                     |> Seq.head
 
                 group, newItem)
@@ -1004,7 +1028,7 @@ module Engine =
 
 
 
-    let groupMapFamily: (GroupRef option * Gun.Alias option * StoreAtomPath -> AtomConfig<(TicksGuid * (GroupRef * AtomValueRef)) list>) =
+    let groupMapFamily: (GroupRef option * Gun.Alias option * StoreAtomPath -> AtomConfig<(TicksGuid * (GroupRef * Encodable)) list>) =
         Atom.atomFamilyAtom
             (fun (groupRef: GroupRef option, alias: Gun.Alias option, storeAtomPath: StoreAtomPath) ->
                 let getDebugInfo () =
@@ -1037,10 +1061,10 @@ module Engine =
                 //                |> unbox<(TicksGuid * (obj * obj)) list>
                 |> groupValues)
 
-    let inline createRegisteredAtomWithGroup<'TGroup, 'A when 'TGroup: comparison and 'A: equality>
+    let inline createRegisteredAtomWithGroup
         (storeAtomPath: StoreAtomPath)
-        (defaultGroup: 'TGroup, defaultValue: 'A)
-        : AtomConfig<('TGroup * (TicksGuid * 'A)) list> =
+        (defaultGroup: 'TGroup, defaultValue: 'A6)
+        : AtomConfig<('TGroup * (TicksGuid * 'A6)) list> =
 
         let defaultValue = Guid.Empty, (defaultGroup, defaultValue)
 
@@ -1081,8 +1105,8 @@ module Engine =
                     filteredResult
                     |> List.map
                         (fun (groupRef, (ticks, atomValueRef)) ->
-                            groupRef |> unbox<'TGroup>, (ticks, atomValueRef |> unbox<'A>)))
-                (fun getter setter (newValueFn: ('TGroup * (TicksGuid * 'A)) list) ->
+                            groupRef |> unbox<'TGroup>, (ticks, atomValueRef.GetValue () |> unbox<'A6>)))
+                (fun getter setter (newValueFn: ('TGroup * (TicksGuid * 'A6)) list) -> // TODO:log fn, hook
                     let alias = Atom.get getter Selectors.Gun.alias
                     let userAtom = userAtomFamily (Some (GroupRef defaultGroup), alias, storeAtomPath)
 
@@ -1095,8 +1119,7 @@ module Engine =
                         setter
                         userAtom
                         (newValueFn
-                         |> unbox<(GroupRef * (TicksGuid * AtomValueRef)) list
-                             -> (GroupRef * (TicksGuid * AtomValueRef)) list>))
+                         |> unbox<(GroupRef * (TicksGuid * Encodable)) list -> (GroupRef * (TicksGuid * Encodable)) list>))
             |> Atom.register storeAtomPath
 
         wrapper?init <- defaultValue
@@ -1105,12 +1128,11 @@ module Engine =
 
 
     let adapterAtomMap =
-        Dictionary<Atom.AdapterType * Gun.Alias * StoreAtomPath, AtomConfig<(bool * (TicksGuid * AtomValueRef)) option>>
-            ()
+        Dictionary<Atom.AdapterType * Gun.Alias * StoreAtomPath, AtomConfig<(bool * (TicksGuid * Encodable)) option>> ()
 
 
 
-    let inline getAdapterValues getter storeAtomPath (defaultValue: 'A) =
+    let inline getAdapterValues getter storeAtomPath (defaultValue: 'A7) =
         let alias = Atom.get getter Selectors.Gun.alias
 
         let getDebugInfo () =
@@ -1129,7 +1151,7 @@ module Engine =
                         match adapterAtomMap.TryGetValue ((adapterType, alias, storeAtomPath)) with
                         | true, value -> value
                         | _ ->
-                            let mount, unmount = getAdapterSubscription<'A> adapterType
+                            let mount, unmount = getAdapterSubscription adapterType
                             let mount, unmount = mount storeAtomPath, unmount storeAtomPath
                             //
 //                            let newMount
@@ -1175,13 +1197,13 @@ module Engine =
 //                                | None -> None
 
                             let newAtom =
-                                createAtomWithAdapter<'A> adapterType mount unmount
+                                createAtomWithAdapter adapterType mount unmount
                                 |> Atom.map
                                     (Option.map
-                                        (fun (fromUi, (ticks, value: 'A)) -> fromUi, (ticks, AtomValueRef (box value))))
+                                        (fun (fromUi, (ticks, value: 'A7)) -> fromUi, (ticks, createEncodable value)))
                                     (Option.map
-                                        (fun (fromUi, (ticks, value: AtomValueRef)) ->
-                                            fromUi, (ticks, value |> unbox<'A>)))
+                                        (fun (fromUi, (ticks, value: Encodable)) ->
+                                            fromUi, (ticks, value.GetValue () |> unbox<'A7>)))
 
                             adapterAtomMap.Add ((adapterType, alias, storeAtomPath), newAtom)
                             newAtom
@@ -1198,8 +1220,8 @@ module Engine =
 
 
     let inline sync
-        (adapterValues: (Atom.AdapterType * Atom.AdapterOptions * AtomConfig<(bool * (TicksGuid * AtomValueRef)) option> * (bool * (TicksGuid * AtomValueRef)) option) list)
-        (atom: AtomConfig<((Atom.AdapterType * bool) * (TicksGuid * AtomValueRef)) list>)
+        (adapterValues: (Atom.AdapterType * Atom.AdapterOptions * AtomConfig<(bool * (TicksGuid * Encodable)) option> * (bool * (TicksGuid * Encodable)) option) list)
+        (atom: AtomConfig<((Atom.AdapterType * bool) * (TicksGuid * Encodable)) list>)
         : unit =
         match lastStore with
         | Some (getter, setter) ->
@@ -1320,10 +1342,10 @@ module Engine =
         | _ -> ()
 
 
-    let inline createRegisteredAtomWithSubscription<'A when 'A: equality>
+    let inline createRegisteredAtomWithSubscription<'A8 when 'A8: equality>
         storeAtomPath
-        (defaultValue: 'A)
-        : AtomConfig<'A> =
+        (defaultValue: 'A8)
+        : AtomConfig<'A8> =
         //        typeMetadataMap.[typeof<'A>] <-
 //            {|
 //                DefaultValue = AtomValueRef (box defaultValue)
@@ -1331,10 +1353,8 @@ module Engine =
 //                Encode = unbox Gun.userEncode<TicksGuid * 'A>
 //            |}
 
-        let localAdaptersAtom: AtomConfig<((Atom.AdapterType * bool) * (TicksGuid * 'A)) list> =
-            createRegisteredAtomWithGroup<Atom.AdapterType * bool, 'A>
-                storeAtomPath
-                ((Atom.AdapterType.Memory, false), defaultValue)
+        let localAdaptersAtom: AtomConfig<((Atom.AdapterType * bool) * (TicksGuid * 'A8)) list> =
+            createRegisteredAtomWithGroup storeAtomPath ((Atom.AdapterType.Memory, false), defaultValue)
 
         let atomPath = storeAtomPath |> StoreAtomPath.AtomPath
 
@@ -1359,20 +1379,20 @@ module Engine =
                             (fun items ->
                                 items
                                 |> List.map
-                                    (fun ((adapterType, fromUi), (ticks, value: 'A)) ->
-                                        (adapterType, fromUi), (ticks, AtomValueRef (box value))))
+                                    (fun ((adapterType, fromUi), (ticks, value: 'A8)) ->
+                                        (adapterType, fromUi), (ticks, createEncodable value)))
                             (fun items ->
                                 items
                                 |> List.map
-                                    (fun ((adapterType, fromUi), (ticks, value: AtomValueRef)) ->
-                                        (adapterType, fromUi), (ticks, value |> unbox<'A>)))
+                                    (fun ((adapterType, fromUi), (ticks, value: Encodable)) ->
+                                        (adapterType, fromUi), (ticks, value.GetValue () |> unbox<'A8>)))
 
                     sync adapterValues newAtom)
                 0
 
         let inline refreshAdapterValues getter =
             addTimestamp (fun () -> "[ refreshAdapterValues ](a3)") getDebugInfo
-            let adapterValues = getAdapterValues<'A> getter storeAtomPath defaultValue
+            let adapterValues = getAdapterValues getter storeAtomPath defaultValue
             debouncedSync adapterValues
 
         let rec wrapper =
@@ -1389,7 +1409,7 @@ module Engine =
                     addTimestamp (fun () -> "[ wrapper.get() ](a5)") getDebugInfo
 
                     value)
-                (fun getter setter (newValue: 'A) ->
+                (fun getter setter (newValue: 'A8) ->
                     refreshAdapterValues getter
 
                     Atom.change
@@ -1410,8 +1430,8 @@ module Engine =
 
         wrapper |> Atom.register storeAtomPath
 
-    let inline bindAtom<'A when 'A: equality> atom1 atom2 =
-        let mutable lastSetAtom: ('A option -> unit) option = None
+    let inline bindAtom atom1 atom2 =
+        let mutable lastSetAtom: ('A9 option -> unit) option = None
         let mutable lastValue = None
 
         let storeAtomPath = Atom.query (AtomReference.Atom atom1)
@@ -1482,8 +1502,12 @@ module Engine =
         wrapper |> Atom.register storeAtomPath
 
 
-    let inline createRegisteredAtomWithSubscriptionStorage<'A when 'A: equality> storeAtomPath (defaultValue: 'A) =
+
+    let inline createRegisteredAtomWithSubscriptionStorage<'A10 when 'A10: equality>
+        storeAtomPath
+        (defaultValue: 'A10)
+        =
         //        let storageAtom = Atom.createRegisteredWithStorage storeAtomPath (Guid.Empty, defaultValue)
-        let storageAtom = Atom.createRegisteredWithStorage<'A> storeAtomPath defaultValue
-        let syncAtom = createRegisteredAtomWithSubscription<'A> storeAtomPath defaultValue
-        bindAtom<'A> syncAtom storageAtom
+        let storageAtom = Atom.createRegisteredWithStorage storeAtomPath defaultValue
+        let syncAtom = createRegisteredAtomWithSubscription<'A10> storeAtomPath defaultValue
+        bindAtom syncAtom storageAtom
