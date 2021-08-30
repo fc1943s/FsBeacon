@@ -52,6 +52,7 @@ module Atom =
     let inline change<'A> (setter: Setter<obj>) (atom: AtomConfig<'A>) (value: 'A -> 'A) =
         setter (unbox atom) (unbox value)
 
+
     //    type Subscription<'A> = (('A -> unit) -> JS.Promise<unit>) -> unit -> unit
 
     let inline addSubscription<'A> (debounce: bool) mount unmount (atom: AtomConfig<'A>) =
@@ -155,19 +156,25 @@ module Atom =
         let inline atom value = jotai.atom value
 
         let inline selector<'A> (read: Read<'A>) (write: Write<'A>) =
-            jotai.atom (
-                (fun getter ->
-                    Logger.logTrace (fun () -> $"{nameof FsStore} | Atom.Primitives.selector get()")
-                    read getter),
-                Some
-                    (fun getter setter value ->
-                        //                        Logger.logTrace (fun () -> $"{nameof FsStore} | Atom.Primitives.selector set()")
-                        let newValue = value
-                        //                        match jsTypeof value with
-                        //                         | "function" -> (unbox value) () |> unbox
-                        //                         | _ -> value
-                        write getter setter newValue)
-            )
+            let rec atom =
+                jotai.atom (
+                    (fun getter ->
+                        Logger.logTrace (fun () -> $"{nameof FsStore} | Atom.Primitives.selector get()")
+                        read getter),
+                    Some
+                        (fun getter setter value ->
+                            //                        Logger.logTrace (fun () -> $"{nameof FsStore} | Atom.Primitives.selector set()")
+                            let newValue =
+                                match jsTypeof value with
+                                | "function" ->
+                                    let oldValue = get getter atom
+                                    (unbox value) oldValue |> unbox
+                                | _ -> value
+
+                            write getter setter newValue)
+                )
+
+            atom
 
         let inline readSelector (read: Read<'A>) =
             selector read (fun _ _ _ -> failwith "Atom.Primitives.readSelector is read only. (5)")
@@ -208,7 +215,7 @@ module Atom =
                 let newValue: 'B = readFn value
                 newValue)
             (fun _getter setter newValue ->
-                let newValue : 'A = writeFn newValue
+                let newValue: 'A = writeFn newValue
                 set setter atom newValue)
 
     let inline atomFamilyAtom defaultValueFn =

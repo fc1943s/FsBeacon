@@ -4,6 +4,6 @@
   "integrationFolder": "src/Tests",
   "testFiles": "**/*.spec.fs.js",
   "video": true,
-  "viewportWidth": 1000,
-  "viewportHeight": 950
+  "viewportWidth": 1700,
+  "viewportHeight": 1200
 }
