@@ -6,6 +6,7 @@ open Fable.Core.JsInterop
 open Fable.Core
 open FsJs
 open FsStore.Bindings
+open FsStore.Bindings.Gun.Types
 open FsStore.Bindings.Jotai
 open FsStore.Model
 open FsCore
@@ -332,6 +333,8 @@ module Engine =
         | FromUi
         | NotFromUi
 
+    let gunSubscriptionMap = Dictionary<IGunChainReference, TicksGuid> ()
+
     let inline getAdapterSubscription<'A2 when 'A2: equality> atomType adapterType =
 
         let typeMetadata = typeMetadataMap.[atomType]
@@ -380,33 +383,41 @@ module Engine =
                                         adapterSetAtom value)
                                     0
 
-                            Gun.batchSubscribe
-                                gunAtomNode
-                                (Guid.newTicksGuid ())
-                                (fun (subscriptionTicks, gunValue) ->
-                                    promise {
-                                        try
-                                            let! newValue = typeMetadata.Decode privateKeys gunValue
+                            if gunSubscriptionMap.ContainsKey gunAtomNode then
+                                addTimestamp
+                                    (fun () -> "[ ### setAdapterValue ](j4-2) skipping subscription. cached ")
+                                    getDebugInfo
+                            else
+                                let subscriptionId = Guid.newTicksGuid ()
+                                gunSubscriptionMap.Add (gunAtomNode, subscriptionId)
 
-                                            addTimestamp
-                                                (fun () ->
-                                                    "[ ||==> setAdapterValue ](j4-1) invoking debouncedSetAtom. inside gun.on() ")
-                                                getDebugInfo
+                                Gun.batchSubscribe
+                                    gunAtomNode
+                                    subscriptionId
+                                    (fun (subscriptionTicks, gunValue) ->
+                                        promise {
+                                            try
+                                                let! newValue = typeMetadata.Decode privateKeys gunValue
 
-                                            debouncedAdapterSetAtom (
-                                                newValue
-                                                |> Option.map
-                                                    (fun (ticks, value) -> NotFromUi, ticks, value |> unbox<'A2>)
-                                                |> Option.defaultValue (unbox null)
-                                            )
-                                        with
-                                        | ex ->
-                                            Logger.logError
-                                                (fun () ->
-                                                    $"Engine.getAtomAdapter. gun subscribe data error. ex={ex.Message} gunValue={gunValue} subscriptionTicks={subscriptionTicks} {getDebugInfo ()}")
+                                                addTimestamp
+                                                    (fun () ->
+                                                        "[ ||==> setAdapterValue ](j4-1) invoking debouncedSetAtom. inside gun.on() ")
+                                                    getDebugInfo
 
-                                            Logger.consoleError [| ex |]
-                                    })
+                                                debouncedAdapterSetAtom (
+                                                    newValue
+                                                    |> Option.map
+                                                        (fun (ticks, value) -> NotFromUi, ticks, value |> unbox<'A2>)
+                                                    |> Option.defaultValue (unbox null)
+                                                )
+                                            with
+                                            | ex ->
+                                                Logger.logError
+                                                    (fun () ->
+                                                        $"Engine.getAtomAdapter. gun subscribe data error. ex={ex.Message} gunValue={gunValue} subscriptionTicks={subscriptionTicks} {getDebugInfo ()}")
+
+                                                Logger.consoleError [| ex |]
+                                        })
 
                             let setAdapterValue (fromUi: FromUi, (lastTicks, lastValue: 'A2)) =
                                 let getDebugInfo () =
@@ -445,13 +456,17 @@ module Engine =
                         let gunAtomNode = Atom.get getter (Selectors.Gun.gunAtomNode (Some alias, atomPath))
 
                         match gunAtomNode with
-                        | Some gunAtomNode -> gunAtomNode.off () |> ignore
+                        | Some _gunAtomNode ->
+                            //                            gunAtomNode.off () |> ignore
+                            ()
                         | _ -> ()
 
                         let getDebugInfo () =
                             $"adapterOptions={adapterOptions} {getDebugInfo ()}"
 
-                        addTimestamp (fun () -> "[ <==== unmountFn ](j5) gun unmount ") getDebugInfo
+                        addTimestamp
+                            (fun () -> "[ <==== unmountFn ](j5) gun unmount (# skipped, gun bug? ) ")
+                            getDebugInfo
 
                     | _ -> ())
             | Atom.AdapterType.Hub ->
@@ -790,8 +805,7 @@ module Engine =
         : unit =
         match lastStore with
         | Some (getter, setter) ->
-            let getDebugInfo () =
-                $"atom={atom} {getDebugInfo ()}"
+            let getDebugInfo () = $"atom={atom} {getDebugInfo ()}"
 
             let addTimestamp fn getDebugInfo =
                 Profiling.addTimestamp (fun () -> $"{nameof FsStore} | Engine.sync {fn ()} | {getDebugInfo ()}")
