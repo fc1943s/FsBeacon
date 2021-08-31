@@ -10,18 +10,19 @@ open FsStore.Model
 module rec Message =
     let collection = Collection (nameof Message)
 
-    let inline messageIdIdentifier messageId =
-        messageId
-        |> MessageId.Value
-        |> string
-        |> List.singleton
-
+    let formatMessageId =
+        Engine.getKeysFormatter
+            (fun messageId ->
+                messageId
+                |> MessageId.Value
+                |> string
+                |> List.singleton)
 
     let inline messageAtomFamilyWithAdapters atomName defaultValue =
         Atom.Primitives.atomFamily
             (fun (messageId: MessageId) ->
                 Engine.createRegisteredAtomWithSubscription
-                    (IndexedAtomPath (FsStore.storeRoot, collection, messageIdIdentifier messageId, atomName))
+                    (IndexedAtomPath (FsStore.storeRoot, collection, formatMessageId messageId, atomName))
                     defaultValue)
 
     let rec ack = messageAtomFamilyWithAdapters (AtomName (nameof ack)) (None: bool option)

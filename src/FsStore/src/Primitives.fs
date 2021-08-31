@@ -1,7 +1,6 @@
 namespace FsStore
 
 open Fable.Core.JsInterop
-open Fable.Core
 open FsStore.Model
 open Microsoft.FSharp.Core.Operators
 open FsCore
@@ -78,12 +77,12 @@ module PrimitivesMagic =
             collection
             name
             (defaultValueFn: 'TKey -> 'A)
-            keyIdentifier
+            keysFormatter
             =
             Atom.Primitives.atomFamily
                 (fun param ->
                     Atom.createRegistered
-                        (IndexedAtomPath (storeRoot, collection, keyIdentifier param, AtomName name))
+                        (IndexedAtomPath (storeRoot, collection, keysFormatter param, AtomName name))
                         (AtomType.Atom (defaultValueFn param)))
 
 

@@ -4,6 +4,7 @@ open System
 open System.Collections.Generic
 open Fable.Core.JsInterop
 open Fable.Core
+open FsCore.BaseModel
 open FsJs
 open FsStore.Bindings
 open FsStore.Bindings.Gun.Types
@@ -334,6 +335,7 @@ module Engine =
         | NotFromUi
 
     let gunSubscriptionMap = Dictionary<IGunChainReference, TicksGuid> ()
+    let collectionSubscriptionMap = Dictionary<StoreRoot * Collection, unit -> unit> ()
 
     let inline getAdapterSubscription<'A2 when 'A2: equality> atomType adapterType =
 
@@ -377,7 +379,8 @@ module Engine =
                                         let getDebugInfo () = $"value={value} {getDebugInfo ()}"
 
                                         addTimestamp
-                                            (fun () -> "[ ********> mountFn ](j3) gun. debounced on subscribe data")
+                                            (fun () ->
+                                                "[ ********> mountFn / debouncedAdapterSetAtom ](j3) gun. debounced on subscribe data")
                                             getDebugInfo
 
                                         adapterSetAtom value)
@@ -385,7 +388,7 @@ module Engine =
 
                             if gunSubscriptionMap.ContainsKey gunAtomNode then
                                 addTimestamp
-                                    (fun () -> "[ ### setAdapterValue ](j4-2) skipping subscription. cached ")
+                                    (fun () -> "[ ### mountFn ](j4-2) skipping subscription. cached ")
                                     getDebugInfo
                             else
                                 let subscriptionId = Guid.newTicksGuid ()
@@ -401,7 +404,7 @@ module Engine =
 
                                                 addTimestamp
                                                     (fun () ->
-                                                        "[ ||==> setAdapterValue ](j4-1) invoking debouncedSetAtom. inside gun.on() ")
+                                                        "[ ||==> Gun.batchSubscribe.on() ](j4-1) invoking debouncedSetAtom. inside gun.on() ")
                                                     getDebugInfo
 
                                                 debouncedAdapterSetAtom (
@@ -442,6 +445,55 @@ module Engine =
                                             debouncedAdapterSetAtom (NotFromUi, lastTicks, lastValue))
                                     )
 
+                            let collectionPath = storeAtomPath |> StoreAtomPath.CollectionPath
+
+                            match collectionPath with
+                            | Some (storeRoot, collection) ->
+                                let siblingsGunAtomNode = gunAtomNode.back().back().map ()
+
+                                let siblings () =
+                                    if gunSubscriptionMap.ContainsKey siblingsGunAtomNode then
+                                        addTimestamp
+                                            (fun () -> "[ ### siblings ](j4-3) skipping siblings subscription. cached ")
+                                            getDebugInfo
+                                    else
+                                        let subscriptionId = Guid.newTicksGuid ()
+                                        gunSubscriptionMap.Add (siblingsGunAtomNode, subscriptionId)
+
+                                        Gun.batchSubscribe
+                                            siblingsGunAtomNode
+                                            subscriptionId
+                                            (fun (subscriptionTicks, gunValue) ->
+                                                promise {
+                                                    try
+                                                        //                                                    let! newValue = typeMetadata.Decode privateKeys gunValue
+                                                        let getDebugInfo () =
+                                                            $"subscriptionTicks={subscriptionTicks} gunValue={gunValue} {getDebugInfo ()}"
+
+                                                        addTimestamp
+                                                            (fun () ->
+                                                                "[ ||==> siblings Gun.batchSubscribe.map().on() ](j4-x1)  ")
+                                                            getDebugInfo
+
+                                                    //                                                    debouncedAdapterSetAtom (
+                                                    //                                                        newValue
+                                                    //                                                        |> Option.map
+                                                    //                                                            (fun (ticks, value) -> NotFromUi, ticks, value |> unbox<'A2>)
+                                                    //                                                        |> Option.defaultValue (unbox null)
+                                                    //                                                    )
+                                                    with
+                                                    | ex ->
+                                                        Logger.logError
+                                                            (fun () ->
+                                                                $"Engine.getAtomAdapter. gun siblings map().on() subscribe data error. ex={ex.Message} gunValue={gunValue} subscriptionTicks={subscriptionTicks} {getDebugInfo ()}")
+
+                                                        Logger.consoleError [| ex |]
+                                                })
+
+                                collectionSubscriptionMap.Add ((storeRoot, collection), siblings)
+                            | None -> ()
+
+
                             Some setAdapterValue
                         | _ -> failwith $"invalid gun atom node {getDebugInfo ()}"
                     | _ -> None),
@@ -458,6 +510,8 @@ module Engine =
                         match gunAtomNode with
                         | Some _gunAtomNode ->
                             //                            gunAtomNode.off () |> ignore
+                            // TODO: gunAtomNode.back().back().map().off() |> ignore
+                            // TODO: delayed unsub (free after 10 seconds)
                             ()
                         | _ -> ()
 
@@ -616,8 +670,115 @@ module Engine =
     let inline subscribeFamilyKey<'TKey, 'A4 when 'TKey: equality and 'A4: equality>
         (_atomFamily: 'TKey -> AtomConfig<'A4>)
         =
-        let result: AtomConfig<AtomConfig<'TKey> []> = Atom.create (AtomType.Atom [||])
-        result
+        let atom = Atom.create (AtomType.Atom ([||]: 'TKey []))
+
+        let invalidAtom = _atomFamily (unbox null)
+
+        let storeAtomPath = Atom.query (AtomReference.Atom invalidAtom)
+
+        let collectionPath = storeAtomPath |> StoreAtomPath.CollectionPath
+
+        let getDebugInfo () =
+            $" collectionPath={collectionPath} storeAtomPath={storeAtomPath} atom={atom} invalidAtom={invalidAtom} {getDebugInfo ()}"
+
+        let addTimestamp fn getDebugInfo =
+            Profiling.addTimestamp
+                (fun () -> $"{nameof FsStore} | Engine.subscribeFamilyKey {fn ()} | {getDebugInfo ()}")
+
+        addTimestamp (fun () -> "[ constructor ](z1)") getDebugInfo
+
+        Atom.Primitives.readSelector
+            (fun getter ->
+                let alias = Atom.get getter Selectors.Gun.alias
+
+                let getDebugInfo () = $"alias={alias} {getDebugInfo ()}"
+
+                match collectionPath with
+                | Some (storeRoot, collection) ->
+                    match collectionSubscriptionMap.TryGetValue ((storeRoot, collection)) with
+                    | true, subscribeCollection ->
+                        addTimestamp
+                            (fun () -> "[ wrapper.get() ](z3) invoking subscribe collection fn !!")
+                            getDebugInfo
+
+                        subscribeCollection ()
+                    | _ ->
+                        addTimestamp
+                            (fun () -> "[ wrapper.get() ](z2) skipping. subscription fn not found")
+                            getDebugInfo
+                | None -> failwith $"invalid collectionPath. storeAtomPath={storeAtomPath}"
+
+                //                let adapterOptionsList =
+//                    Reflection.unionCases<Atom.AdapterType>
+//                    |> List.choose
+//                        (fun adapterType ->
+//                            match getAdapterOptions getter adapterType with
+//                            | Some adapterOptions -> Some (adapterType, adapterOptions)
+//                            | None -> None)
+//
+
+                let value = Atom.get getter atom
+
+                let getDebugInfo () =
+                    $"Json.encodeWithNull value={value} {getDebugInfo ()}"
+
+                addTimestamp (fun () -> "[ wrapper.get() ](z3) ") getDebugInfo
+
+                value)
+        |> Atom.split
+
+
+
+    //    let inline subscribeCollection<'T when 'T: comparison>
+//        (storeRoot: StoreRoot)
+//        collection
+//        (_onFormat: TicksGuid -> 'T)
+//        : AtomConfig<AtomConfig<'T> []> =
+//        let storeAtomPath = CollectionAtomPath (storeRoot, collection)
+//
+//        let getDebugInfo () =
+//            $"storeAtomPath={storeAtomPath |> StoreAtomPath.AtomPath}"
+//
+//        Profiling.addTimestamp (fun () -> $"+05a subscribeCollection [ constructor ] {getDebugInfo ()}")
+//
+//        let atom = createRegisteredAtomWithGroup storeAtomPath (Atom.AdapterType.Memory, [||])
+//
+//        Atom.Primitives.readSelector
+//            (fun getter ->
+//                let alias = Atom.get getter Selectors.Gun.alias
+//
+//                let adapterOptionsList =
+//                    Reflection.unionCases<Atom.AdapterType>
+//                    |> List.choose
+//                        (fun adapterType ->
+//                            match getAdapterOptions getter adapterType with
+//                            | Some adapterOptions -> Some (adapterType, adapterOptions)
+//                            | None -> None)
+//
+//                let _adapterValues =
+//                    adapterOptionsList
+//                    |> List.toArray
+//                    |> Array.map
+//                        (fun (adapterType, _) ->
+//                            if
+//                                subscriptionAdapterFnMap.ContainsKey (adapterType, storeAtomPath)
+//                                |> not
+//                            then
+//                                subscriptionAdapterFnMap.[(adapterType, storeAtomPath)] <- getCollectionAdapter
+//                                atomDefaultValueMap.[storeAtomPath] <- box [||]
+//
+//                            subscriptionFamily (alias, storeAtomPath, adapterType))
+//                    |> Array.map (Atom.get getter)
+//
+//
+//                let ticks, adapterType, value = Atom.get getter atom
+//
+//                Profiling.addTimestamp
+//                    (fun () ->
+//                        $"+01a Engine.subscribeCollection wrapper.get() ticks={ticks} adapterType={adapterType} result={Json.encodeWithNull value} {getDebugInfo ()}")
+//
+//                value)
+//        |> Atom.split
 
     let inline groupValues groupMap =
         groupMap
@@ -1090,9 +1251,14 @@ module Engine =
         wrapper |> Atom.register storeAtomPath
 
 
-
     let inline createRegisteredAtomWithSubscriptionStorage storeAtomPath (defaultValue: 'A10) =
         //        let storageAtom = Atom.createRegisteredWithStorage storeAtomPath (Guid.Empty, defaultValue)
         let storageAtom = Atom.createRegisteredWithStorage<'A10> storeAtomPath defaultValue
         let syncAtom = createRegisteredAtomWithSubscription storeAtomPath defaultValue
         bindAtom<'A10> syncAtom storageAtom
+
+    let inline getKeysFormatter fn id =
+        id
+        |> Option.ofObjUnbox
+        |> Option.map fn
+        |> Option.defaultValue []

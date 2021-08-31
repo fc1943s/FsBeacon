@@ -165,3 +165,9 @@ module Model =
             ]
             |> String.concat "/"
             |> AtomPath
+
+        static member CollectionPath storeAtomPath =
+            match storeAtomPath with
+            | RootAtomPath _ -> None
+            | CollectionAtomPath (storeRoot, collection) -> Some (storeRoot, collection)
+            | IndexedAtomPath (storeRoot, collection, _, _) -> Some (storeRoot, collection)

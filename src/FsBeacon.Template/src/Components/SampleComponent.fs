@@ -79,7 +79,7 @@ module SampleComponent =
 
     [<ReactComponent>]
     let Files () =
-        Profiling.addTimestamp (fun () -> $"{nameof FsBeacon} | Files [ render ] ")
+        Profiling.addTimestamp (fun () -> $"{nameof FsBeacon} | Files [ render ]")
         let fileIdAtoms = Store.useValue Selectors.Sample.fileIdAtoms
         //        let fileIdAtoms = Store.useValue State.Selectors.asyncFileIdAtoms
 

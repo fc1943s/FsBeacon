@@ -19,7 +19,7 @@ module rec File =
                     (IndexedAtomPath (
                         FsStore.storeRoot,
                         Atoms.File.collection,
-                        Atoms.File.fileIdIdentifier fileId,
+                        Atoms.File.formatFileId fileId,
                         atomName
                     ))
                     (AtomType.ReadSelector (fn fileId)))

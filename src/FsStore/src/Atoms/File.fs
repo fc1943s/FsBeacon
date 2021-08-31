@@ -12,19 +12,14 @@ open FsCore
 module rec File =
     let collection = Collection (nameof File)
 
-    let fileIdIdentifier (fileId: FileId) =
-        fileId |> FileId.Value |> string |> List.singleton
+    let formatFileId = Engine.getKeysFormatter (fun fileId -> fileId |> FileId.Value |> string |> List.singleton)
+
 
     let rec chunkCount =
         Atom.Primitives.atomFamily
             (fun fileId ->
                 Engine.createRegisteredAtomWithSubscription
-                    (IndexedAtomPath (
-                        FsStore.storeRoot,
-                        collection,
-                        fileIdIdentifier fileId,
-                        AtomName (nameof chunkCount)
-                    ))
+                    (IndexedAtomPath (FsStore.storeRoot, collection, formatFileId fileId, AtomName (nameof chunkCount)))
                     0)
 
     let rec chunk =
@@ -34,7 +29,7 @@ module rec File =
                     (IndexedAtomPath (
                         FsStore.storeRoot,
                         collection,
-                        fileIdIdentifier fileId
+                        formatFileId fileId
                         @ [
                             string index
                         ],
