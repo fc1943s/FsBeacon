@@ -449,7 +449,7 @@ module Gun =
         Batcher.batch (Batcher.BatchType.KeysFromServer (data, ticks, fn))
 
     let inline batchSubscribe gunAtomNode ticks trigger =
-        let fn ticks =
+        let inline fn ticks =
             Profiling.addTimestamp (fun () -> $"($$) ---- #1.1 ticks={ticks} gunAtomNode={gunAtomNode} ")
             subscribe gunAtomNode (fun value ->
                 Profiling.addTimestamp (fun () -> $"($$) ---- #A ticks={ticks} value={value} ")
@@ -459,7 +459,7 @@ module Gun =
         Batcher.batch (Batcher.BatchType.Subscribe (ticks, fn))
 
     let inline batchSet gunAtomNode (ticks, trigger) =
-        let fn ticks =
+        let inline fn ticks =
             subscribe gunAtomNode (fun value -> batchData trigger (ticks, value))
 
         Batcher.batch (Batcher.BatchType.Subscribe (ticks, fn))

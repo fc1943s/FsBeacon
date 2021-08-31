@@ -17,6 +17,7 @@ module rec Device =
                 deviceId
                 |> DeviceId.Value
                 |> string
+                |> AtomKeyFragment
                 |> List.singleton)
 
     let rec devicePing =

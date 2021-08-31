@@ -62,7 +62,7 @@ module Atom =
 
         Logger.logTrace (fun () -> $"{nameof FsStore} | Atom.wrap [ constructor ] {getDebugInfo ()}")
 
-        let internalMount (setAtom: 'A -> unit) =
+        let inline internalMount (setAtom: 'A -> unit) =
             promise {
                 mounted <- true
 
@@ -77,7 +77,7 @@ module Atom =
             else
                 Js.debounce (internalMount >> Promise.start) 0
 
-        let internalUnmount () =
+        let inline internalUnmount () =
             if mounted then
                 Logger.logTrace (fun () -> $"{nameof FsStore} | Atom.wrap [ internalUnmount ] {getDebugInfo ()}")
 
@@ -85,7 +85,7 @@ module Atom =
 
             mounted <- false
 
-        let onMount (setAtom: _ -> unit) =
+        let inline onMount (setAtom: _ -> unit) =
             internalMount setAtom
             fun _ -> internalUnmount ()
 

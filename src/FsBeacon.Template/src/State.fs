@@ -33,7 +33,10 @@ module State =
                             (IndexedAtomPath (
                                 FsBeacon.storeRoot,
                                 collection,
-                                accordionType |> string |> List.singleton,
+                                accordionType
+                                |> string
+                                |> AtomKeyFragment
+                                |> List.singleton,
                                 (AtomName (nameof accordionHiddenFlag))
                             ))
                             (AtomType.Atom ([||]: string [])))
@@ -99,5 +102,5 @@ module State =
 
     module Selectors =
         module Sample =
-            let fileIdAtoms = Engine.subscribeFamilyKey Atoms.File.chunkCount
-            let messageIdAtoms = Engine.subscribeFamilyKey Atoms.Message.ack
+            let fileIdAtoms = Engine.subscribeFamilyKey Atoms.File.chunkCount (Engine.parseGuidKey FileId)
+            let messageIdAtoms = Engine.subscribeFamilyKey Atoms.Message.ack (Engine.parseGuidKey MessageId)

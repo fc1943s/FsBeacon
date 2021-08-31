@@ -16,6 +16,7 @@ module rec Message =
                 messageId
                 |> MessageId.Value
                 |> string
+                |> AtomKeyFragment
                 |> List.singleton)
 
     let inline messageAtomFamilyWithAdapters atomName defaultValue =

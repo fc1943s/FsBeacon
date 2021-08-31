@@ -23,10 +23,13 @@ module Model =
     type Getter<'A> = Jotai.Getter<'A>
     type Setter<'A> = Jotai.Setter<'A>
 
+    [<Erase>]
+    type AtomKeyFragment = AtomKeyFragment of string
+
     type StoreAtomPath =
         | RootAtomPath of storeRoot: StoreRoot * name: AtomName
         | CollectionAtomPath of storeRoot: StoreRoot * collection: Collection
-        | IndexedAtomPath of storeRoot: StoreRoot * collection: Collection * keys: string list * name: AtomName
+        | IndexedAtomPath of storeRoot: StoreRoot * collection: Collection * keys: AtomKeyFragment list * name: AtomName
 
     and AtomName = AtomName of string
 
@@ -139,6 +142,9 @@ module Model =
         static member inline NewId () = SubscriptionId (Guid.newTicksGuid ())
         static member inline Value (SubscriptionId guid) = guid
 
+    type AtomKeyFragment with
+        static member inline Value (AtomKeyFragment key) = key
+
     type InputScope<'TValue> with
         static member inline AtomScope<'TValue> (inputScope: InputScope<'TValue> option) =
             match inputScope with
@@ -158,7 +164,7 @@ module Model =
                 match collection with
                 | Some collection -> yield collection |> Collection.Value
                 | None -> ()
-                yield! keys
+                yield! keys |> List.map AtomKeyFragment.Value
                 match name with
                 | Some name -> yield name |> AtomName.Value
                 | None -> ()
@@ -166,8 +172,13 @@ module Model =
             |> String.concat "/"
             |> AtomPath
 
-        static member CollectionPath storeAtomPath =
+        static member inline CollectionPath storeAtomPath =
             match storeAtomPath with
             | RootAtomPath _ -> None
             | CollectionAtomPath (storeRoot, collection) -> Some (storeRoot, collection)
             | IndexedAtomPath (storeRoot, collection, _, _) -> Some (storeRoot, collection)
+
+        static member inline Keys storeAtomPath =
+            match storeAtomPath with
+            | IndexedAtomPath (_, _, keys, _) -> Some keys
+            | _ -> None
