@@ -1,5 +1,6 @@
 namespace FsStore.State
 
+open Fable.Core.JsInterop
 open System.Collections.Generic
 open Fable.Core
 open FsCore
@@ -255,24 +256,28 @@ module SelectorsMagic =
                         gunUser.__.sea)
 
 
-            let getRecursiveNode (gunNode: Types.IGunNode) (nodes: GunNodeSlice list) getter alias =
+            let getRecursiveNode (gunNode: Types.IGunNode) (nodes: AtomKeyFragment list) getter alias =
+                let withToString (node: Types.IGunChainReference) =
+                    node?toString <- fun () -> $"alias={alias} nodes={nodes}"
+                    node
+
                 match nodes with
                 | [] -> None
-                | [ root ] -> Some (gunNode.get root)
+                | [ root ] -> Some (gunNode.get root |> withToString)
                 | nodes ->
                     let lastNode = nodes |> List.last
 
                     let parentAtomPath =
                         AtomPath (
                             nodes.[0..nodes.Length - 2]
-                            |> List.map GunNodeSlice.Value
+                            |> List.map AtomKeyFragment.Value
                             |> String.concat "/"
                         )
 
                     let node = Atom.get getter (gunAtomNode (alias, parentAtomPath))
 
                     node
-                    |> Option.map (fun (node: Types.IGunChainReference) -> node.get lastNode)
+                    |> Option.map (fun (node: Types.IGunChainReference) -> node.get lastNode |> withToString)
 
             let rec gunAtomNode =
                 Atom.Primitives.atomFamily
@@ -289,7 +294,7 @@ module SelectorsMagic =
                                         atomPath
                                         |> String.split "/"
                                         |> Array.toList
-                                        |> List.map GunNodeSlice
+                                        |> List.map AtomKeyFragment
 
                                     //                    let getNodeOld () =
                                     //                        (Some (gunNamespace.get nodes.Head), nodes.Tail)

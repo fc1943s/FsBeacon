@@ -114,10 +114,6 @@ module BaseStore =
 
 
 
-        [<RequireQualifiedAccess>]
-        type BatchKind =
-            | Replace
-            | Union
 
 
         let inline deleteRoot getter atom =

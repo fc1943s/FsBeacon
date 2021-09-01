@@ -2,6 +2,7 @@ namespace FsStore.State.Atoms
 
 open FsCore.BaseModel
 open FsStore
+open FsStore.Bindings
 open FsStore.Bindings.Jotai
 open FsStore.Model
 
@@ -17,7 +18,7 @@ module rec Device =
                 deviceId
                 |> DeviceId.Value
                 |> string
-                |> AtomKeyFragment
+                |> Gun.AtomKeyFragment
                 |> List.singleton)
 
     let rec devicePing =

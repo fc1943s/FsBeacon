@@ -11,7 +11,7 @@ open FsStore.Bindings
 [<AutoOpen>]
 module SetInternalFromSync =
     module Store =
-        let inline setInternalFromSync getDebugInfo setAtom syncPaused lastValue onError (ticks, newValue) =
+        let inline setInternalFromSync getDebugInfo setAtom syncPaused lastValue onError (ticks, newValue, key) =
             try
                 Logger.logTrace
                     (fun () ->
@@ -68,7 +68,7 @@ module SetInternalFromSync =
 
                             // setAtom internalAtom
 
-                            Gun.batchData setAtom (ticks, newValue)
+                            Gun.batchData setAtom (ticks, newValue, key)
                         with
                         | ex ->
                             Logger.logError (fun () -> $"Store.setInternalFromSync. ex-inner={ex} newValue={newValue}")

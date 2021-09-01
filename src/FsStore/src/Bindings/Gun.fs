@@ -64,7 +64,7 @@ module Gun =
 
 
     [<Erase>]
-    type GunNodeSlice = GunNodeSlice of value: string
+    type AtomKeyFragment = AtomKeyFragment of string
 
     [<Erase>]
     type GunPeer = GunPeer of url: string
@@ -86,7 +86,7 @@ module Gun =
 
     [<Erase; RequireQualifiedAccess>]
     type GunValue<'T> =
-        | NodeReference of GunNodeSlice
+        | NodeReference of AtomKeyFragment
         | EncryptedSignedValue of EncryptedSignedValue
         | DecryptedValue of DecryptedValue<'T>
 
@@ -100,8 +100,8 @@ module Gun =
     type RadQuery = RadQuery of query: {| ``.``: {| ``*``: Pub |} |}
 
 
-    type GunNodeSlice with
-        static member inline Value (GunNodeSlice value) = value
+    type AtomKeyFragment with
+        static member inline Value (AtomKeyFragment value) = value
 
     type GunPeer with
         static member inline Value (GunPeer url) = url
@@ -112,7 +112,7 @@ module Gun =
     module rec Types =
         type IGunNode =
             abstract get : RadQuery -> IGunChainReference
-            abstract get : GunNodeSlice -> IGunChainReference
+            abstract get : AtomKeyFragment -> IGunChainReference
             abstract set : GunValue<'T> -> IGunChainReference
 
         //        module GunOps =
@@ -158,8 +158,8 @@ module Gun =
             abstract map : unit -> IGunChainReference
             abstract off : unit -> IGunChainReference
             abstract back : unit -> IGunChainReference
-            abstract on : (GunValue<'T> -> GunNodeSlice -> JS.Promise<unit>) -> unit
-            abstract once : (GunValue<'T> -> GunNodeSlice -> unit) -> unit
+            abstract on : (GunValue<'T> -> AtomKeyFragment -> JS.Promise<unit>) -> unit
+            abstract once : (GunValue<'T> -> AtomKeyFragment -> unit) -> unit
             abstract on : event: GunEvent * (unit -> unit) -> unit
             abstract put : GunValue<'T> -> (PutAck -> PutNode -> unit) -> IGunChainReference
             abstract user : unit -> IGunUser
@@ -278,17 +278,16 @@ module Gun =
                             | None -> return None
                         with
                         | ex ->
-                            Logger.logError (fun () -> $"userDecode decrypt exception. data={data} ex={ex}")
+                            Logger.logError (fun () -> $"userDecode decrypt exception. data={Json.encodeWithNull data} ex={ex}")
                             return None
                     | _ -> return None
                 }
 
             let decoded =
                 match decrypted with
-                | Some (DecryptedValue decrypted) ->
-                        decrypted |> Json.decode<'TValue option>
+                | Some (DecryptedValue decrypted) -> decrypted |> Json.decode<'TValue option>
                 | None ->
-                    Logger.logDebug (fun () -> $"userDecode decrypt empty. decrypted={decrypted} data={data}")
+                    Logger.logDebug (fun () -> $"userDecode decrypt empty. decrypted={decrypted} data={Json.encodeWithNull data}")
 
                     JS.undefined
 
@@ -356,7 +355,7 @@ module Gun =
                         pub = Some (Pub (String.Valid pub))
                     } as keys) ->
 
-                let dataSlice = GunNodeSlice (nameof data)
+                let dataSlice = AtomKeyFragment (nameof data)
                 let node = user.get dataSlice
 
                 //                    GunValue.DecryptedValue (DecryptedValue value)
@@ -379,8 +378,8 @@ module Gun =
 
                             let node =
                                 gun
-                                    .get(GunNodeSlice $"#{nameof data}")
-                                    .get (GunNodeSlice $"{pub}#{hash}")
+                                    .get(AtomKeyFragment $"#{nameof data}")
+                                    .get (AtomKeyFragment $"{pub}#{hash}")
 
                             let! putResult = put node (GunValue.NodeReference key)
 
@@ -404,7 +403,7 @@ module Gun =
                                alias = (Some (GunUserAlias.GunKeys { pub = Some pub }))
                            } ->
                         gun
-                            .get(GunNodeSlice $"#{nameof data}")
+                            .get(AtomKeyFragment $"#{nameof data}")
                             .get(RadQuery (pubRadQuery pub))
                             .map()
                             .once (fun gunValue _nodeSlice ->
@@ -412,7 +411,7 @@ module Gun =
                                 | GunValue.NodeReference gunNodeSlice ->
                                     gun
                                         .user(pub)
-                                        .get(GunNodeSlice (nameof data))
+                                        .get(AtomKeyFragment (nameof data))
                                         .get(gunNodeSlice)
                                         .once (fun result _key ->
                                             printfn $"hashData result={result} key={_key}"
@@ -427,12 +426,14 @@ module Gun =
 
     let inline subscribe (gun: IGunChainReference) fn =
         gun.on
-            (fun data (GunNodeSlice key) ->
+            (fun data key ->
                 promise {
-                    Profiling.addTimestamp (fun () -> $"($$) ---- Gun.subscribe.on() data. batching...data={data} key={key} ")
+                    Profiling.addTimestamp
+                        (fun () -> $"($$) ---- Gun.subscribe.on() data. batching... key={key} data={data} ")
 
-                    fn (data |> unbox<EncryptedSignedValue>)
+                    fn (data |> unbox<EncryptedSignedValue>, key)
                 })
+
         Object.newDisposable
             (fun () ->
                 Profiling.addTimestamp (fun () -> $"($$) ---- Gun.subscribe.on() data. Dispose promise observable. ")
@@ -440,27 +441,41 @@ module Gun =
         |> Promise.lift
 
 
-    let inline batchData (fn: TicksGuid * EncryptedSignedValue -> JS.Promise<unit>) (ticks: TicksGuid, data: EncryptedSignedValue) =
-        Profiling.addTimestamp (fun () -> $"($$) ---- #B subscriptionTicks={ticks} data={data} ")
-        Batcher.batch (Batcher.BatchType.Data (data, ticks, fn))
+    let inline batchData
+        (fn: TicksGuid * EncryptedSignedValue * AtomKeyFragment -> JS.Promise<unit>)
+        (ticks: TicksGuid, data: EncryptedSignedValue, AtomKeyFragment key)
+        =
+        Profiling.addTimestamp (fun () -> $"($$) ---- #B key={key} subscriptionTicks={ticks} data={data} ")
 
-    let inline batchKeys map fn (ticks, data) =
+        Batcher.batch (
+            Batcher.BatchType.Data (
+                ticks,
+                data,
+                key,
+                (fun (ticks, value, key) -> fn (ticks, value, AtomKeyFragment key))
+            )
+        )
+
+    let inline batchKeys atomType fn (ticks, data) map  =
         let fn = map >> fn
-        Batcher.batch (Batcher.BatchType.KeysFromServer (data, ticks, fn))
+        Batcher.batch (Batcher.BatchType.KeysFromServer (atomType, data, ticks, fn))
 
     let inline batchSubscribe gunAtomNode ticks trigger =
         let inline fn ticks =
             Profiling.addTimestamp (fun () -> $"($$) ---- #1.1 ticks={ticks} gunAtomNode={gunAtomNode} ")
-            subscribe gunAtomNode (fun value ->
-                Profiling.addTimestamp (fun () -> $"($$) ---- #A ticks={ticks} value={value} ")
-                batchData trigger (ticks, value))
+
+            subscribe
+                gunAtomNode
+                (fun (value, key) ->
+                    Profiling.addTimestamp (fun () -> $"($$) ---- #A key={key} ticks={ticks} value={value} ")
+                    batchData trigger (ticks, value, key))
 
         Profiling.addTimestamp (fun () -> $"($$) ---- #1 ticks={ticks} ")
         Batcher.batch (Batcher.BatchType.Subscribe (ticks, fn))
 
     let inline batchSet gunAtomNode (ticks, trigger) =
         let inline fn ticks =
-            subscribe gunAtomNode (fun value -> batchData trigger (ticks, value))
+            subscribe gunAtomNode (fun (value, key) -> batchData trigger (ticks, value, key))
 
         Batcher.batch (Batcher.BatchType.Subscribe (ticks, fn))
 

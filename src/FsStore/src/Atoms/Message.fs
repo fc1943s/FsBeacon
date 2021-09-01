@@ -2,6 +2,7 @@ namespace FsStore.State.Atoms
 
 open FsCore.BaseModel
 open FsStore
+open FsStore.Bindings
 open FsStore.Model
 
 #nowarn "40"
@@ -16,7 +17,7 @@ module rec Message =
                 messageId
                 |> MessageId.Value
                 |> string
-                |> AtomKeyFragment
+                |> Gun.AtomKeyFragment
                 |> List.singleton)
 
     let inline messageAtomFamilyWithAdapters atomName defaultValue =

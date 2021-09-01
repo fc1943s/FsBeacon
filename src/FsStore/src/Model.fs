@@ -4,6 +4,7 @@ open Fable.Core
 open FsCore
 open FsCore.BaseModel
 open FsStore.Bindings
+open FsStore.Bindings.Gun
 
 
 module FsStore =
@@ -23,13 +24,15 @@ module Model =
     type Getter<'A> = Jotai.Getter<'A>
     type Setter<'A> = Jotai.Setter<'A>
 
-    [<Erase>]
-    type AtomKeyFragment = AtomKeyFragment of string
 
     type StoreAtomPath =
         | RootAtomPath of storeRoot: StoreRoot * name: AtomName
         | CollectionAtomPath of storeRoot: StoreRoot * collection: Collection
-        | IndexedAtomPath of storeRoot: StoreRoot * collection: Collection * keys: AtomKeyFragment list * name: AtomName
+        | IndexedAtomPath of
+            storeRoot: StoreRoot *
+            collection: Collection *
+            keys: Gun.AtomKeyFragment list *
+            name: AtomName
 
     and AtomName = AtomName of string
 
@@ -55,13 +58,13 @@ module Model =
     [<RequireQualifiedAccess>]
     type InputScope<'A> =
         | Current
-        | Temp of Gun.Serializer<'A>
+        | Temp of Serializer<'A>
 
 
     [<StructuralComparison; StructuralEquality; RequireQualifiedAccess>]
     type AppCommand =
         | Init of state: AppEngineState
-        | SignInPair of keys: Gun.GunKeys
+        | SignInPair of keys: GunKeys
 
     and AppEngineState = { Adapters: unit list }
 
@@ -142,8 +145,6 @@ module Model =
         static member inline NewId () = SubscriptionId (Guid.newTicksGuid ())
         static member inline Value (SubscriptionId guid) = guid
 
-    type AtomKeyFragment with
-        static member inline Value (AtomKeyFragment key) = key
 
     type InputScope<'TValue> with
         static member inline AtomScope<'TValue> (inputScope: InputScope<'TValue> option) =
@@ -180,5 +181,5 @@ module Model =
 
         static member inline Keys storeAtomPath =
             match storeAtomPath with
-            | IndexedAtomPath (_, _, keys, _) -> Some keys
+            | IndexedAtomPath (_, _, keys, _) -> keys |> List.toArray |> Some
             | _ -> None

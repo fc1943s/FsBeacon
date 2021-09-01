@@ -1,5 +1,6 @@
 namespace FsBeacon.Template
 
+open FsStore.Bindings
 open FsStore.Bindings.Jotai
 open FsCore
 open FsCore.BaseModel
@@ -35,7 +36,7 @@ module State =
                                 collection,
                                 accordionType
                                 |> string
-                                |> AtomKeyFragment
+                                |> Gun.AtomKeyFragment
                                 |> List.singleton,
                                 (AtomName (nameof accordionHiddenFlag))
                             ))

@@ -2,6 +2,7 @@ namespace FsStore.State.Atoms
 
 open FsCore.BaseModel
 open FsStore
+open FsStore.Bindings
 open FsStore.Model
 open Microsoft.FSharp.Core.Operators
 open FsCore
@@ -18,7 +19,7 @@ module rec File =
                 fileId
                 |> FileId.Value
                 |> string
-                |> AtomKeyFragment
+                |> Gun.AtomKeyFragment
                 |> List.singleton)
 
 
@@ -38,7 +39,7 @@ module rec File =
                         collection,
                         [
                             yield! formatFileId fileId
-                            AtomKeyFragment (string index)
+                            Gun.AtomKeyFragment (string index)
                         ],
                         AtomName (nameof chunk)
                     ))

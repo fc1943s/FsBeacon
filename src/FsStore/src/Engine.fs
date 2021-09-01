@@ -7,6 +7,7 @@ open Fable.Core
 open FsCore.BaseModel
 open FsJs
 open FsStore.Bindings
+open FsStore.Bindings.Batcher
 open FsStore.Bindings.Gun.Types
 open FsStore.Bindings.Jotai
 open FsStore.Model
@@ -272,11 +273,14 @@ module Engine =
     type AtomValueRef = AtomValueRef of IComparable
 
     let typeMetadataMap =
-        Dictionary<Type, {| DefaultValue: AtomValueRef
-                            Decode: Gun.GunKeys
-                                -> Gun.EncryptedSignedValue
-                                -> JS.Promise<(TicksGuid * AtomValueRef) option>
-                            Encode: Gun.GunKeys -> TicksGuid * AtomValueRef -> JS.Promise<Gun.EncryptedSignedValue> |}>
+        Dictionary<DataType * Type, {| DefaultValue: AtomValueRef
+                                       Decode: Gun.GunKeys
+                                           -> Gun.EncryptedSignedValue
+                                           -> JS.Promise<(TicksGuid * AtomValueRef) option>
+                                       Encode: Gun.GunKeys
+                                           -> TicksGuid * AtomValueRef
+                                           -> JS.Promise<Gun.EncryptedSignedValue>
+                                       OnFormat: Gun.AtomKeyFragment [] -> AtomValueRef option |}>
             ()
 
 
@@ -289,8 +293,8 @@ module Engine =
         let addTimestamp fn getDebugInfo =
             Profiling.addTimestamp (fun () -> $"{nameof FsStore} | Engine.batchPutFromUi {fn ()} | {getDebugInfo ()}")
 
-        Batcher.batch (
-            Batcher.BatchType.Set (
+        batch (
+            BatchType.Set (
                 ticks,
                 (fun ticks ->
                     promise {
@@ -345,7 +349,13 @@ module Engine =
     let collectionKeysFamily =
         Atom.atomFamilyAtom
             (fun (_alias: Gun.Alias option, _storeRoot: StoreRoot, _collection: Collection) ->
-                Map.empty: Map<AtomKeyFragment list, KeyOperation>)
+                Map.empty: Map<Gun.AtomKeyFragment [], KeyOperation>)
+
+
+    [<RequireQualifiedAccess>]
+    type BatchKind =
+        | Replace
+        | Union
 
     let inline getAdapterSubscription<'A2 when 'A2: equality> atomType adapterType =
 
@@ -354,7 +364,7 @@ module Engine =
         let debouncedBatchPutFromUi = Js.debounce (batchPutFromUi atomType) 0
 
         let getDebugInfo () =
-            $"adapterType={adapterType} {getDebugInfo ()}"
+            $"atomType={atomType} adapterType={adapterType} {getDebugInfo ()}"
 
         let addTimestamp fn getDebugInfo =
             Profiling.addTimestamp
@@ -363,7 +373,7 @@ module Engine =
         let mount, unmount =
             match adapterType with
             | Atom.AdapterType.Gun ->
-                (fun storeAtomPath getter (_setter: Setter<obj>) adapterOptions adapterSetAtom ->
+                (fun storeAtomPath getter (_setter: Setter<obj>) adapterOptions (adapterSetAtom: FromUi * TicksGuid * 'A2 -> unit) ->
                     let atomPath = storeAtomPath |> StoreAtomPath.AtomPath
 
                     let getDebugInfo () =
@@ -381,7 +391,7 @@ module Engine =
 
                         match gunAtomNode, privateKeys with
                         | Some gunAtomNode, Some privateKeys ->
-                            Dom.Global.internalSet $"node_{atomPath}" gunAtomNode
+                            Dom.Global.internalSet $"node_{atomPath}" gunAtomNode // TODO: remove
 
                             if gunSubscriptionMap.ContainsKey gunAtomNode then
                                 addTimestamp
@@ -398,34 +408,14 @@ module Engine =
                                     (fun () -> "[ ||||||||| mountFn ](j2) gun. will batch subscribe")
                                     getDebugInfo
 
+
                                 match storeAtomPath with
-                                | CollectionAtomPath _ ->
-                                    Gun.batchSubscribe
-                                        gunAtomNode
-                                        subscriptionId
-                                        (fun (subscriptionTicks, gunValue) ->
-                                            promise {
-                                                try
-                                                    let! newValue = typeMetadata.Decode privateKeys gunValue
+                                | IndexedAtomPath (_, _, _, name)
+                                | RootAtomPath (_, name) ->
+                                    addTimestamp
+                                        (fun () -> $"[ |--| mount ] invoking indexed subscribe. name={name} ")
+                                        getDebugInfo
 
-                                                    let getDebugInfo () =
-                                                        $"newValue={newValue} subscriptionTicks={subscriptionTicks} {getDebugInfo ()}"
-
-                                                    addTimestamp
-                                                        (fun () ->
-                                                            "[ ||==>X Gun.batchSubscribe.on() ](j4-1) inside gun.map().on() ")
-                                                        getDebugInfo
-                                                with
-                                                | ex ->
-                                                    Logger.logError
-                                                        (fun () ->
-                                                            $"Engine.getAtomAdapter. gun.map() subscribe data error. ex={ex.Message} gunValue={gunValue} subscriptionTicks={subscriptionTicks} {getDebugInfo ()}")
-
-                                                    Logger.consoleError [| ex |]
-                                            })
-
-                                    None
-                                | _ ->
                                     let debouncedAdapterSetAtom =
                                         Js.debounce
                                             (fun value ->
@@ -443,9 +433,17 @@ module Engine =
                                     Gun.batchSubscribe
                                         gunAtomNode
                                         subscriptionId
-                                        (fun (subscriptionTicks, gunValue) ->
+                                        (fun (subscriptionTicks, gunValue, key) ->
                                             promise {
+                                                let getDebugInfo () =
+                                                    $"gunValue={gunValue} key={key} {getDebugInfo ()}"
+
                                                 try
+                                                    addTimestamp
+                                                        (fun () ->
+                                                            "[ ||==> Gun.batchSubscribe.on() ](j4-1(1)) will decode. inside gun.on() ")
+                                                        getDebugInfo
+
                                                     let! newValue = typeMetadata.Decode privateKeys gunValue
 
                                                     let getDebugInfo () =
@@ -453,7 +451,7 @@ module Engine =
 
                                                     addTimestamp
                                                         (fun () ->
-                                                            "[ ||==> Gun.batchSubscribe.on() ](j4-1) invoking debouncedSetAtom. inside gun.on() ")
+                                                            "[ ||==> Gun.batchSubscribe.on() ](j4-1(2)) invoking debouncedSetAtom. inside gun.on() ")
                                                         getDebugInfo
 
                                                     debouncedAdapterSetAtom (
@@ -467,7 +465,7 @@ module Engine =
                                                 | ex ->
                                                     Logger.logError
                                                         (fun () ->
-                                                            $"Engine.getAtomAdapter. gun subscribe data error. ex={ex.Message} gunValue={gunValue} subscriptionTicks={subscriptionTicks} {getDebugInfo ()}")
+                                                            $"Engine.getAtomAdapter. gun subscribe data error. ex={ex.Message} subscriptionTicks={subscriptionTicks} {getDebugInfo ()}")
 
                                                     Logger.consoleError [| ex |]
                                             })
@@ -496,58 +494,109 @@ module Engine =
                                                     debouncedAdapterSetAtom (NotFromUi, lastTicks, lastValue))
                                             )
 
-                                    let inline _siblings () =
-                                        let collectionPath = storeAtomPath |> StoreAtomPath.CollectionPath
+                                    Some setAdapterValue
+                                | CollectionAtomPath _ ->
+                                    addTimestamp
+                                        (fun () -> "[ |--| mount ] invoking collection subscribe  ")
+                                        getDebugInfo
 
-                                        match collectionPath with
-                                        | Some (_storeRoot, _collection) ->
-                                            let siblingsGunAtomNode = gunAtomNode.back().back().map ()
+                                    let mutable lastValue: Set<Gun.AtomKeyFragment> option = None
 
-                                            if gunSubscriptionMap.ContainsKey siblingsGunAtomNode then
+                                    let inline batchKeys
+                                        (setAtom: Gun.AtomKeyFragment [] -> JS.Promise<unit>)
+                                        data
+                                        kind
+                                        =
+                                        Gun.batchKeys
+                                            atomType
+                                            setAtom
+                                            data
+                                            (fun itemsArray ->
+                                                let newSet = itemsArray |> Seq.collect snd |> Set.ofSeq
+
+                                                let merge =
+                                                    match kind with
+                                                    | BatchKind.Replace -> newSet
+                                                    | BatchKind.Union ->
+                                                        lastValue
+                                                        |> Option.defaultValue Set.empty
+                                                        |> Set.union newSet
+
+                                                lastValue <- Some merge
+                                                let items = merge |> Set.toArray
+
+
+                                                //                    let newItems =
+                                                //                        itemsArray
+                                                //                        |> Seq.collect snd
+                                                //                        |> Seq.filter (lastSet.Contains >> not)
+                                                //                        |> Seq.toArray
+                                                //
+                                                //                    let items =
+                                                //                        itemsArray
+                                                //                        |> Array.collect snd
+                                                //                        |> Array.append newItems
+                                                //                        |> Array.distinct
+                                                //
+                                                //                    lastValue <- Some (newItems |> Set.ofArray |> Set.union lastSet)
+                                                let getDebugInfo () =
+                                                    $" items.Length={items.Length} {getDebugInfo ()}"
+
+                                                addTimestamp (fun () -> "[ batchKeys ](y2) ") getDebugInfo
+
+                                                items)
+
+                                    //                                    let batchKeysAtom (fromUi: FromUi, ticks, value) kind =
+//                                        batchKeys adapterSetAtom (fromUi, ticks, value) kind
+
+                                    let inline batchKeysAtom (fromUi, ticks, value) kind =
+                                        batchKeys
+                                            (fun value ->
+                                                promise {
+                                                    match typeMetadata.OnFormat value with
+                                                    | Some atomValueRef ->
+                                                        adapterSetAtom (fromUi, ticks, atomValueRef |> unbox<'A2>)
+                                                    | None ->
+                                                        addTimestamp
+                                                            (fun () ->
+                                                                "[ batchKeys ](y2) batchKeysAtom skipped. invalid onformat ")
+                                                            getDebugInfo
+                                                })
+                                            (ticks, value)
+                                            kind
+
+
+                                    Gun.batchSubscribe
+                                        (gunAtomNode.map ())
+                                        subscriptionId
+                                        (fun (subscriptionTicks, gunValue, key) ->
+                                            promise {
+                                                let getDebugInfo () =
+                                                    $"key={key} gunValue={gunValue} subscriptionTicks={subscriptionTicks} {getDebugInfo ()}"
+
                                                 addTimestamp
                                                     (fun () ->
-                                                        "[ ### siblings ](j4-3) skipping siblings subscription. cached ")
+                                                        "[ ||==>X Gun.batchSubscribe.on() ](j4-1) inside gun.map().on() ")
                                                     getDebugInfo
-                                            else
-                                                let subscriptionId = Guid.newTicksGuid ()
-                                                gunSubscriptionMap.Add (siblingsGunAtomNode, subscriptionId)
 
-                                                Gun.batchSubscribe
-                                                    siblingsGunAtomNode
-                                                    subscriptionId
-                                                    (fun (subscriptionTicks, gunValue) ->
-                                                        promise {
-                                                            try
-                                                                //                                                    let! newValue = typeMetadata.Decode privateKeys gunValue
-                                                                let getDebugInfo () =
-                                                                    $"subscriptionTicks={subscriptionTicks} gunValue={gunValue} {getDebugInfo ()}"
+                                                match gunValue |> Option.ofObjUnbox with
+                                                | Some _ ->
+                                                    batchKeysAtom
+                                                        (NotFromUi, Guid.newTicksGuid (), key |> Array.singleton)
+                                                        BatchKind.Union
+                                                | _ -> eprintfn $"invalid gun.map().on() "
+                                            })
 
-                                                                addTimestamp
-                                                                    (fun () ->
-                                                                        "[ ||==> siblings Gun.batchSubscribe.map().on() ](j4-x1)  ")
-                                                                    getDebugInfo
+                                    let inline setAdapterValue (fromUi: FromUi, (lastTicks, lastValue: 'A2)) =
+                                        let getDebugInfo () =
+                                            $"fromUi={fromUi} lastTicks={lastTicks} lastValue={lastValue} {getDebugInfo ()}"
 
-                                                            //                                                    debouncedAdapterSetAtom (
-                                                            //                                                        newValue
-                                                            //                                                        |> Option.map
-                                                            //                                                            (fun (ticks, value) -> NotFromUi, ticks, value |> unbox<'A2>)
-                                                            //                                                        |> Option.defaultValue (unbox null)
-                                                            //                                                    )
-                                                            with
-                                                            | ex ->
-                                                                Logger.logError
-                                                                    (fun () ->
-                                                                        $"Engine.getAtomAdapter. gun siblings map().on() subscribe data error. ex={ex.Message} gunValue={gunValue} subscriptionTicks={subscriptionTicks} {getDebugInfo ()}")
-
-                                                                Logger.consoleError [| ex |]
-                                                        })
-
-                                        //                                    collectionSubscriptionMap.Add ((storeRoot, collection), siblings)
-                                        | None -> ()
-
+                                        addTimestamp
+                                            (fun () ->
+                                                "[ ||==> collection setAdapterValue ](j4-2) skipping. should batch keys  ")
+                                            getDebugInfo
 
                                     Some setAdapterValue
-
                         | _ -> failwith $"invalid gun atom node {getDebugInfo ()}"
                     | _ -> None),
                 (fun storeAtomPath getter (_setter: Setter<obj>) adapterOptions ->
@@ -669,6 +718,7 @@ module Engine =
                             match setAdapterValue with
                             | Some setAdapterValue when
                                 (match oldValue with
+                                 | None when newFromUi = FromUi -> true
                                  | None -> false
                                  | Some (_, _, oldValue) when oldValue |> Object.compare newValue |> not -> true
                                  | _ -> false)
@@ -797,25 +847,30 @@ module Engine =
                 | _ -> None)
 
 
-    let inline subscribeCollection<'TKey, 'A4 when 'TKey: equality and 'A4: equality>
+    let inline subscribeCollection<'TKey, 'A4 when 'TKey: equality and 'A4: equality and 'TKey :> IComparable>
         storeRoot
         collection
-        (onFormat: AtomKeyFragment list -> 'TKey option)
+        (onFormat: Gun.AtomKeyFragment [] -> 'TKey option)
         //        (_onFormat: string -> 'TKey)
         =
-        let atomType = typeof<'TKey []>
+        let atomType = DataType.Key, typeof<'TKey []>
 
-        typeMetadataMap.[atomType] <-
-            {|
-                DefaultValue = AtomValueRef ([||] |> unbox<IComparable>)
-                Decode = unbox null
-                Encode = unbox null
-            |}
+        if typeMetadataMap.ContainsKey atomType |> not then
+            typeMetadataMap.[atomType] <-
+                {|
+                    DefaultValue = AtomValueRef (([||]: 'TKey []) |> unbox<IComparable>)
+                    OnFormat =
+                        (fun keys ->
+                            onFormat keys
+                            |> Option.map (fun key -> AtomValueRef key))
+                    Decode = unbox null
+                    Encode = unbox null
+                |}
 
         let storeAtomPath = CollectionAtomPath (storeRoot, collection)
 
         let getDebugInfo () =
-            $" atomPath={storeAtomPath |> StoreAtomPath.AtomPath} {getDebugInfo ()}"
+            $"atomType={atomType} atomPath={storeAtomPath |> StoreAtomPath.AtomPath} {getDebugInfo ()}"
 
 
         let addTimestamp fn getDebugInfo =
@@ -824,6 +879,24 @@ module Engine =
 
         addTimestamp (fun () -> "[ constructor ](z1)") getDebugInfo
 
+        let inline sync _adapterValues =
+            match lastStore with
+            | Some (getter, _setter) ->
+                let adapterValues = getAdapterValues atomType getter storeAtomPath
+
+                let getDebugInfo () =
+                    $"adapterValues={adapterValues} {getDebugInfo ()}"
+
+                addTimestamp (fun () -> "[ sync ](z4)") getDebugInfo
+            | _ -> ()
+
+        let debouncedSync =
+            Js.debounce
+                (fun adapterValues ->
+                    addTimestamp (fun () -> "[ debouncedSync ](z2)") getDebugInfo
+                    sync adapterValues)
+                0
+
         let inline refreshAdapterValues getter =
             let adapterValues = getAdapterValues atomType getter storeAtomPath
 
@@ -831,6 +904,8 @@ module Engine =
                 $"adapterValues={adapterValues} {getDebugInfo ()}"
 
             addTimestamp (fun () -> "[ refreshAdapterValues ](z3)") getDebugInfo
+
+            debouncedSync adapterValues
 
         Atom.Primitives.readSelector
             (fun getter ->
@@ -859,73 +934,8 @@ module Engine =
 
                     result
 
-                //                let adapterOptionsList =
-//                    Reflection.unionCases<Atom.AdapterType>
-//                    |> List.choose
-//                        (fun adapterType ->
-//                            match getAdapterOptions getter adapterType with
-//                            | Some adapterOptions -> Some (adapterType, adapterOptions)
-//                            | None -> None)
-//
-
-                //                let value = Atom.get getter atom
-
-
                 value |> Array.choose onFormat)
         |> Atom.split
-
-
-
-    //    let inline subscribeCollection<'T when 'T: comparison>
-//        (storeRoot: StoreRoot)
-//        collection
-//        (_onFormat: TicksGuid -> 'T)
-//        : AtomConfig<AtomConfig<'T> []> =
-//        let storeAtomPath = CollectionAtomPath (storeRoot, collection)
-//
-//        let getDebugInfo () =
-//            $"storeAtomPath={storeAtomPath |> StoreAtomPath.AtomPath}"
-//
-//        Profiling.addTimestamp (fun () -> $"+05a subscribeCollection [ constructor ] {getDebugInfo ()}")
-//
-//        let atom = createRegisteredAtomWithGroup storeAtomPath (Atom.AdapterType.Memory, [||])
-//
-//        Atom.Primitives.readSelector
-//            (fun getter ->
-//                let alias = Atom.get getter Selectors.Gun.alias
-//
-//                let adapterOptionsList =
-//                    Reflection.unionCases<Atom.AdapterType>
-//                    |> List.choose
-//                        (fun adapterType ->
-//                            match getAdapterOptions getter adapterType with
-//                            | Some adapterOptions -> Some (adapterType, adapterOptions)
-//                            | None -> None)
-//
-//                let _adapterValues =
-//                    adapterOptionsList
-//                    |> List.toArray
-//                    |> Array.map
-//                        (fun (adapterType, _) ->
-//                            if
-//                                subscriptionAdapterFnMap.ContainsKey (adapterType, storeAtomPath)
-//                                |> not
-//                            then
-//                                subscriptionAdapterFnMap.[(adapterType, storeAtomPath)] <- getCollectionAdapter
-//                                atomDefaultValueMap.[storeAtomPath] <- box [||]
-//
-//                            subscriptionFamily (alias, storeAtomPath, adapterType))
-//                    |> Array.map (Atom.get getter)
-//
-//
-//                let ticks, adapterType, value = Atom.get getter atom
-//
-//                Profiling.addTimestamp
-//                    (fun () ->
-//                        $"+01a Engine.subscribeCollection wrapper.get() ticks={ticks} adapterType={adapterType} result={Json.encodeWithNull value} {getDebugInfo ()}")
-//
-//                value)
-//        |> Atom.split
 
     let inline groupValues groupMap =
         groupMap
@@ -1152,20 +1162,25 @@ module Engine =
             |> Promise.start
         | _ -> ()
 
-    let inline createRegisteredAtomWithSubscription storeAtomPath (defaultValue: 'A8) : AtomConfig<'A8> =
-        let atomType = typeof<'A8>
+    let inline createRegisteredAtomWithSubscription<'A8 when 'A8: equality and 'A8 :> IComparable>
+        storeAtomPath
+        (defaultValue: 'A8)
+        : AtomConfig<'A8> =
+        let atomType = DataType.Data, typeof<'A8>
 
-        typeMetadataMap.[atomType] <-
-            {|
-                DefaultValue = AtomValueRef defaultValue
-                Decode = unbox Gun.userDecode<TicksGuid * 'A8>
-                Encode = unbox Gun.userEncode<TicksGuid * 'A8>
-            |}
+        if typeMetadataMap.ContainsKey atomType |> not then
+            typeMetadataMap.[atomType] <-
+                {|
+                    DefaultValue = AtomValueRef defaultValue
+                    Decode = unbox Gun.userDecode<TicksGuid * 'A8>
+                    Encode = unbox Gun.userEncode<TicksGuid * 'A8>
+                    OnFormat = unbox null
+                |}
 
         let atomPath = storeAtomPath |> StoreAtomPath.AtomPath
 
         let getDebugInfo () =
-            $"atomPath={atomPath} defaultValue={defaultValue} {getDebugInfo ()}"
+            $"atomType={atomType} atomPath={atomPath} defaultValue={defaultValue} {getDebugInfo ()}"
 
         let addTimestamp fn getDebugInfo =
             Profiling.addTimestamp
@@ -1369,7 +1384,7 @@ module Engine =
 
     let inline parseGuidKey fn keys =
         match keys with
-        | [ AtomKeyFragment guid ] ->
+        | [| Gun.AtomKeyFragment guid |] ->
             match Guid.TryParse guid with
             | true, guid -> Some (fn guid)
             | _ -> None

@@ -33,12 +33,22 @@ module Batcher =
 //        : ('TKey [] -> unit) -> {| interval: int |} -> ('TKey -> unit) = unbox batcher
 
     [<RequireQualifiedAccess>]
+    type DataType =
+        | Key
+        | Data
+
+    [<RequireQualifiedAccess>]
     type BatchType<'TKey, 'TValue> =
         | KeysFromServer of
+            atomType: (DataType * Type) *
             keys: 'TKey [] *
             ticks: TicksGuid *
-            trigger: ((TicksGuid * 'TKey []) [] -> JS.Promise<IDisposable>)
-        | Data of data: 'TValue * ticks: TicksGuid * trigger: (TicksGuid * 'TValue -> JS.Promise<unit>)
+            trigger: ((TicksGuid * 'TKey []) [] -> JS.Promise<unit>)
+        | Data of
+            ticks: TicksGuid *
+            data: 'TValue *
+            key: string *
+            trigger: (TicksGuid * 'TValue * string -> JS.Promise<unit>)
         | Subscribe of ticks: TicksGuid * trigger: (TicksGuid -> JS.Promise<IDisposable>)
         | Set of ticks: TicksGuid * trigger: (TicksGuid -> JS.Promise<unit>)
 
@@ -65,8 +75,9 @@ module Batcher =
                     (function
                     | BatchType.Set (ticks, trigger) -> Some (ticks, trigger), None, None, None
                     | BatchType.Subscribe (ticks, trigger) -> None, Some (ticks, trigger), None, None
-                    | BatchType.Data (data, ticks, trigger) -> None, None, Some (data, ticks, trigger), None
-                    | BatchType.KeysFromServer (item, ticks, trigger) -> None, None, None, Some (item, ticks, trigger))
+                    | BatchType.Data (ticks, data, key, trigger) -> None, None, Some (ticks, data, key, trigger), None
+                    | BatchType.KeysFromServer (atomType, item, ticks, trigger) ->
+                        None, None, None, Some (atomType, item, ticks, trigger))
 
             let! setDataDisposables =
                 items
@@ -88,14 +99,9 @@ module Batcher =
                 match providerData with
                 | [||] -> [||]
                 | _ ->
-                    let trigger =
-                        providerData
-                        |> Array.last
-                        |> fun (_, _, trigger) -> trigger
-
                     let providerData =
                         providerData
-                        |> Array.map (fun (data, ticks, _) -> fun () -> trigger (ticks, data))
+                        |> Array.map (fun (ticks, data, key, trigger) -> fun () -> trigger (ticks, data, key))
 
                     providerData |> Array.map wrapTry
                 |> Promise.all
@@ -106,20 +112,20 @@ module Batcher =
                     |> Array.choose (fun (_, _, _, keys) -> keys)
 
                 match keysFromServer with
-                | [||] -> []
+                | [||] -> [||]
                 | _ ->
-                    let trigger =
-                        keysFromServer
-                        |> Array.last
-                        |> fun (_, _, trigger) -> trigger
+                    keysFromServer
+                    |> Array.groupBy (fun (atomType, _, _, _) -> atomType)
+                    |> Array.map
+                        (fun (_, group) ->
+                            let trigger =
+                                group
+                                |> Array.last
+                                |> fun (_, _, _, trigger) -> trigger
 
-                    let items =
-                        keysFromServer
-                        |> Array.map (fun (item, ticks, _) -> ticks, item)
-
-                    [
-                        trigger items
-                    ]
+                            group
+                            |> Array.map (fun (_, item, ticks, _) -> ticks, item)
+                            |> trigger)
                 |> Promise.all
 
             Profiling.addTimestamp

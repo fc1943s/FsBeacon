@@ -23,7 +23,7 @@ module rec Join =
                             FsStore.storeRoot,
                             collection,
                             [
-                                AtomKeyFragment (string atomPathGuidHash)
+                                Gun.AtomKeyFragment (string atomPathGuidHash)
                             ],
                             AtomName name
                         ))

@@ -112,7 +112,7 @@ module SyncSubscribe =
                             Gun.batchSubscribe
                                 gunAtomNode
                                 (Guid.newTicksGuid ())
-                                (fun (ticks, gunValue) ->
+                                (fun (ticks, gunValue, _key) ->
                                     promise {
                                         let data =
                                             match gunValue with
