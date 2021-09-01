@@ -278,7 +278,9 @@ module Gun =
                             | None -> return None
                         with
                         | ex ->
-                            Logger.logError (fun () -> $"userDecode decrypt exception. data={Json.encodeWithNull data} ex={ex}")
+                            Logger.logError
+                                (fun () -> $"userDecode decrypt exception. data={Json.encodeWithNull data} ex={ex}")
+
                             return None
                     | _ -> return None
                 }
@@ -287,7 +289,8 @@ module Gun =
                 match decrypted with
                 | Some (DecryptedValue decrypted) -> decrypted |> Json.decode<'TValue option>
                 | None ->
-                    Logger.logDebug (fun () -> $"userDecode decrypt empty. decrypted={decrypted} data={Json.encodeWithNull data}")
+                    Logger.logDebug
+                        (fun () -> $"userDecode decrypt empty. decrypted={decrypted} data={Json.encodeWithNull data}")
 
                     JS.undefined
 
@@ -456,7 +459,7 @@ module Gun =
             )
         )
 
-    let inline batchKeys atomType fn (ticks, data) map  =
+    let inline batchKeys atomType fn (ticks, data) map =
         let fn = map >> fn
         Batcher.batch (Batcher.BatchType.KeysFromServer (atomType, data, ticks, fn))
 
