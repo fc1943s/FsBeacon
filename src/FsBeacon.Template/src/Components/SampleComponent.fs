@@ -48,7 +48,7 @@ module SampleComponent =
 //                [||]
 //            )
 
-        Ui.stack
+        Ui.box
             (fun _ -> ())
             [
                 str $"fileId={fileId} progress={progress}%%"

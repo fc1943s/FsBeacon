@@ -102,5 +102,8 @@ module State =
 
     module Selectors =
         module Sample =
-            let fileIdAtoms = Engine.subscribeFamilyKey Atoms.File.chunkCount (Engine.parseGuidKey FileId)
-            let messageIdAtoms = Engine.subscribeFamilyKey Atoms.Message.ack (Engine.parseGuidKey MessageId)
+            let fileIdAtoms =
+                Engine.subscribeCollection FsStore.storeRoot Atoms.File.collection (Engine.parseGuidKey FileId)
+
+            let messageIdAtoms =
+                Engine.subscribeCollection FsStore.storeRoot Atoms.Message.collection (Engine.parseGuidKey MessageId)
