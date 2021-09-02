@@ -13,7 +13,7 @@ open FsUi.State
 
 
 module State =
-    module FsBeacon =
+    module rec FsBeacon =
         let storeRoot = StoreRoot (nameof FsBeacon)
 
 

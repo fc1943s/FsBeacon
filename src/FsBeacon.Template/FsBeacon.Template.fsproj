@@ -27,9 +27,5 @@
         <Content Include="package.json" />
         <Content Include="cypress.json" />
     </ItemGroup>
-    <ItemGroup>
-        <ProjectReference Include="..\FsStore\FsStore.fsproj" />
-        <ProjectReference Include="..\FsUi\FsUi.fsproj" />
-    </ItemGroup>
     <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>
