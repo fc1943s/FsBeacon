@@ -58,7 +58,7 @@ module SelectorsMagic =
                         Atom.set setter accessorsAtom (Some (getter, setter))
                         Atom.set setter valueAtom newValue)
                 |> Atom.addSubscription
-                    true
+                    false
                     (fun setAtom ->
                         promise {
                             Profiling.addTimestamp
