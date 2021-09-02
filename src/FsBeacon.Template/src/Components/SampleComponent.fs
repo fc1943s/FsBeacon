@@ -81,7 +81,8 @@ module SampleComponent =
     let Files () =
         let fileIdAtoms = Store.useValue Selectors.Sample.fileIdAtoms
 
-        Profiling.addTimestamp (fun () -> $"{nameof FsBeacon} | Files [ render ] fileIdAtoms.Length={fileIdAtoms.Length}")
+        Profiling.addTimestamp
+            (fun () -> $"{nameof FsBeacon} | Files [ render ] fileIdAtoms.Length={fileIdAtoms.Length}")
         //        let fileIdAtoms = Store.useValue State.Selectors.asyncFileIdAtoms
 
         React.fragment [
@@ -115,6 +116,9 @@ module SampleComponent =
                 promise {
                     Atom.set setter Atoms.showDebug true
                     Atom.set setter Atoms.logLevel Logger.LogLevel.Trace
+//                    Atom.set setter Atoms.showDebug false
+//                    Atom.set setter Atoms.logLevel Logger.LogLevel.Info
+//                    Dom.globalDebug.Set false
                 })
 
         nothing

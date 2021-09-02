@@ -31,7 +31,9 @@ module SelectorsMagic =
                 (AtomType.ReadSelector
                     (fun getter ->
                         let logLevel = Atom.get getter Atoms.logLevel
-                        Logger.Logger.Create logLevel))
+                        let logger = Logger.Logger.Create logLevel
+                        Logger.State.lastLogger <- logger
+                        logger))
 
         let rec store =
             let mutable lastValue = 0
@@ -91,7 +93,7 @@ module SelectorsMagic =
         module rec Gun =
             let collection = Collection (nameof Gun)
 
-            let readSelector name fn =
+            let rec readSelector name fn =
                 Atom.createRegistered
                     (IndexedAtomPath (FsStore.storeRoot, collection, [], AtomName name))
                     (AtomType.ReadSelector fn)

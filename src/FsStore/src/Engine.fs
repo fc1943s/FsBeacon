@@ -150,8 +150,7 @@ module Engine =
         let inline refreshInternalState getter =
             if lastStore.IsNone then lastStore <- Atom.get getter Selectors.store
 
-            let logger = Atom.get getter Selectors.logger
-            Logger.State.lastLogger <- logger
+            let _logger = Atom.get getter Selectors.logger
 
             let newState = stateFn getter
 
@@ -320,6 +319,7 @@ module Engine =
 
                         let getDebugInfo () =
                             $"putResult={putResult} {getDebugInfo ()}"
+
                         addTimestamp (fun () -> "[ batchSetFn ](i1)") getDebugInfo
                         if putResult then onPut ()
                     })
@@ -638,9 +638,11 @@ module Engine =
 
                         match gunAtomNode with
                         | Some _gunAtomNode ->
-                            //                            gunAtomNode.off () |> ignore
-                            // TODO: gunAtomNode.back().back().map().off() |> ignore
                             // TODO: delayed unsub (free after 10 seconds)
+//                            match storeAtomPath with
+//                            | IndexedAtomPath _
+//                            | RootAtomPath _ -> gunAtomNode.off () |> ignore
+//                            | CollectionAtomPath _ -> gunAtomNode.map().off () |> ignore
                             ()
                         | _ -> ()
 
@@ -819,7 +821,12 @@ module Engine =
                                         (fun () -> "[ setAdapterValue / setAtom ](f6+1) after debounced put?")
                                         getDebugInfo
 
-                                    setAtom (Some (Transaction (fromUi, ticksGuid, value))))
+                                    if setAdapterValue.IsNone then
+                                        addTimestamp
+                                            (fun () -> "[ setAdapterValue / setAtom ](f6+2) skipping assign from adapter. unmounted ")
+                                            getDebugInfo
+                                    else
+                                        setAtom (Some (Transaction (fromUi, ticksGuid, value))))
 
                         match mountResult with
                         | Some (subscriptionId, setAdapterValues) ->

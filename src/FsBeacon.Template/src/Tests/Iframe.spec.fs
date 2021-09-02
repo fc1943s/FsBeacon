@@ -8,7 +8,6 @@ open FsJs
 open FsJs.Bindings.Cypress
 open FsStore
 open FsStore.Bindings
-open FsStore.Bindings.Jotai
 open FsStore.Model
 
 
@@ -214,7 +213,7 @@ module Iframe =
 
 
                     promise {
-                        let! profilingState = FsJs.Profiling.globalProfilingState.AsyncRead globalGet
+                        let! profilingState = Profiling.globalProfilingState.AsyncRead globalGet
 
                         expect(profilingState.CountMap.["App [ render ] "])
                             .``to``.be.equal 2

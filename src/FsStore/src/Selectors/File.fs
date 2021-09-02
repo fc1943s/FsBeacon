@@ -72,27 +72,32 @@ chunks.[0].Length={if chunks.Length = 0 then unbox null else chunks.[0].Length} 
         fileReadSelectorFamily
             (AtomName (nameof progress))
             (fun fileId getter ->
-                let logger = Atom.get getter Selectors.logger
                 let chunkCount = Atom.get getter (Atoms.File.chunkCount fileId)
 
                 match chunkCount with
                 | 0 -> 0
                 | _ ->
-                    let completedChunkCount =
+                    let chunkLengthArray =
                         [|
                             0 .. chunkCount - 1
                         |]
                         |> Array.map (fun i -> Atoms.File.chunk (fileId, i))
                         |> Atom.waitForAll
                         |> Atom.get getter
-                        |> Array.filter (fun chunk -> chunk.Length > 0)
+                        |> Array.map (fun chunk -> chunk.Length)
+
+                    let completedChunkCount =
+                        chunkLengthArray
+                        |> Array.filter (fun len -> len > 0)
                         |> Array.length
 
                     let progress = 100 / chunkCount * completedChunkCount
 
-                    logger.Debug
+                    Profiling.addTimestamp
                         (fun () ->
                             $"File.progress
+                                                size(bytes)={chunkLengthArray |> Array.sum}
+                                                size(kb)={(chunkLengthArray |> Array.sum) / 1024}
                                                 chunkCount={chunkCount}
                                                 completedChunkCount={completedChunkCount}
                                                 progress={progress} ")
