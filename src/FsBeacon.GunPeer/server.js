@@ -55,7 +55,7 @@ const server = config.https
 
 const gun = Gun({
   web: server.listen(config.port),
-  // stats: false,
+  stats: false,
   file: config.rootPath
 });
 

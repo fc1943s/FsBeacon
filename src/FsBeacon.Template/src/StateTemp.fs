@@ -9,7 +9,6 @@ module StateTempMagic =
         module Atoms =
             module Sample =
                 let rec testCounter =
-                    Engine.createRegisteredAtomWithSubscriptionStorage
-                        //        Atom.createRegisteredWithStorage
+                    Engine.createAtomWithSubscriptionStorage
                         (RootAtomPath (State.FsBeacon.storeRoot, AtomName (nameof testCounter)))
                         0

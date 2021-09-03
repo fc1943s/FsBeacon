@@ -1,7 +1,6 @@
 namespace FsBeacon.Template
 
 open FsStore.Bindings
-open FsStore.Bindings.Jotai
 open FsCore
 open FsCore.BaseModel
 open FsStore
@@ -30,7 +29,7 @@ module State =
             let rec accordionHiddenFlag =
                 Atom.Primitives.atomFamily
                     (fun (accordionType: Host.AccordionType) ->
-                        Atom.createRegistered
+                        Atom.create
                             (IndexedAtomPath (
                                 FsBeacon.storeRoot,
                                 collection,
@@ -45,19 +44,17 @@ module State =
 
         module Sample =
             let rec syncHydrateStarted =
-                Atom.createRegistered
+                Atom.create
                     (RootAtomPath (FsBeacon.storeRoot, AtomName (nameof syncHydrateStarted)))
                     (AtomType.Atom false)
 
             let rec syncHydrateCompleted =
-                Atom.createRegistered
+                Atom.create
                     (RootAtomPath (FsBeacon.storeRoot, AtomName (nameof syncHydrateCompleted)))
                     (AtomType.Atom false)
 
             let rec mounted =
-                Atom.createRegistered
-                    (RootAtomPath (FsBeacon.storeRoot, AtomName (nameof mounted)))
-                    (AtomType.Atom false)
+                Atom.create (RootAtomPath (FsBeacon.storeRoot, AtomName (nameof mounted))) (AtomType.Atom false)
 
 
             module Operation =

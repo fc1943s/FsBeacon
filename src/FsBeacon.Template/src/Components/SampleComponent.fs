@@ -1,7 +1,6 @@
 namespace FsBeacon.Template.Components
 
 open FsStore
-open FsStore.Store
 open FsCore
 open Browser.Types
 open Fable.React
@@ -114,11 +113,11 @@ module SampleComponent =
             (nameof HydrateCoreContainer)
             (fun _ setter ->
                 promise {
-                    Atom.set setter Atoms.showDebug true
-                    Atom.set setter Atoms.logLevel Logger.LogLevel.Trace
-//                    Atom.set setter Atoms.showDebug false
-//                    Atom.set setter Atoms.logLevel Logger.LogLevel.Info
-//                    Dom.globalDebug.Set false
+                    //                    Atom.set setter Atoms.showDebug true
+//                    Atom.set setter Atoms.logLevel Logger.LogLevel.Trace
+                    Atom.set setter Atoms.showDebug false
+                    Atom.set setter Atoms.logLevel Logger.LogLevel.Info
+                    Dom.globalDebug.Set false
                 })
 
         nothing
@@ -216,7 +215,7 @@ module SampleComponent =
                         Profiling.addTimestamp
                             (fun () -> $"{nameof FsBeacon} | SignInContainer [ render ] starting sign up...")
 
-                        let credentials = $"a@{Dom.deviceTag}"
+                        let credentials = $"alias@{Dom.deviceTag}"
                         //
 //                            match! signIn (credentials, credentials) with
 //                            | Ok _ -> ()
@@ -345,7 +344,7 @@ module SampleComponent =
                         Profiling.addTimestamp (fun () -> $"{nameof FsBeacon} | AddFileButton [ render ] addFile()")
 
                         let! hexString = hexStringPromise
-                        let fileId = Hydrate.hydrateFile setter (AtomScope.Current, hexString)
+                        let fileId = Hydrate.hydrateFile setter hexString
 
                         Profiling.addTimestamp
                             (fun () -> $"{nameof FsBeacon} | addFile callback completed. fileId={fileId}")

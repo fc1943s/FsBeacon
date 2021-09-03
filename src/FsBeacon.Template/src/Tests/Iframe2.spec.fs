@@ -78,7 +78,7 @@ module Iframe2 =
 
             before (fun () -> Cy.visit homeUrl)
 
-//            after (fun () -> globalExit.Write globalSet true)
+            //            after (fun () -> globalExit.Write globalSet true)
 
             it
                 "all"
@@ -98,12 +98,12 @@ module Iframe2 =
 
                     //                    Cy2.clickText "clear logs"
 
-//                    Cy2.clickText "mount"
+                    //                    Cy2.clickText "mount"
 //                    Cy2.clickText "hydrate"
 //                    Cy2.clickText "clear logs"
 
 
-//                    Cy2.clickText "sign in"
+                    //                    Cy2.clickText "sign in"
 
 
 
@@ -126,128 +126,132 @@ module Iframe2 =
                     //                    Cy2.clickText "unmount"
 //                    Cy2.clickText "mount"
 
+                    Profiling.measureTimeN 1 "measure test" (fun () -> printfn "measuring")
 
-                    Cy2.waitFor "\"IsTesting\": true,"
+                    let load () =
+                        Cy2.waitFor "\"IsTesting\": true,"
 
-                    allFn (fun node () -> node.should "not.be.empty") ()
+                        allFn (fun node () -> node.should "not.be.empty") ()
 
-                    allFn Cy2.waitForEl "async alias: undefined"
-                    allFn Cy2.clickTextEl "hydrate"
+                        allFn Cy2.waitForEl "async alias: undefined"
+                        allFn Cy2.clickTextEl "hydrate"
 
-                    [
-                        get1
-                        get2
-                    ]
-                    |> someFn Cy2.clickTextEl "sign in"
+                        [
+                            get1
+                            get2
+                        ]
+                        |> someFn Cy2.clickTextEl "sign in"
 
-                    waitForElSelectorValueIndicator<Gun.GunKeys> get2 "#component" "privateKeys"
-                    |> Promise.bind
-                        (fun privateKeys ->
-                            promise {
-                                let keysJson = JS.JSON.stringify privateKeys
+                        waitForElSelectorValueIndicator<Gun.GunKeys> get2 "#component" "privateKeys"
+                        |> Promise.bind
+                            (fun privateKeys ->
+                                promise {
+                                    let keysJson = JS.JSON.stringify privateKeys
 
-                                let keys = keysJson |> Json.decode<Gun.GunKeys>
-                                let message = Message.Command (AppCommand.SignInPair keys)
-                                let messages = message |> Array.singleton
+                                    let keys = keysJson |> Json.decode<Gun.GunKeys>
+                                    let message = Message.Command (AppCommand.SignInPair keys)
+                                    let messages = message |> Array.singleton
 
-                                let json =
-                                    messages
-                                    |> Json.encode<Message<AppCommand, AppEvent> []>
+                                    let json =
+                                        messages
+                                        |> Json.encode<Message<AppCommand, AppEvent> []>
 
-                                let base64 =
-                                    match window () with
-                                    | Some window -> window?btoa json
-                                    | None -> ""
+                                    let base64 =
+                                        match window () with
+                                        | Some window -> window?btoa json
+                                        | None -> ""
 
-                                Logger.logWarning
-                                    (fun () ->
-                                        $"test: keys get2 waitForElSelectorObjectKey. json={json} base64={base64}")
+                                    Logger.logWarning
+                                        (fun () ->
+                                            $"test: keys get2 waitForElSelectorObjectKey. json={json} base64={base64}")
 
-                                if base64 <> "" then
-                                    let! _ =
-                                        (getIframeN 3)
-                                            .invoke ("attr", "src", $"https://localhost:49222/#{base64}")
+                                    if base64 <> "" then
+                                        let! _ =
+                                            (getIframeN 3)
+                                                .invoke ("attr", "src", $"https://localhost:49222/#{base64}")
+
+                                        ()
 
                                     ()
+                                })
+                        |> Promise.iter id
 
-                                ()
-                            })
-                    |> Promise.iter id
+                        //                    actorSignIn get2 (fun keysJson -> promise { Dom.logWarning (fun () -> $"test: keys actorsignin get2 ={keysJson}") })
 
-                    //                    actorSignIn get2 (fun keysJson -> promise { Dom.logWarning (fun () -> $"test: keys actorsignin get2 ={keysJson}") })
+                        allFn Cy2.waitForEl "async alias: a@"
 
-                    allFn Cy2.waitForEl "async alias: a@"
+                        Cy2.clickTextEl (get2 ()) "add file"
 
-                    Cy2.clickTextEl (get2 ()) "add file"
+                        //                    Cy2.waitForEl (Cy.getIframeBody1 ()) "async alias: undefined"
+                        //                    Cy2.waitForEl (Cy.getIframeBody2 ()) "async alias: undefined"
+                        //                    Cy2.waitForEl (Cy.getIframeBody3 ()) "async alias: undefined"
+                        //
+                        //                    Cy2.clickTextEl (Cy.getIframeBody1 ()) "hydrate"
+                        //                    Cy2.clickTextEl (Cy.getIframeBody1 ()) "hydrate"
 
-                    //                    Cy2.waitForEl (Cy.getIframeBody1 ()) "async alias: undefined"
-//                    Cy2.waitForEl (Cy.getIframeBody2 ()) "async alias: undefined"
-//                    Cy2.waitForEl (Cy.getIframeBody3 ()) "async alias: undefined"
-//
-//                    Cy2.clickTextEl (Cy.getIframeBody1 ()) "hydrate"
-//                    Cy2.clickTextEl (Cy.getIframeBody1 ()) "hydrate"
+                        //                    actorSignIn
+                        //                        Cy.getIframeBody1
+                        //                        (fun keysJson ->
+                        //                            promise {
+                        //                                Dom
+                        //                                    .logWarning (fun () -> $"test: keys1={keysJson}")
+                        //
+                        //                                typeText (Cy.getIframeBody3().find "#privateKeys") keysJson
+                        //
+                        //                            })
+                        //
+                        //                    actorSignIn
+                        //                        Cy.getIframeBody2
+                        //                        (fun keysJson ->
+                        //                            promise {
+                        //                                Dom
+                        //                                    .logWarning (fun () -> $"test: keys2={keysJson}")
+                        //
+                        //                            })
+                        //
+                        //                    Cy2.waitForEl (Cy.getIframeBody1 ()) "async alias: a@"
+                        //                    Cy2.waitForEl (Cy.getIframeBody2 ()) "async alias: a@"
+                        //                    Cy2.waitForEl (Cy.getIframeBody3 ()) "async alias: a@"
 
-                    //                    actorSignIn
-//                        Cy.getIframeBody1
-//                        (fun keysJson ->
-//                            promise {
-//                                Dom
-//                                    .logWarning (fun () -> $"test: keys1={keysJson}")
-//
-//                                typeText (Cy.getIframeBody3().find "#privateKeys") keysJson
-//
-//                            })
-//
-//                    actorSignIn
-//                        Cy.getIframeBody2
-//                        (fun keysJson ->
-//                            promise {
-//                                Dom
-//                                    .logWarning (fun () -> $"test: keys2={keysJson}")
-//
-//                            })
-//
-//                    Cy2.waitForEl (Cy.getIframeBody1 ()) "async alias: a@"
-//                    Cy2.waitForEl (Cy.getIframeBody2 ()) "async alias: a@"
-//                    Cy2.waitForEl (Cy.getIframeBody3 ()) "async alias: a@"
+                        //                    Cy2.waitForEl (get1 ()) "\"<44> FsUi/systemUiFont get\": \"2\""
 
-                    //                    Cy2.waitForEl (get1 ()) "\"<44> FsUi/systemUiFont get\": \"2\""
+                        //                    Cy2.waitForEl (get1 ()) $"""49212:file[0]=0%%"""
+                        //                    Cy2.waitForEl (get1 ()) $"""49212:file[1]=0%%"""
+                        //                    Cy2.waitForEl (get2 ()) $"""49222:file[0]=0%%"""
+                        //                    Cy2.waitForEl (get2 ()) $"""49222:file[1]=0%%"""
+                        //
+                        //                    Cy2.clickTextEl (get1 ()) $"""49212:file[0]:save"""
+                        //
+                        //                    Cy2.waitForEl (get1 ()) $"""49212:file[0]=100%%"""
+                        //                    Cy2.waitForEl (get2 ()) $"""49222:file[0]=100%%"""
+                        //
+                        //                    Cy2.clickTextEl (get2 ()) $"""49222:file[1]:save"""
+                        //
+                        //                    Cy2.waitForEl (get1 ()) $"""49212:file[1]=100%%"""
+                        //                    Cy2.waitForEl (get2 ()) $"""49222:file[1]=100%%"""
 
-                    //                    Cy2.waitForEl (get1 ()) $"""49212:file[0]=0%%"""
-//                    Cy2.waitForEl (get1 ()) $"""49212:file[1]=0%%"""
-//                    Cy2.waitForEl (get2 ()) $"""49222:file[0]=0%%"""
-//                    Cy2.waitForEl (get2 ()) $"""49222:file[1]=0%%"""
-//
-//                    Cy2.clickTextEl (get1 ()) $"""49212:file[0]:save"""
-//
-//                    Cy2.waitForEl (get1 ()) $"""49212:file[0]=100%%"""
-//                    Cy2.waitForEl (get2 ()) $"""49222:file[0]=100%%"""
-//
-//                    Cy2.clickTextEl (get2 ()) $"""49222:file[1]:save"""
-//
-//                    Cy2.waitForEl (get1 ()) $"""49212:file[1]=100%%"""
-//                    Cy2.waitForEl (get2 ()) $"""49222:file[1]=100%%"""
-
-                    //// cypress/integration/custom-command-spec.js
-//it('gets the post using custom command', () => {
-//  cy.visit('index.html')
-//  cy.getIframeBody()
-//    .find('#run-button').should('have.text', 'Try it').click()
-//  cy.getIframeBody()
-//    .find('#result').should('include.text', '"delectus aut autem"')
-//})
+                        //// cypress/integration/custom-command-spec.js
+                        //it('gets the post using custom command', () => {
+                        //  cy.visit('index.html')
+                        //  cy.getIframeBody()
+                        //    .find('#run-button').should('have.text', 'Try it').click()
+                        //  cy.getIframeBody()
+                        //    .find('#result').should('include.text', '"delectus aut autem"')
+                        //})
 
 
 
 
-                    promise {
-                        let! profilingState = Profiling.globalProfilingState.AsyncRead globalGet
+                        promise {
+                            let! profilingState = Profiling.globalProfilingState.AsyncRead globalGet
 
-                        expect(profilingState.CountMap.["App [ render ] "])
-                            .``to``.be.equal 2
+                            expect(profilingState.CountMap.["App [ render ] "])
+                                .``to``.be.equal 2
 
-                    }
-                    |> Promise.iter id
+                        }
+                        |> Promise.iter id
+                    //                    load ()
+                    ()
 
 
                     ))
