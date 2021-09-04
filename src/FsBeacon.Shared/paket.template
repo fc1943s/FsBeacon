@@ -1,0 +1,12 @@
+type project
+authors fc1943s
+language F#
+tags fsharp, fable
+repositoryType git
+repositoryUrl https://github.com/fc1943s/FsBeacon
+include-pdbs true
+include-referenced-projects true
+files
+    *.fsproj ==> fable
+    paket.references ==> fable
+    src/*.fs ==> fable/src

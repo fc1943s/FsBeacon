@@ -3,13 +3,19 @@
     <PropertyGroup>
         <TargetFramework>net6.0</TargetFramework>
         <LangVersion>preview</LangVersion>
+        <PackageId>FsBeacon.Shared</PackageId>
+        <Version>0.0.1-alpha.1</Version>
     </PropertyGroup>
     <ItemGroup>
         <Compile Include="src\Sync.fs" />
         <Content Include="package.json" />
         <Content Include="paket.references" />
+        <Content Include="pack.ps1">
+            <Pack>false</Pack>
+        </Content>
         <Content Include=".gitignore" />
         <Content Include="yarn.lock" />
+        <Content Include="paket.template" />
     </ItemGroup>
     <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>

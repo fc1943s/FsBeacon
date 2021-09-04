@@ -37,6 +37,14 @@ jobs:
           start: yarn cypress-serve
           command: yarn cypress-run-delay
 
+      - shell: pwsh
+        env:
+          GITHUB_READ_PACKAGES_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: cd src/FsBeacon.Shared; ./pack.ps1
+
+      - run: dotnet nuget add source https://nuget.pkg.github.com/${{ github.actor }}/index.json --name github
+      - run: dotnet nuget push src/FsBeacon.Shared/bin/Release/*.nupkg --source github --api-key ${{ secrets.GITHUB_TOKEN }} --skip-duplicate
+
       - uses: actions/upload-artifact@v2
         if: failure()
         with:
@@ -44,7 +52,6 @@ jobs:
           path: ./src/FsBeacon.Template/cypress/screenshots
 
       - uses: actions/upload-artifact@v2
-        if: failure()
         with:
           name: cypress-videos
           path: ./src/FsBeacon.Template/cypress/videos

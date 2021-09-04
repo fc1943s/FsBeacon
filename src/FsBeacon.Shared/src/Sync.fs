@@ -1,7 +1,7 @@
 namespace FsBeacon.Shared
 
 
-module rec Sync =
+module Sync =
     [<RequireQualifiedAccess>]
     type Request =
         | Connect of alias: string
@@ -18,4 +18,4 @@ module rec Sync =
         | FilterResult of atomPathArray: string []
         | FilterStream of (string * string * string) * atomPathArray: string []
 
-    let endpoint = $"/{nameof Sync}"
+    let endpoint = "/fsbeacon"

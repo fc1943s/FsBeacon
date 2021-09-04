@@ -161,7 +161,7 @@ module Iframe =
 
                     Cy2.waitForEl (get3 ()) "logout (alias@"
 
-                    let fileCount = 5
+                    let fileCount = 3
 
                     for i = 1 to fileCount do
                         Cy2.clickTextEl (get2 ()) "add file"
