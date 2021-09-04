@@ -41,8 +41,11 @@
     "n7z:win32": "./node_modules/node-7z-archive/binaries/win32/7z.exe",
     "n7z:linux": "./node_modules/node-7z-archive/binaries/linux/7z",
     "n7z": "run-script-os",
+    "pre-n7z:win32": "echo pre-n7z:win32",
+    "pre-n7z:linux": "chmod +x ./node_modules/node-7z-archive/binaries/linux/7z",
+    "pre-n7z": "run-script-os",
 
-    "download-extensions": "rm -rf extensions && mkdir extensions && cd extensions && download-crx --url https://chrome.google.com/webstore/detail/dbepggeogbaibhgnhhndojpepiihcmeb --name vimium && download-crx --url https://chrome.google.com/webstore/detail/fmkadmapgofadopljbjfkapdkoienihi --name reactdevtools && cd .. && yarn n7z x ./extensions/vimium.crx -oextensions/vimium/ && yarn n7z x ./extensions/reactdevtools.crx -oextensions/reactdevtools/ && cd extensions && ls -al",
+    "download-extensions": "rm -rf extensions && mkdir extensions && cd extensions && download-crx --url https://chrome.google.com/webstore/detail/dbepggeogbaibhgnhhndojpepiihcmeb --name vimium && download-crx --url https://chrome.google.com/webstore/detail/fmkadmapgofadopljbjfkapdkoienihi --name reactdevtools && cd .. && yarn pre-n7z && yarn n7z x ./extensions/vimium.crx -oextensions/vimium/ && yarn n7z x ./extensions/reactdevtools.crx -oextensions/reactdevtools/ && cd extensions && ls -al",
 
     "serve": "concurrently \"yarn:frontend-serve\" \"echo #1 yarn serve\"",
     "frontend-serve": "cross-env PORT=9762 NODE_ENV=production serve cra_output",
