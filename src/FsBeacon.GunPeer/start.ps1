@@ -1,7 +1,3 @@
-$env:FSBEACON_DOMAIN = "localhost"
-$env:HTTPS = "true"
-$env:ROOT_PATH = "./radata"
-
 yarn install
 
 yarn mkcert -install

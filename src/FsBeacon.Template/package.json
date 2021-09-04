@@ -29,7 +29,7 @@
     "cypress": "cypress open",
 
     "cypress-serve-hub": "dotnet run --project ../FsBeacon.HubPeer/FsBeacon.HubPeer.fsproj --root-path %tmp%/fsbeacon-hubpeer-synctestdata --port 49211",
-    "cypress-serve-gun": "cd ../FsBeacon.GunPeer && cross-env PORT=49221 ROOT_PATH=%tmp%/fsbeacon-gunpeer-synctestdata pwsh ./start-dev.ps1",
+    "cypress-serve-gun": "cd ../FsBeacon.GunPeer && cross-env PORT=49221 ROOT_PATH=%tmp%/fsbeacon-gunpeer-synctestdata yarn start-dev",
     "cypress-serve-template1": "cross-env HTTPS=true EXTEND_ESLINT=true BROWSER=none FAST_REFRESH=true PORT=49212 SKIP_PREFLIGHT_CHECK=true react-app-rewired start",
     "cypress-serve-template2": "cross-env HTTPS=true EXTEND_ESLINT=true BROWSER=none FAST_REFRESH=true PORT=49222 SKIP_PREFLIGHT_CHECK=true react-app-rewired start",
     "cypress-serve": "concurrently \"npm:watch\" \"yarn:cypress-serve-hub\" \"yarn:cypress-serve-gun\" \"yarn:cypress-serve-template1\" \"yarn:cypress-serve-template2\" ",
@@ -39,10 +39,10 @@
     "cypress-run-delay": "sleep 60s && yarn download-extensions && yarn cypress-run",
 
     "n7z:win32": "./node_modules/node-7z-archive/binaries/win32/7z.exe",
-    "n7z:linux": "cd ./node_modules/node-7z-archive/binaries && ls -al",
+    "n7z:linux": "./node_modules/node-7z-archive/binaries/linux/7z",
     "n7z": "run-script-os",
 
-    "download-extensions": "rm -rf extensions && mkdir extensions && cd extensions && download-crx --url https://chrome.google.com/webstore/detail/dbepggeogbaibhgnhhndojpepiihcmeb --name vimium && download-crx --url https://chrome.google.com/webstore/detail/fmkadmapgofadopljbjfkapdkoienihi --name reactdevtools && cd .. && yarn n7z:linux && yarn n7z x ./extensions/vimium.crx -oextensions/vimium/ && yarn n7z x ./extensions/reactdevtools.crx -oextensions/reactdevtools/ && cd extensions && ls -al",
+    "download-extensions": "rm -rf extensions && mkdir extensions && cd extensions && download-crx --url https://chrome.google.com/webstore/detail/dbepggeogbaibhgnhhndojpepiihcmeb --name vimium && download-crx --url https://chrome.google.com/webstore/detail/fmkadmapgofadopljbjfkapdkoienihi --name reactdevtools && cd .. && yarn n7z x ./extensions/vimium.crx -oextensions/vimium/ && yarn n7z x ./extensions/reactdevtools.crx -oextensions/reactdevtools/ && cd extensions && ls -al",
 
     "serve": "concurrently \"yarn:frontend-serve\" \"echo #1 yarn serve\"",
     "frontend-serve": "cross-env PORT=9762 NODE_ENV=production serve cra_output",
