@@ -1,10 +1,8 @@
 version 6.0
 framework: net6.0
 storage: none
-
 source https://api.nuget.org/v3/index.json
 source https://nuget.pkg.github.com/fc1943s/index.json username: "%GITHUB_ACTOR%" password: "%GITHUB_READ_PACKAGES_TOKEN%"
-
 
 nuget FSharp.Core ~> 5.0
 

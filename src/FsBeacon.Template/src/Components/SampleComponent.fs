@@ -25,34 +25,31 @@ module SampleComponent =
 
 
     [<ReactComponent>]
-    let File fileIdAtom =
+    let File index fileIdAtom =
         let fileId = Store.useValue fileIdAtom
         let progress = Store.useValue (Selectors.File.progress fileId)
 
-        Profiling.addTimestamp (fun () -> $"{nameof FsBeacon} | File [ render ] fileId={fileId} progress={progress}")
+        Profiling.addTimestamp
+            (fun () -> $"{nameof FsBeacon} | File [ render ] fileId={fileId} index={index} progress={progress}")
 
+        let deleteFile =
+            Store.useCallbackRef
+                (fun getter _setter _ ->
+                    promise {
+                        Profiling.addTimestamp (fun () -> $"{nameof FsBeacon} | File [ deleteFile ] ")
 
-        //        let valid, setValid = React.useState false
-//
-//        let valid =
-//            React.useEffect (
-//                (fun () ->
-//                    promise {
-//                        if progress >= 100 then
-//                            let! hexString = hexStringPromise
-//                            setValid (hexString = )
-//                        ()
-//                    }
-//                    |> Promise.start),
-//                [||]
-//            )
+                        let storeAtomPath =
+                            RecordAtomPath (FsStore.storeRoot, Atoms.File.collection, Atoms.File.formatFileId fileId)
 
-        Ui.box
-            (fun _ -> ())
+                        do! Engine.delete getter storeAtomPath
+                    })
+
+        Ui.flex
+            (fun x -> x.whiteSpace <- "nowrap")
             [
-                str $"fileId={fileId} progress={progress}%%"
+                str $"fileId={fileId} index={index} progress={progress}%%"
 
-            //                Button.Button
+                //                Button.Button
 //                    {|
 //                        Icon = Some (Icons.bi.BiSave |> Icons.render, Button.IconPosition.Left)
 //                        Tooltip = None
@@ -63,16 +60,16 @@ module SampleComponent =
 //                            ]
 //                    |}
 //
-//                Button.Button
-//                    {|
-//                        Icon = Some (Icons.bi.BiTrash |> Icons.render, Button.IconPosition.Left)
-//                        Tooltip = None
-//                        Props = fun _ -> ()
-//                        Children =
-//                            [
-//                                str $"{Browser.Dom.window.location.port}:file[{fileId}]:delete"
-//                            ]
-//                    |}
+                Button.Button
+                    {|
+                        Icon = Some (Icons.bi.BiTrash |> Icons.render, Button.IconPosition.Left)
+                        Tooltip = None
+                        Props = fun x -> x.onClick <- (fun _ -> deleteFile ())
+                        Children =
+                            [
+                                str $"[{index}]:delete"
+                            ]
+                    |}
             ]
 
 
@@ -85,7 +82,9 @@ module SampleComponent =
         //        let fileIdAtoms = Store.useValue State.Selectors.asyncFileIdAtoms
 
         React.fragment [
-            yield! fileIdAtoms |> Array.map File
+            br []
+            str $"file count: {fileIdAtoms.Length}"
+            yield! fileIdAtoms |> Array.mapi File
         ]
 
 
@@ -113,11 +112,9 @@ module SampleComponent =
             (nameof HydrateCoreContainer)
             (fun _ setter ->
                 promise {
-                    //                    Atom.set setter Atoms.showDebug true
-//                    Atom.set setter Atoms.logLevel Logger.LogLevel.Trace
-                    Atom.set setter Atoms.showDebug false
-                    Atom.set setter Atoms.logLevel Logger.LogLevel.Info
-                    Dom.globalDebug.Set false
+                    Atom.set setter Atoms.showDebug true
+                    Atom.set setter Atoms.logLevel Logger.LogLevel.Trace
+                    Dom.globalDebug.Set true
                 })
 
         nothing
@@ -201,6 +198,7 @@ module SampleComponent =
         let logger = Store.useValue Selectors.logger
 
         let signUp = Auth.useSignUp ()
+        let _ = Auth.useGunAliasLoader ()
 
         let toast = Ui.useToast ()
 
@@ -299,13 +297,13 @@ module SampleComponent =
                         x.disabled <- alias.IsNone
                 Children =
                     [
-                        str "logout"
+                        str $"logout ({alias})"
                     ]
             |}
 
     [<ReactComponent>]
-    let ClearButton () =
-        Profiling.addTimestamp (fun () -> $"{nameof FsBeacon} | ClearButton [ render ] ")
+    let ClearLogsButton () =
+        Profiling.addTimestamp (fun () -> $"{nameof FsBeacon} | ClearLogsButton [ render ]")
 
         Button.Button
             {|
@@ -316,7 +314,9 @@ module SampleComponent =
                         x.onClick <-
                             (fun _ ->
                                 promise {
-                                    Profiling.addTimestamp (fun () -> $"{nameof FsBeacon} | ClearButton [ onClick ]")
+                                    Profiling.addTimestamp
+                                        (fun () -> $"{nameof FsBeacon} | ClearLogsButton [ onClick ]")
+
                                     Profiling.globalClearProfilingState.Get () ()
                                 })
                 Children =
@@ -325,11 +325,45 @@ module SampleComponent =
                     ]
             |}
 
-    //    let addFile
-////        : (unit -> Fable.Core.JS.Promise<unit>)
-//        = Store.rawSetSelector (fun getter setter newValue ->
-//            ()
-//    )
+    [<ReactComponent>]
+    let ToggleLogsButton () =
+        let showDebug, setShowDebug = Store.useState Atoms.showDebug
+        let logLevel, setLogLevel = Store.useState Atoms.logLevel
+
+        let getLocals () =
+            $"showDebug={showDebug} logLevel={logLevel}"
+
+        let addTimestamp fn getLocals =
+            Profiling.addTimestamp
+                (fun () -> $"{nameof FsBeacon} | SampleComponent.ToggleLogsButton {fn ()} {getLocals ()}")
+
+        Button.Button
+            {|
+                Tooltip = None
+                Icon = Some (Icons.bi.BiRecycle |> Icons.render, Button.IconPosition.Left)
+                Props =
+                    fun x ->
+                        x.onClick <-
+                            (fun _ ->
+                                promise {
+                                    addTimestamp (fun () -> "[ onClick ]") getLocals
+
+                                    setShowDebug (not showDebug)
+
+                                    setLogLevel (
+                                        if logLevel = Logger.LogLevel.Trace then
+                                            Logger.LogLevel.Debug
+                                        else
+                                            Logger.LogLevel.Trace
+                                    )
+
+                                    Dom.globalDebug.Set (not showDebug)
+                                })
+                Children =
+                    [
+                        str $"""{if not showDebug then "enable" else "disable"} logs"""
+                    ]
+            |}
 
     [<ReactComponent>]
     let AddFileButton () =
@@ -429,18 +463,6 @@ module SampleComponent =
 
         str $"href: {Browser.Dom.window.location.href}"
 
-    [<ReactComponent>]
-    let AsyncAliasIndicator () =
-        let asyncAlias = Store.useValue Selectors.Gun.asyncAlias
-
-        Profiling.addTimestamp (fun () -> $"{nameof FsBeacon} | AsyncAliasIndicator [ render ] asyncAlias={asyncAlias}")
-
-        Ui.flex
-            (fun _ -> ())
-            [
-                str $"async alias: {asyncAlias}"
-            ]
-
 
     [<ReactComponent>]
     let SettingsIndicator () =
@@ -492,13 +514,6 @@ module SampleComponent =
                     ]
 
                 HrefIndicator ()
-
-                React.suspense (
-                    [
-                        AsyncAliasIndicator ()
-                    ],
-                    LoadingSpinner.InlineLoadingSpinner ()
-                )
 
                 Files ()
 
@@ -585,6 +600,10 @@ module SampleComponent =
             [
                 HydrateCoreContainer ()
 
+                ClearLogsButton ()
+
+                ToggleLogsButton ()
+
                 MountButton ()
 
                 CounterButton ()
@@ -593,8 +612,6 @@ module SampleComponent =
                     HydrateSyncContainerWrapper ()
                     MessagesListener ()
                     InnerComponent ()
-
-                ClearButton ()
 
                 DebugPanel.DebugPanel DebugPanel.DebugPanelDisplay.Inline
             ]

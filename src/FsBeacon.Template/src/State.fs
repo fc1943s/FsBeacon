@@ -30,7 +30,7 @@ module State =
                 Atom.Primitives.atomFamily
                     (fun (accordionType: Host.AccordionType) ->
                         Atom.create
-                            (IndexedAtomPath (
+                            (ValueAtomPath (
                                 FsBeacon.storeRoot,
                                 collection,
                                 accordionType
@@ -39,7 +39,7 @@ module State =
                                 |> List.singleton,
                                 (AtomName (nameof accordionHiddenFlag))
                             ))
-                            (AtomType.Atom ([||]: string [])))
+                            (AtomType.Atom ([]: string list)))
 
 
         module Sample =

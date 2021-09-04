@@ -89,7 +89,10 @@ module Iframe =
         (fun () ->
             let homeUrl = "https://localhost:9762"
 
-            before (fun () -> Cy.visit homeUrl)
+            before
+                (fun () ->
+
+                    Cy.visit homeUrl)
 
             it
                 "all"
@@ -101,9 +104,14 @@ module Iframe =
 
                     Cy2.waitFor "\"IsTesting\": true,"
 
+                    Cy2.waitFor
+                        "160. FsStore | Engine.createAtomWithSubscription [ debouncedSync ](a2) | localAdaptersAtom=atom54 atomType=Data,System.Boolean atomPath=FsUi/systemUiFont defaultValue=true"
+
+
                     allFn (fun node () -> node.should "not.be.empty") ()
 
-                    allFn Cy2.waitForEl "async alias: undefined"
+                    allFn Cy2.waitForEl "alias=null"
+                    allFn Cy2.clickTextEl "mount"
                     allFn Cy2.clickTextEl "hydrate"
 
                     [
@@ -112,7 +120,9 @@ module Iframe =
                     ]
                     |> someFn Cy2.clickTextEl "sign in"
 
-                    waitForElSelectorValueIndicator<Gun.GunKeys> get2 "#component" "privateKeys"
+                    allFn Cy2.clickTextEl "clear logs"
+
+                    waitForElSelectorValueIndicator<Gun.GunKeys> get2 "#debug" "privateKeys"
                     |> Promise.bind
                         (fun privateKeys ->
                             promise {
@@ -146,118 +156,22 @@ module Iframe =
                             })
                     |> Promise.iter id
 
-                    //                    actorSignIn get2 (fun keysJson -> promise { Dom.logWarning (fun () -> $"test: keys actorsignin get2 ={keysJson}") })
+                    allFn Cy2.clickTextEl "clear logs"
+                    allFn Cy2.clickTextEl "disable logs"
 
-                    allFn Cy2.waitForEl "async alias: a@"
+                    Cy2.waitForEl (get3 ()) "logout (alias@"
 
-                    Cy2.clickTextEl (get2 ()) "add file"
+                    let fileCount = 5
 
-                    //                    Cy2.waitForEl (Cy.getIframeBody1 ()) "async alias: undefined"
-//                    Cy2.waitForEl (Cy.getIframeBody2 ()) "async alias: undefined"
-//                    Cy2.waitForEl (Cy.getIframeBody3 ()) "async alias: undefined"
-//
-//                    Cy2.clickTextEl (Cy.getIframeBody1 ()) "hydrate"
-//                    Cy2.clickTextEl (Cy.getIframeBody1 ()) "hydrate"
+                    for i = 0 to fileCount do
+                        Cy2.clickTextEl (get2 ()) "add file"
+                        Cy2.clickTextEl (get3 ()) "add file"
 
-                    //                    actorSignIn
-//                        Cy.getIframeBody1
-//                        (fun keysJson ->
-//                            promise {
-//                                Dom
-//                                    .logWarning (fun () -> $"test: keys1={keysJson}")
-//
-//                                typeText (Cy.getIframeBody3().find "#privateKeys") keysJson
-//
-//                            })
-//
-//                    actorSignIn
-//                        Cy.getIframeBody2
-//                        (fun keysJson ->
-//                            promise {
-//                                Dom
-//                                    .logWarning (fun () -> $"test: keys2={keysJson}")
-//
-//                            })
-//
-//                    Cy2.waitForEl (Cy.getIframeBody1 ()) "async alias: a@"
-//                    Cy2.waitForEl (Cy.getIframeBody2 ()) "async alias: a@"
-//                    Cy2.waitForEl (Cy.getIframeBody3 ()) "async alias: a@"
+                    for i = 0 to (fileCount * 2) do
+                        Cy2.waitForEl (get2 ()) $"index={i} progress=100%%"
+                        Cy2.waitForEl (get3 ()) $"index={i} progress=100%%"
 
-                    //                    Cy2.waitForEl (get1 ()) "\"<44> FsUi/systemUiFont get\": \"2\""
+                    for i = 0 to (fileCount * 2) do
+                        Cy2.clickTextEl (get2 ()) $"[{i}]:delete"
 
-                    //                    Cy2.waitForEl (get1 ()) $"""49212:file[0]=0%%"""
-//                    Cy2.waitForEl (get1 ()) $"""49212:file[1]=0%%"""
-//                    Cy2.waitForEl (get2 ()) $"""49222:file[0]=0%%"""
-//                    Cy2.waitForEl (get2 ()) $"""49222:file[1]=0%%"""
-//
-//                    Cy2.clickTextEl (get1 ()) $"""49212:file[0]:save"""
-//
-//                    Cy2.waitForEl (get1 ()) $"""49212:file[0]=100%%"""
-//                    Cy2.waitForEl (get2 ()) $"""49222:file[0]=100%%"""
-//
-//                    Cy2.clickTextEl (get2 ()) $"""49222:file[1]:save"""
-//
-//                    Cy2.waitForEl (get1 ()) $"""49212:file[1]=100%%"""
-//                    Cy2.waitForEl (get2 ()) $"""49222:file[1]=100%%"""
-
-                    //// cypress/integration/custom-command-spec.js
-//it('gets the post using custom command', () => {
-//  cy.visit('index.html')
-//  cy.getIframeBody()
-//    .find('#run-button').should('have.text', 'Try it').click()
-//  cy.getIframeBody()
-//    .find('#result').should('include.text', '"delectus aut autem"')
-//})
-
-
-
-
-                    promise {
-                        let! profilingState = Profiling.globalProfilingState.AsyncRead globalGet
-
-                        expect(profilingState.CountMap.["App [ render ] "])
-                            .``to``.be.equal 2
-
-                    }
-                    |> Promise.iter id
-
-
-                    //let x = $""""registerAtom FsStore/logLevel": "1""""
-                    ()
-                    //
-
-                    //                    Cy
-//                        .get("@consoleLog")
-//                        .should (
-//                            unbox
-//                                (fun x ->
-//                                    let calls: string [] [] = x?getCalls ()
-//                                    let args = calls |> Array.map (String.concat " ")
-//                                    Dom.consoleLog( [|$"calls={calls} args={args} x={x}"|])
-//                                    failwith x
-//
-//                                    args
-//                                    |> Array.iter (fun y -> ((Cy.expect y)?``to``?deep?equal) x))
-//                        ) |> ignore
-
-                    //                    Cy.get("@consoleLog").should
-//                        "have.been.calledWith"
-//                        (Cy.sinon?``match``)
-//                        "registerAtom FsStore/logLevel"
-
-                    //                    Cy.get("@consoleLog").should "be.calledWithMatch" "*registerAtom FsStore/logLevel" null
-//                    Cy.should
-//                        (fun () ->
-//                            Cy.window ()
-//                            |> Promise.iter
-//                                (fun window -> (Cy.expect (window?lastConsoleLogArgs))?``to``?equal "Hello World!"))
-                    //
-//                    Cy.get("@consoleError").should "be.calledWithMatch" "/React 18/" null
-//
-//                    Cy.get("@consoleLog").should "be.calledWithMatch" "DebugPanel.render. showDebug=false" null
-
-
-
-                    //                    Cy.window ()
-//                    |> Promise.iter (fun window -> window?Debug <- false)
-                    ))
+                    Cy2.waitForEl (get3 ()) "file count: 0"))
