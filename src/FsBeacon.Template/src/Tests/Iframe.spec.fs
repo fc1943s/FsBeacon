@@ -159,20 +159,20 @@ module Iframe =
                     allFn Cy2.clickTextEl "clear logs"
                     allFn Cy2.clickTextEl "disable logs"
 
-                    Cy2.waitForEl (get3 ()) "logout (alias@"
-
-                    let fileCount = 3
-
-                    for i = 1 to fileCount do
-                        Cy2.clickTextEl (get2 ()) "add file"
-                        Cy2.clickTextEl (get3 ()) "add file"
-
-                    for i = fileCount * 2 downto 1 do
-                        Cy2.waitForEl (get2 ()) $"index={i} progress=100%%"
-                        Cy2.waitForEl (get3 ()) $"index={i} progress=100%%"
-
-//                    for i = fileCount * 2 downto 1 do
-//                        Cy2.clickTextEl (get2 ()) $"[{i}]:delete"
+//                    Cy2.waitForEl (get3 ()) "logout (alias@"
 //
-//                    Cy2.waitForEl (get3 ()) "file count: 0"
+//                    let fileCount = 3
+//
+//                    for i = 1 to fileCount do
+//                        Cy2.clickTextEl (get2 ()) "add file"
+//                        Cy2.clickTextEl (get3 ()) "add file"
+//
+//                    for i = fileCount * 2 downto 1 do
+//                        Cy2.waitForEl (get2 ()) $"index={i} progress=100%%"
+//                        Cy2.waitForEl (get3 ()) $"index={i} progress=100%%"
+//
+////                    for i = fileCount * 2 downto 1 do
+////                        Cy2.clickTextEl (get2 ()) $"[{i}]:delete"
+////
+////                    Cy2.waitForEl (get3 ()) "file count: 0"
                     ))
