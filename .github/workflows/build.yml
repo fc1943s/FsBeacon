@@ -71,6 +71,9 @@ jobs:
             type=raw,value=hub-main
 
       - uses: docker/build-push-action@v2
+        env:
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_READ_PACKAGES_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           context: .
           file: src/FsBeacon.HubPeer/Dockerfile
@@ -86,6 +89,9 @@ jobs:
             type=raw,value=gun-main
 
       - uses: docker/build-push-action@v2
+        env:
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_READ_PACKAGES_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           context: .
           file: src/FsBeacon.GunPeer/Dockerfile
