@@ -30,7 +30,7 @@ module SampleComponent =
         let progress = Store.useValue (Selectors.File.progress fileId)
 
         Profiling.addTimestamp
-            (fun () -> $"{nameof FsBeacon} | File [ render ] fileId={fileId} index={index} progress={progress}")
+            (fun () -> $"{nameof FsBeacon} | File [ render ] fileId={fileId} index={index + 1} progress={progress}")
 
         let deleteFile =
             Store.useCallbackRef
@@ -47,7 +47,7 @@ module SampleComponent =
         Ui.flex
             (fun x -> x.whiteSpace <- "nowrap")
             [
-                str $"fileId={fileId} index={index} progress={progress}%%"
+                str $"fileId={fileId} index={index + 1} progress={progress}%%"
 
                 //                Button.Button
 //                    {|
@@ -67,7 +67,7 @@ module SampleComponent =
                         Props = fun x -> x.onClick <- (fun _ -> deleteFile ())
                         Children =
                             [
-                                str $"[{index}]:delete"
+                                str $"[{index + 1}]:delete"
                             ]
                     |}
             ]
