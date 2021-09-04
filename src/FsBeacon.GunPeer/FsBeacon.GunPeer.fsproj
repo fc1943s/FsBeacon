@@ -6,6 +6,7 @@
     <ItemGroup>
 		<Content Include=".gitignore" />
         <Content Include="package.json" />
+        <Content Include="start-dev.ps1" />
 		<Content Include="server.js" />
         <Content Include="yarn.lock" />
         <Content Include="Dockerfile" />
