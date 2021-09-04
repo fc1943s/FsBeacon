@@ -1,9 +1,11 @@
 namespace FsBeacon.HubPeer
 
+open FsCore
 open System.Collections.Concurrent
 open System.IO
-open System.Threading
+open System.Threading.Tasks
 open FSharp.Control
+open System.Threading
 open Fable.SignalR
 open FsBeacon.Shared
 open FSharp.Control.Tasks.V2
@@ -13,11 +15,11 @@ open Microsoft.Extensions.Hosting
 
 
 module Hub =
-    let createParentDirectory path =
+    let inline createParentDirectory path =
         Directory.CreateDirectory (Directory.GetParent(path).FullName)
         |> ignore
 
-    let writeFile rootPath username key value =
+    let inline writeFile rootPath username key value =
         task {
             try
                 let path = Path.Combine (rootPath, username, key)
@@ -35,7 +37,7 @@ module Hub =
                 return false
         }
 
-    let readFile rootPath username key =
+    let inline readFile rootPath username key =
         task {
             try
                 let path = Path.Combine (rootPath, username, key)
@@ -50,7 +52,7 @@ module Hub =
     let watchlist = ConcurrentDictionary<string * string * string, string [] option> ()
 
 
-    let fetchTableKeys rootPath username storeRoot collection =
+    let inline fetchTableKeys rootPath username storeRoot collection =
         let path = Path.Combine (rootPath, username, $"{storeRoot}/{collection}")
         Directory.CreateDirectory path |> ignore
 
@@ -58,7 +60,12 @@ module Hub =
         |> Seq.map Path.GetFileName
         |> Seq.toArray
 
-    let update rootPath (msg: Sync.Request) (_hubContext: FableHub<Sync.Request, Sync.Response> option) =
+    let inline updateKeys rootPath username storeRoot collection =
+        let result = fetchTableKeys rootPath username storeRoot collection
+        watchlist.[(username, storeRoot, collection)] <- Some result
+        result
+
+    let inline update rootPath (msg: Sync.Request) (_hubContext: FableHub<Sync.Request, Sync.Response> option) =
         task {
             //            printfn $"Model.update() msg={msg}"
 
@@ -68,6 +75,14 @@ module Hub =
                 return Sync.Response.ConnectResult
             | Sync.Request.Set (username, key, value) ->
                 let! result = writeFile rootPath username key value
+
+                if value = null then
+                    match key |> String.split "/" |> Array.toList with
+                    | storeRoot :: collection :: _ ->
+                        let _newKeys = updateKeys rootPath username storeRoot collection
+                        ()
+                    | _ -> ()
+
                 //                printfn $"set {key} {value}"
 //                    match hubContext with
 //                    | Some _hub when result ->
@@ -91,8 +106,7 @@ module Hub =
                 //                printfn $"get username={username} key={key} value={value}"
                 return Sync.Response.GetResult value
             | Sync.Request.Filter (username, storeRoot, collection) ->
-                let result = fetchTableKeys rootPath username storeRoot collection
-                watchlist.[(username, storeRoot, collection)] <- Some result
+                let result = updateKeys rootPath username storeRoot collection
                 printfn $"Sync.Request.Filter username={username} collection={collection} result={result.Length}"
                 return Sync.Response.FilterResult result
 
@@ -103,18 +117,38 @@ module Hub =
 //            |> AsyncSeq.toAsyncEnum
         }
 
-    let invoke rootPath (msg: Sync.Request) _ = update rootPath msg None
+    let inline invoke rootPath (msg: Sync.Request) _ = update rootPath msg None
 
-    let send rootPath (msg: Sync.Request) (hubContext: FableHub<Sync.Request, Sync.Response>) =
+    let inline send rootPath (msg: Sync.Request) (hubContext: FableHub<Sync.Request, Sync.Response>) =
         task {
             let! response = update rootPath msg (Some hubContext)
             do! hubContext.Clients.Caller.Send response
         }
 
+    let inline tick rootPath sendAll =
+        task {
+            do!
+                watchlist
+                |> Seq.choose
+                    (fun (KeyValue (collectionPath, lastValue)) ->
+                        let username, storeRoot, collection = collectionPath
+                        let result = fetchTableKeys rootPath username storeRoot collection
+
+                        match lastValue, result with
+                        | None, _ -> None
+                        | Some lastValue, result when lastValue = result -> None
+                        | Some _, result ->
+                            watchlist.[collectionPath] <- Some result
+                            Some (collectionPath, result)
+                        | _ -> None)
+                |> Seq.toArray
+                |> Seq.map (Sync.Response.FilterStream >> sendAll)
+                |> Task.WhenAll
+        }
+
     [<RequireQualifiedAccess>]
     module Stream =
-
-        let sendToClient rootPath (msg: Sync.Request) (hubContext: FableHub<Sync.Request, Sync.Response>) =
+        let inline sendToClient rootPath (msg: Sync.Request) (hubContext: FableHub<Sync.Request, Sync.Response>) =
             update rootPath msg (Some hubContext)
             |> Async.AwaitTask
             |> AsyncSeq.init2

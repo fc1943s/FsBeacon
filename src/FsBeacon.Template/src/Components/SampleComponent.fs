@@ -137,17 +137,15 @@ module SampleComponent =
             (nameof HydrateSyncContainer)
             (fun _ setter ->
                 promise {
-                    Atom.set
-                        setter
-                        Atoms.gunOptions
-                        (GunOptions.Sync [|
-                            GunPeer "https://localhost:49221/gun"
-                         |])
-
                     //                    Atom.set
 //                        setter
-//                        Atoms.hubUrl
-//                        (Some "https://localhost:49211")
+//                        Atoms.gunOptions
+//                        (GunOptions.Sync [|
+//                            GunPeer "https://localhost:49221/gun"
+//                         |])
+                    Atom.set setter Atoms.gunOptions GunOptions.Minimal
+
+                    Atom.set setter Atoms.hubUrl (Some "https://localhost:49211")
 
                     Profiling.addTimestamp
                         (fun () ->

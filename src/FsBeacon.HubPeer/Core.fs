@@ -7,10 +7,10 @@ open FSharp.Control
 
 
 module AsyncSeq =
-    let init2 x = AsyncSeq.initAsync 1L (fun _ -> x)
+    let inline init2 x = AsyncSeq.initAsync 1L (fun _ -> x)
 
 module Startup =
-    let parseArgs<'T when 'T :> IArgParserTemplate> args =
+    let inline parseArgs<'T when 'T :> IArgParserTemplate> args =
         let errorHandler =
             ProcessExiter (
                 colorizer =

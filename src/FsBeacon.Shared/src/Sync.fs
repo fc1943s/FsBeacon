@@ -15,7 +15,7 @@ module Sync =
         | SetResult of ok: bool
         | GetResult of value: string option
         | GetStream of atomPath: string * value: string option
-        | FilterResult of atomPathArray: string []
-        | FilterStream of (string * string * string) * atomPathArray: string []
+        | FilterResult of keys: string []
+        | FilterStream of (string * string * string) * keys: string []
 
     let endpoint = "/fsbeacon"

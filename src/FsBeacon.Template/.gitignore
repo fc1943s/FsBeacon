@@ -12,3 +12,7 @@ electron_output/
 # Cordova
 /plugins/
 /platforms/
+
+
+/fsbeacon-gunpeer-synctestdata
+/fsbeacon-hubpeer-synctestdata

@@ -265,7 +265,9 @@ NUGET
       System.Threading.Tasks.Extensions (>= 4.4)
       System.ValueTuple (>= 4.4)
   remote: https://nuget.pkg.github.com/fc1943s/index.json
-    FsCore (0.0.1-alpha.8)
+    FsBeacon.Shared (0.0.1-alpha.1)
+      FSharp.Core (>= 5.0 < 6.0)
+    FsCore (0.0.1-alpha.9)
       FSharp.Core (>= 5.0 < 6.0)
     FsJs (0.0.1-alpha.38)
       Fable.DateFunctions (>= 3.6 < 4.0)
@@ -275,8 +277,9 @@ NUGET
       FsCore
       FSharp.Core (>= 5.0 < 6.0)
       Thoth.Json (>= 6.0 < 7.0)
-    FsStore (0.2.0-alpha.21)
+    FsStore (0.2.0-alpha.26)
       Fable.SignalR (>= 0.11 < 1.0)
+      FsBeacon.Shared (>= 0.0.0-prerelease < 1.0.0-prerelease)
       FsCore (>= 0.0.0-prerelease < 1.0.0-prerelease)
       FSharp.Core (>= 5.0 < 6.0)
       FsJs (>= 0.0.0-prerelease < 1.0.0-prerelease)

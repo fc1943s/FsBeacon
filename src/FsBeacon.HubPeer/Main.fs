@@ -1,9 +1,7 @@
 ﻿namespace FsBeacon.HubPeer
 
 open System.IO
-open System.Threading.Tasks
 open Argu
-open FSharp.Control
 open Fable.SignalR
 open FsBeacon.Shared
 open Microsoft.Extensions.Logging
@@ -12,7 +10,7 @@ open Saturn
 
 
 module Main =
-    let getApp port rootPath =
+    let inline getApp port rootPath =
         application {
             use_signalr (
                 configure_signalr {
@@ -73,26 +71,7 @@ module Main =
                 (fun serviceCollection ->
                     Hub.Stream.Ticker.Create (
                         serviceCollection,
-                        fun (hub: FableHubCaller<Sync.Request, Sync.Response>) ->
-                            task {
-                                do!
-                                    Hub.watchlist
-                                    |> Seq.choose
-                                        (fun (KeyValue (collectionPath, lastValue)) ->
-                                            let username, storeRoot, collection = collectionPath
-                                            let result = Hub.fetchTableKeys rootPath username storeRoot collection
-
-                                            match lastValue, result with
-                                            | None, _ -> None
-                                            | Some lastValue, result when lastValue = result -> None
-                                            | Some _, result ->
-                                                Hub.watchlist.[collectionPath] <- Some result
-                                                Some (collectionPath, result)
-                                            | _ -> None)
-                                    |> Seq.toArray
-                                    |> Seq.map (Sync.Response.FilterStream >> hub.Clients.All.Send)
-                                    |> Task.WhenAll
-                            }
+                        fun (hub: FableHubCaller<Sync.Request, Sync.Response>) -> Hub.tick rootPath hub.Clients.All.Send
                     ))
 
             logging
