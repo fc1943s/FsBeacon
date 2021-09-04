@@ -36,7 +36,7 @@
 
     "cypress-watch": "concurrently \"npm:cypress-serve\" \"npm:cypress\"",
     "cypress-run": "cross-env NODE_TLS_REJECT_UNAUTHORIZED=0 cypress run --headed",
-    "cypress-run-delay": "sleep 40s && yarn cypress-run",
+    "cypress-run-delay": "sleep 60s && yarn download-extensions && yarn cypress-run",
 
     "n7z:win32": "./node_modules/node-7z-archive/binaries/win32/7z.exe",
     "n7z:linux": "cd ./node_modules/node-7z-archive/binaries && ls -al",

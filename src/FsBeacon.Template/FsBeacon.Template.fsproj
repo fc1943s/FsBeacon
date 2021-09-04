@@ -26,6 +26,8 @@
         <Content Include="yarn.lock" />
         <Content Include="package.json" />
         <Content Include="cypress.json" />
+        <Content Include="cypress\plugins\index.js" />
+        <Content Include="cypress\support\index.js" />
     </ItemGroup>
     <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>
