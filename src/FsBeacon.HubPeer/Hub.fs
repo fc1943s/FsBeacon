@@ -12,6 +12,7 @@ open FSharp.Control.Tasks.V2
 open System
 open Microsoft.Extensions.DependencyInjection
 open Microsoft.Extensions.Hosting
+open Serilog
 
 
 module Hub =
@@ -60,61 +61,57 @@ module Hub =
         |> Seq.map Path.GetFileName
         |> Seq.toArray
 
-    let inline updateKeys rootPath username storeRoot collection =
+    let inline fetchKeys rootPath username storeRoot collection =
         let result = fetchTableKeys rootPath username storeRoot collection
-        watchlist.[(username, storeRoot, collection)] <- Some result
+
+        if
+            watchlist.ContainsKey (username, storeRoot, collection)
+            |> not
+        then
+            watchlist.[(username, storeRoot, collection)] <- Some [||]
+
         result
+
+    let inline addDebug fn getLocals = Log.Debug $"{fn ()} {getLocals ()}"
+    let inline addTrace fn getLocals = Log.Verbose $"{fn ()} {getLocals ()}"
+
+    let inline substringTo n (str: string) =
+        if str.Length > n then str |> String.substring 0 n else str
 
     let inline update rootPath (msg: Sync.Request) (_hubContext: FableHub<Sync.Request, Sync.Response> option) =
         task {
-            //            printfn $"Model.update() msg={msg}"
+            let getLocals () =
+                $"rootPath={rootPath} msg={string msg |> substringTo 400} {getLocals ()}"
+
+            let inline addDebug fn getLocals =
+                addDebug (fun () -> $"Hub.update {fn ()}") getLocals
 
             match msg with
-            | Sync.Request.Connect username ->
-                printfn $"@@@ Sync.Request.Connect username={username}"
+            | Sync.Request.Connect _username ->
+                addDebug (fun () -> "[ Sync.Request.Connect ]") getLocals
                 return Sync.Response.ConnectResult
             | Sync.Request.Set (username, key, value) ->
                 let! result = writeFile rootPath username key value
+                addDebug (fun () -> "[ Sync.Request.Set ][0]") getLocals
 
-                if value = null then
-                    match key |> String.split "/" |> Array.toList with
-                    | storeRoot :: collection :: _ ->
-                        let _newKeys = updateKeys rootPath username storeRoot collection
-                        ()
-                    | _ -> ()
-
-                //                printfn $"set {key} {value}"
-//                    match hubContext with
-//                    | Some _hub when result ->
-//                        printfn
-//                            $"Sync.Request.Set. username={username} key={key}. result=true hub.IsSome. broadcasting."
-
-                //                        do!
-//                            hub.Clients.All.Send (
-//                                Sync.Response.GetResult (
-//                                    key,
-//                                    match value with
-//                                    | String.Valid _ -> Some value
-//                                    | _ -> None
-//                                )
-//                            )
-//                    | _ -> ()
+                match key |> String.split "/" |> Array.toList with
+                | storeRoot :: collection :: Guid.Valid _ :: _ ->
+                    let _newKeys = fetchKeys rootPath username storeRoot collection
+                    let getLocals () = $"_newKeys=%A{_newKeys} {getLocals ()}"
+                    addDebug (fun () -> "[ Sync.Request.Set ][1]") getLocals
+                | _ -> ()
 
                 return Sync.Response.SetResult result
             | Sync.Request.Get (username, key) ->
                 let! value = readFile rootPath username key
-                //                printfn $"get username={username} key={key} value={value}"
+                let getLocals () = $"value={value} {getLocals ()}"
+                addDebug (fun () -> "[ Sync.Request.Get ]") getLocals
                 return Sync.Response.GetResult value
             | Sync.Request.Filter (username, storeRoot, collection) ->
-                let result = updateKeys rootPath username storeRoot collection
-                printfn $"Sync.Request.Filter username={username} collection={collection} result={result.Length}"
+                let result = fetchKeys rootPath username storeRoot collection
+                let getLocals () = $"result=%A{result} {getLocals ()}"
+                addDebug (fun () -> "[ Sync.Request.Filter ]") getLocals
                 return Sync.Response.FilterResult result
-
-        //        let update2 msg hubContext =
-//            asyncSeq {
-//                update msg hubContext
-//            }
-//            |> AsyncSeq.toAsyncEnum
         }
 
     let inline invoke rootPath (msg: Sync.Request) _ = update rootPath msg None
@@ -127,12 +124,26 @@ module Hub =
 
     let inline tick rootPath sendAll =
         task {
+            let getLocals () =
+                $"rootPath={rootPath} watchlist.Count={watchlist.Count} {getLocals ()}"
+
+            let inline _addDebug fn getLocals =
+                addDebug (fun () -> $"Hub.tick {fn ()}") getLocals
+
+            let inline addTrace fn getLocals =
+                addTrace (fun () -> $"Hub.tick {fn ()}") getLocals
+
             do!
                 watchlist
                 |> Seq.choose
                     (fun (KeyValue (collectionPath, lastValue)) ->
                         let username, storeRoot, collection = collectionPath
                         let result = fetchTableKeys rootPath username storeRoot collection
+
+                        let getLocals () =
+                            $"collectionPath={collectionPath} lastValue=%A{lastValue} result=%A{result} {getLocals ()}"
+
+                        addTrace (fun () -> "[ watchlist.choose ]") getLocals
 
                         match lastValue, result with
                         | None, _ -> None
@@ -158,7 +169,7 @@ module Hub =
             let cts = new CancellationTokenSource ()
 
             let ticking =
-                AsyncSeq.intervalMs 500
+                AsyncSeq.intervalMs 2000
                 |> AsyncSeq.iterAsync (fun _ -> fn hub |> Async.AwaitTask)
 
             interface IHostedService with

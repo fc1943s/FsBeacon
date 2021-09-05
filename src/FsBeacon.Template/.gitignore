@@ -13,6 +13,5 @@ electron_output/
 /plugins/
 /platforms/
 
-
-/fsbeacon-gunpeer-synctestdata
-/fsbeacon-hubpeer-synctestdata
+fsbeacon-gunpeer-synctestdata/
+fsbeacon-hubpeer-synctestdata/

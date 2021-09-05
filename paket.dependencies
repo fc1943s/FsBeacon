@@ -10,6 +10,9 @@ nuget FSharp.Core ~> 5.0
 nuget Argu ~> 6.1
 nuget Fable.SignalR.Saturn ~> 0.11
 nuget FSharp.Control.AsyncSeq ~> 3.0
+nuget Giraffe.SerilogExtensions ~> 2.0
+nuget Serilog.Sinks.SpectreConsole ~> 0.1
+nuget Serilog.Sinks.Console ~> 4.0
 
 // FsBeacon.Template
 nuget FsCore ~> 0.0 prerelease

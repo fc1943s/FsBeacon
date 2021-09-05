@@ -1,5 +1,9 @@
 ﻿namespace FsBeacon.HubPeer
 
+open Serilog.Events
+open Serilog.Sinks.SpectreConsole
+open Giraffe.SerilogExtensions
+open Serilog
 open System.IO
 open Argu
 open Fable.SignalR
@@ -10,8 +14,48 @@ open Saturn
 
 
 module Main =
+    let minimumLogLevel = LogLevel.Information
+
+    let inline loggingFn (logging: ILoggingBuilder) =
+        //                        logging.SetMinimumLevel LogLevel.Debug |> ignore
+        logging.SetMinimumLevel minimumLogLevel |> ignore
+
+    //                        logging.AddFilter ("Microsoft.", LogLevel.Warning)
+    //                        |> ignore
+
+    //    SerilogAdapter.Enable ()
     let inline getApp port rootPath =
         application {
+            url $"https://0.0.0.0:{port}/"
+            use_gzip
+            disable_diagnostics
+            use_developer_exceptions
+            memory_cache
+            no_router
+            logging loggingFn
+            force_ssl
+            //            app_config (fun x -> SerilogAdapter.Enable x.)
+            service_config
+                (fun serviceCollection ->
+                    Hub.Stream.Ticker.Create (
+                        serviceCollection,
+                        fun (hub: FableHubCaller<Sync.Request, Sync.Response>) -> Hub.tick rootPath hub.Clients.All.Send
+                    ))
+
+            use_cors
+                "cors"
+                (fun corsBuilder ->
+                    corsBuilder
+                        .AllowCredentials()
+                        .AllowAnyHeader()
+                        .WithOrigins [|
+                            "https://localhost:33929"
+                            "https://localhost:33922"
+                            "https://localhost:9769"
+                            "https://localhost:9762"
+                        |]
+                    |> ignore)
+
             use_signalr (
                 configure_signalr {
                     endpoint Sync.endpoint
@@ -19,8 +63,13 @@ module Main =
                     invoke (Hub.invoke rootPath)
                     stream_from (Hub.Stream.sendToClient rootPath)
                     //                        use_messagepack
-                    //                        with_log_level LogLevel.Trace
-                    with_hub_options (fun options -> options.EnableDetailedErrors <- true)
+                    with_log_level minimumLogLevel
+
+                    with_hub_options
+                        (fun options ->
+                            options.MaximumReceiveMessageSize <- 5L * 1024L * 1024L
+                            options.MaximumParallelInvocationsPerClient <- 32
+                            options.EnableDetailedErrors <- true)
 
                     with_after_routing
                         (fun _applicationBuilder ->
@@ -44,46 +93,6 @@ module Main =
                 //                                    return result
                 }
             )
-
-            //                config
-            use_cors
-                "cors"
-                (fun corsBuilder ->
-                    corsBuilder
-                        .AllowCredentials()
-                        .AllowAnyHeader()
-                        .WithOrigins [|
-                            "https://localhost:33929"
-                            "https://localhost:33922"
-                            "https://localhost:9769"
-                            "https://localhost:9762"
-                        |]
-                    |> ignore)
-
-            url $"https://0.0.0.0:{port}/"
-            use_gzip
-            disable_diagnostics
-            use_developer_exceptions
-            memory_cache
-            no_router
-
-            service_config
-                (fun serviceCollection ->
-                    Hub.Stream.Ticker.Create (
-                        serviceCollection,
-                        fun (hub: FableHubCaller<Sync.Request, Sync.Response>) -> Hub.tick rootPath hub.Clients.All.Send
-                    ))
-
-            logging
-                (fun logging ->
-                    //                        logging.SetMinimumLevel LogLevel.Debug |> ignore
-                    logging.SetMinimumLevel LogLevel.Debug |> ignore
-
-                    //                        logging.AddFilter ("Microsoft.", LogLevel.Warning)
-//                        |> ignore
-                    )
-
-            force_ssl
         //                                    return result
         }
 
@@ -102,6 +111,19 @@ module Args =
 module Program =
     [<EntryPoint>]
     let main argv =
+        Log.Logger <-
+            LoggerConfiguration()
+                .Destructure.FSharpTypes()
+                .Enrich.FromLogContext()
+                .MinimumLevel.Verbose()
+                .WriteTo.Console()
+                .WriteTo
+                .spectreConsole(
+                    "{Timestamp:HH:mm:ss} [{Level:u4}] {Message:lj}{NewLine}{Exception}",
+                    minLevel = LogEventLevel.Verbose
+                )
+                .CreateLogger ()
+
         let args = Startup.parseArgs argv
         let port = args.GetResult Args.Port
 
@@ -110,6 +132,8 @@ module Program =
             |> System.Environment.ExpandEnvironmentVariables
             |> Path.GetFullPath
 
-        printfn $"starting app. port={port} rootPath={rootPath}"
-        run (Main.getApp port rootPath)
+        Log.Information $"starting app. port={port} rootPath={rootPath}"
+        let app = Main.getApp port rootPath
+        //        SerilogAdapter.Enable
+        run app
         0
