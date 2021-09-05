@@ -2,12 +2,22 @@ namespace FsBeacon.HubPeer
 
 open System
 open System.Reflection
+open System.Threading.Tasks
 open Argu
 open FSharp.Control
+open FSharp.Control.Tasks.V2
 
+
+module Task =
+    let ignore (t: Task<unit []>) =
+        task {
+            let! _tasks = t
+            ()
+        }
 
 module AsyncSeq =
     let inline init2 x = AsyncSeq.initAsync 1L (fun _ -> x)
+
 
 module Startup =
     let inline parseArgs<'T when 'T :> IArgParserTemplate> args =

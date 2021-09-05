@@ -20,10 +20,12 @@ module Hub =
         Directory.CreateDirectory (Directory.GetParent(path).FullName)
         |> ignore
 
-    let inline writeFile rootPath username key value =
+    type AtomRef = AtomRef of alias: string * atomPath: string
+
+    let inline writeFile rootPath (AtomRef (alias, atomPath)) value =
         task {
             try
-                let path = Path.Combine (rootPath, username, key)
+                let path = Path.Combine (rootPath, alias, atomPath)
 
                 match Guid.TryParse (Path.GetFileName path) with
                 | true, _ when value = null -> Directory.Delete (path, true)
@@ -38,42 +40,50 @@ module Hub =
                 return false
         }
 
-    let inline readFile rootPath username key =
+    let inline readFile rootPath (AtomRef (alias, atomPath)) =
         task {
             try
-                let path = Path.Combine (rootPath, username, key)
+                let path = Path.Combine (rootPath, alias, atomPath)
                 let! result = File.ReadAllTextAsync path
                 return result |> Option.ofObj
             with
             | _ex ->
-                //                    eprintfn $"readFile error ex={ex.Message}"
+                eprintfn $"readFile error ex={_ex.Message}"
                 return None
         }
 
-    let watchlist = ConcurrentDictionary<string * string * string, string [] option> ()
+    let keyWatchlist = ConcurrentDictionary<AtomRef, TicksGuid * string [] option> ()
+    let atomWatchlist = ConcurrentDictionary<AtomRef, TicksGuid * string option> ()
 
-
-    let inline fetchTableKeys rootPath username storeRoot collection =
-        let path = Path.Combine (rootPath, username, $"{storeRoot}/{collection}")
+    let inline fetchTableKeys rootPath (AtomRef (alias, atomPath)) =
+        let path = Path.Combine (rootPath, alias, atomPath)
         Directory.CreateDirectory path |> ignore
 
         Directory.EnumerateDirectories path
         |> Seq.map Path.GetFileName
         |> Seq.toArray
 
-    let inline fetchKeys rootPath username storeRoot collection =
-        let result = fetchTableKeys rootPath username storeRoot collection
-
-        if
-            watchlist.ContainsKey (username, storeRoot, collection)
-            |> not
-        then
-            watchlist.[(username, storeRoot, collection)] <- Some [||]
-
-        result
+    let inline trySubscribeKeys atomRef =
+        if keyWatchlist.ContainsKey atomRef |> not then
+            keyWatchlist.[atomRef] <- (Guid.newTicksGuid (), Some [||])
 
     let inline addDebug fn getLocals = Log.Debug $"{fn ()} {getLocals ()}"
     let inline addTrace fn getLocals = Log.Verbose $"{fn ()} {getLocals ()}"
+
+    let inline trySubscribeAtom (AtomRef (alias, atomPath) as atomRef) =
+        if atomWatchlist.ContainsKey atomRef |> not then
+            atomWatchlist.[atomRef] <- (Guid.newTicksGuid (), Some "")
+
+        match atomPath |> String.split "/" |> Array.toList with
+        | storeRoot :: collection :: Guid.Valid _ :: _ ->
+            let collectionRef = AtomRef (alias, $"{storeRoot}/{collection}")
+            trySubscribeKeys collectionRef
+
+            let getLocals () =
+                $"collectionRef={collectionRef} {getLocals ()}"
+
+            addDebug (fun () -> "[ trySubscribeAtom ] key subscribe") getLocals
+        | _ -> ()
 
     let inline substringTo n (str: string) =
         if str.Length > n then str |> String.substring 0 n else str
@@ -87,28 +97,26 @@ module Hub =
                 addDebug (fun () -> $"Hub.update {fn ()}") getLocals
 
             match msg with
-            | Sync.Request.Connect _username ->
+            | Sync.Request.Connect _alias ->
                 addDebug (fun () -> "[ Sync.Request.Connect ]") getLocals
                 return Sync.Response.ConnectResult
-            | Sync.Request.Set (username, key, value) ->
-                let! result = writeFile rootPath username key value
-                addDebug (fun () -> "[ Sync.Request.Set ][0]") getLocals
-
-                match key |> String.split "/" |> Array.toList with
-                | storeRoot :: collection :: Guid.Valid _ :: _ ->
-                    let _newKeys = fetchKeys rootPath username storeRoot collection
-                    let getLocals () = $"_newKeys=%A{_newKeys} {getLocals ()}"
-                    addDebug (fun () -> "[ Sync.Request.Set ][1]") getLocals
-                | _ -> ()
-
+            | Sync.Request.Set (alias, atomPath, value) ->
+                let atomRef = AtomRef (alias, atomPath)
+                let! result = writeFile rootPath atomRef value
+                addDebug (fun () -> "[ Sync.Request.Set ]") getLocals
+                trySubscribeAtom atomRef
+                atomWatchlist.[atomRef] <- (Guid.newTicksGuid (), Some value)
                 return Sync.Response.SetResult result
-            | Sync.Request.Get (username, key) ->
-                let! value = readFile rootPath username key
+            | Sync.Request.Get (alias, atomPath) ->
+                let atomRef = AtomRef (alias, atomPath)
+                let! value = readFile rootPath atomRef
                 let getLocals () = $"value={value} {getLocals ()}"
                 addDebug (fun () -> "[ Sync.Request.Get ]") getLocals
                 return Sync.Response.GetResult value
-            | Sync.Request.Filter (username, storeRoot, collection) ->
-                let result = fetchKeys rootPath username storeRoot collection
+            | Sync.Request.Filter (alias, atomPath) ->
+                let collectionRef = AtomRef (alias, atomPath)
+                trySubscribeKeys collectionRef
+                let result = fetchTableKeys rootPath collectionRef
                 let getLocals () = $"result=%A{result} {getLocals ()}"
                 addDebug (fun () -> "[ Sync.Request.Filter ]") getLocals
                 return Sync.Response.FilterResult result
@@ -122,10 +130,27 @@ module Hub =
             do! hubContext.Clients.Caller.Send response
         }
 
+    let inline tryCleanup (dict: ConcurrentDictionary<AtomRef, TicksGuid * _>) =
+        dict
+        |> Seq.iter
+            (fun (KeyValue (atomRef, (lastTicks, lastValue))) ->
+                let ticksDiff =
+                    lastTicks
+                    |> Guid.ticksFromGuid
+                    |> DateTime.ticksDiff
+
+                if ticksDiff > (TimeSpan.FromMinutes 5.).TotalMilliseconds then
+                    let getLocals () =
+                        $"ticksDiff{ticksDiff} lastValue={lastValue} atomRef={atomRef} {getLocals ()}"
+
+                    addTrace (fun () -> "- removing from watchlist") getLocals
+
+                    keyWatchlist.TryRemove atomRef |> ignore)
+
     let inline tick rootPath sendAll =
         task {
             let getLocals () =
-                $"rootPath={rootPath} watchlist.Count={watchlist.Count} {getLocals ()}"
+                $"rootPath={rootPath} keyWatchlist.Count={keyWatchlist.Count} atomWatchlist.Count={atomWatchlist.Count} {getLocals ()}"
 
             let inline _addDebug fn getLocals =
                 addDebug (fun () -> $"Hub.tick {fn ()}") getLocals
@@ -133,28 +158,52 @@ module Hub =
             let inline addTrace fn getLocals =
                 addTrace (fun () -> $"Hub.tick {fn ()}") getLocals
 
+            tryCleanup keyWatchlist
+            tryCleanup atomWatchlist
+
             do!
-                watchlist
+                keyWatchlist
                 |> Seq.choose
-                    (fun (KeyValue (collectionPath, lastValue)) ->
-                        let username, storeRoot, collection = collectionPath
-                        let result = fetchTableKeys rootPath username storeRoot collection
+                    (fun (KeyValue (AtomRef (alias, atomPath) as atomRef, lastKeys)) ->
+                        let result = fetchTableKeys rootPath atomRef
 
                         let getLocals () =
-                            $"collectionPath={collectionPath} lastValue=%A{lastValue} result=%A{result} {getLocals ()}"
+                            $"alias={alias} atomPath={atomPath} lastKeys=%A{lastKeys} result=%A{result} {getLocals ()}"
 
-                        addTrace (fun () -> "[ watchlist.choose ]") getLocals
+                        addTrace (fun () -> "[ keyWatchlist.choose ]") getLocals
 
-                        match lastValue, result with
-                        | None, _ -> None
-                        | Some lastValue, result when lastValue = result -> None
-                        | Some _, result ->
-                            watchlist.[collectionPath] <- Some result
-                            Some (collectionPath, result)
+                        match lastKeys, result with
+                        | (_, None), _ -> None
+                        | (_, Some lastKeys), result when lastKeys = result -> None
+                        | (_, Some _), result ->
+                            keyWatchlist.[atomRef] <- (Guid.newTicksGuid (), Some result)
+                            Some (alias, atomPath, result)
                         | _ -> None)
                 |> Seq.toArray
                 |> Seq.map (Sync.Response.FilterStream >> sendAll)
                 |> Task.WhenAll
+
+            do!
+                atomWatchlist
+                |> Seq.map
+                    (fun (KeyValue (AtomRef (alias, atomPath) as atomRef, lastValue)) ->
+                        task {
+                            let! result = readFile rootPath atomRef
+
+                            let getLocals () =
+                                $"alias={alias} atomPath={atomPath} lastKeys=%A{lastValue} result=%A{result} {getLocals ()}"
+
+                            addTrace (fun () -> "[ atomWatchlist.choose ]") getLocals
+
+                            match lastValue, result with
+                            | (_, Some lastValue), Some result when lastValue = result -> ()
+                            | (_, Some _), result ->
+                                atomWatchlist.[atomRef] <- (Guid.newTicksGuid (), result)
+                                do! sendAll (Sync.Response.GetStream (alias, atomPath, result))
+                            | _ -> ()
+                        })
+                |> Task.WhenAll
+                |> Task.ignore
         }
 
     [<RequireQualifiedAccess>]

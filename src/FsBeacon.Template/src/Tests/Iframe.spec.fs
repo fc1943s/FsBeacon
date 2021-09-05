@@ -161,7 +161,7 @@ module Iframe =
 
                     Cy2.waitForEl (get3 ()) "logout (alias@"
 
-                    let fileCount = 3
+                    let fileCount = 5
 
                     for i = 1 to fileCount do
                         Cy2.clickTextEl (get2 ()) "add file"
@@ -171,8 +171,8 @@ module Iframe =
                         Cy2.waitForEl (get2 ()) $"index={i} progress=100%%"
                         Cy2.waitForEl (get3 ()) $"index={i} progress=100%%"
 
-//                    for i = fileCount * 2 downto 1 do
-//                        Cy2.clickTextEl (get2 ()) $"[{i}]:delete"
-//
-//                    Cy2.waitForEl (get3 ()) "file count: 0"
+                    for i = fileCount * 2 downto 1 do
+                        Cy2.clickTextEl (get2 ()) $"[{i}]:delete"
+
+                    Cy2.waitForEl (get3 ()) "file count: 0"
                     ))
