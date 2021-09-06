@@ -28,7 +28,7 @@ module Hub =
                 let path = Path.Combine (rootPath, alias, atomPath)
 
                 match Guid.TryParse (Path.GetFileName path) with
-                | true, _ when value = null -> Directory.Delete (path, true)
+                | true, _ when isNull value -> Directory.Delete (path, true)
                 | _ ->
                     createParentDirectory path
                     do! File.WriteAllTextAsync (path, value)
