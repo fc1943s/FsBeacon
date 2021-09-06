@@ -1,5 +1,6 @@
 ﻿namespace FsBeacon.HubPeer
 
+open FsCore
 open Serilog.Events
 open Serilog.Sinks.SpectreConsole
 open Giraffe.SerilogExtensions
@@ -37,10 +38,17 @@ module Main =
             //            app_config (fun x -> SerilogAdapter.Enable x.)
             service_config
                 (fun serviceCollection ->
-                    Hub.Stream.Ticker.Create (
-                        serviceCollection,
-                        fun (hub: FableHubCaller<Sync.Request, Sync.Response>) -> Hub.tick rootPath hub.Clients.All.Send
-                    ))
+                    serviceCollection
+                    |> Hub.Stream.withTicker
+                        (fun (hub: FableHubCaller<Sync.Request, Sync.Response>) ->
+                            Hub.tick rootPath hub.Clients.All.Send)
+                    |> Hub.Stream.withFileWatcher
+                        rootPath
+                        (fun (_hub: FableHubCaller<Sync.Request, Sync.Response>, change) ->
+                            async {
+                                let getLocals () = $"change={change} {getLocals ()}"
+                                Logger.logDebug (fun () -> "service_config withFileWatcher") getLocals
+                            }))
 
             use_cors
                 "cors"

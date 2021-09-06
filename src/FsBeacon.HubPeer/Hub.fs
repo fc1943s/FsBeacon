@@ -12,7 +12,6 @@ open FSharp.Control.Tasks.V2
 open System
 open Microsoft.Extensions.DependencyInjection
 open Microsoft.Extensions.Hosting
-open Serilog
 
 
 module Hub =
@@ -44,8 +43,12 @@ module Hub =
         task {
             try
                 let path = Path.Combine (rootPath, alias, atomPath)
-                let! result = File.ReadAllTextAsync path
-                return result |> Option.ofObj
+
+                if File.Exists path then
+                    let! result = File.ReadAllTextAsync path
+                    return result |> Option.ofObj
+                else
+                    return None
             with
             | _ex ->
                 eprintfn $"readFile error ex={_ex.Message}"
@@ -67,9 +70,6 @@ module Hub =
         if keyWatchlist.ContainsKey atomRef |> not then
             keyWatchlist.[atomRef] <- (Guid.newTicksGuid (), Some [||])
 
-    let inline addDebug fn getLocals = Log.Debug $"{fn ()} {getLocals ()}"
-    let inline addTrace fn getLocals = Log.Verbose $"{fn ()} {getLocals ()}"
-
     let inline trySubscribeAtom (AtomRef (alias, atomPath) as atomRef) =
         if atomWatchlist.ContainsKey atomRef |> not then
             atomWatchlist.[atomRef] <- (Guid.newTicksGuid (), Some "")
@@ -82,7 +82,7 @@ module Hub =
             let getLocals () =
                 $"collectionRef={collectionRef} {getLocals ()}"
 
-            addDebug (fun () -> "[ trySubscribeAtom ] key subscribe") getLocals
+            Logger.logDebug (fun () -> "Hub.trySubscribeAtom (key subscribe)") getLocals
         | _ -> ()
 
     let inline substringTo n (str: string) =
@@ -93,32 +93,30 @@ module Hub =
             let getLocals () =
                 $"rootPath={rootPath} msg={string msg |> substringTo 400} {getLocals ()}"
 
-            let inline addDebug fn getLocals =
-                addDebug (fun () -> $"Hub.update {fn ()}") getLocals
-
             match msg with
             | Sync.Request.Connect _alias ->
-                addDebug (fun () -> "[ Sync.Request.Connect ]") getLocals
+                Logger.logDebug (fun () -> "Hub.update (Sync.Request.Connect)") getLocals
                 return Sync.Response.ConnectResult
             | Sync.Request.Set (alias, atomPath, value) ->
                 let atomRef = AtomRef (alias, atomPath)
                 let! result = writeFile rootPath atomRef value
-                addDebug (fun () -> "[ Sync.Request.Set ]") getLocals
+                Logger.logDebug (fun () -> "Hub.update (Sync.Request.Set)") getLocals
                 trySubscribeAtom atomRef
                 atomWatchlist.[atomRef] <- (Guid.newTicksGuid (), Some value)
                 return Sync.Response.SetResult result
             | Sync.Request.Get (alias, atomPath) ->
                 let atomRef = AtomRef (alias, atomPath)
                 let! value = readFile rootPath atomRef
+                atomWatchlist.[atomRef] <- (Guid.newTicksGuid (), value)
                 let getLocals () = $"value={value} {getLocals ()}"
-                addDebug (fun () -> "[ Sync.Request.Get ]") getLocals
+                Logger.logDebug (fun () -> "Hub.update (Sync.Request.Get)") getLocals
                 return Sync.Response.GetResult value
             | Sync.Request.Filter (alias, atomPath) ->
                 let collectionRef = AtomRef (alias, atomPath)
                 trySubscribeKeys collectionRef
                 let result = fetchTableKeys rootPath collectionRef
                 let getLocals () = $"result=%A{result} {getLocals ()}"
-                addDebug (fun () -> "[ Sync.Request.Filter ]") getLocals
+                Logger.logDebug (fun () -> "Hub.update (Sync.Request.Filter)") getLocals
                 return Sync.Response.FilterResult result
         }
 
@@ -139,11 +137,16 @@ module Hub =
                     |> Guid.ticksFromGuid
                     |> DateTime.ticksDiff
 
-                if ticksDiff > (TimeSpan.FromMinutes 5.).TotalMilliseconds then
-                    let getLocals () =
-                        $"ticksDiff{ticksDiff} lastValue={lastValue} atomRef={atomRef} {getLocals ()}"
+                let minutes = 5
 
-                    addTrace (fun () -> "- removing from watchlist") getLocals
+                if ticksDiff > (TimeSpan.FromSeconds 60. * float minutes)
+                    .TotalMilliseconds then
+                    let getLocals () =
+                        $"minutes={minutes} ticksDiff{ticksDiff} lastValue={lastValue} atomRef={atomRef} {getLocals ()}"
+
+                    Logger.logDebug
+                        (fun () -> "Hub.tryCleanup / dict.iter() (ticksDiff. removing from watchlist)")
+                        getLocals
 
                     keyWatchlist.TryRemove atomRef |> ignore)
 
@@ -151,12 +154,6 @@ module Hub =
         task {
             let getLocals () =
                 $"rootPath={rootPath} keyWatchlist.Count={keyWatchlist.Count} atomWatchlist.Count={atomWatchlist.Count} {getLocals ()}"
-
-            let inline _addDebug fn getLocals =
-                addDebug (fun () -> $"Hub.tick {fn ()}") getLocals
-
-            let inline addTrace fn getLocals =
-                addTrace (fun () -> $"Hub.tick {fn ()}") getLocals
 
             tryCleanup keyWatchlist
             tryCleanup atomWatchlist
@@ -170,12 +167,12 @@ module Hub =
                         let getLocals () =
                             $"alias={alias} atomPath={atomPath} lastKeys=%A{lastKeys} result=%A{result} {getLocals ()}"
 
-                        addTrace (fun () -> "[ keyWatchlist.choose ]") getLocals
 
                         match lastKeys, result with
                         | (_, None), _ -> None
                         | (_, Some lastKeys), result when lastKeys = result -> None
                         | (_, Some _), result ->
+                            Logger.logTrace (fun () -> "Hub.tick / keyWatchlist.choose") getLocals
                             keyWatchlist.[atomRef] <- (Guid.newTicksGuid (), Some result)
                             Some (alias, atomPath, result)
                         | _ -> None)
@@ -193,11 +190,11 @@ module Hub =
                             let getLocals () =
                                 $"alias={alias} atomPath={atomPath} lastKeys=%A{lastValue} result=%A{result} {getLocals ()}"
 
-                            addTrace (fun () -> "[ atomWatchlist.choose ]") getLocals
 
                             match lastValue, result with
                             | (_, Some lastValue), Some result when lastValue = result -> ()
                             | (_, Some _), result ->
+                                Logger.logTrace (fun () -> "Hub.tick / atomWatchlist.choose") getLocals
                                 atomWatchlist.[atomRef] <- (Guid.newTicksGuid (), result)
                                 do! sendAll (Sync.Response.GetStream (alias, atomPath, result))
                             | _ -> ()
@@ -211,25 +208,47 @@ module Hub =
         let inline sendToClient rootPath (msg: Sync.Request) (hubContext: FableHub<Sync.Request, Sync.Response>) =
             update rootPath msg (Some hubContext)
             |> Async.AwaitTask
-            |> AsyncSeq.init2
+            |> Async.initAsyncSeq
             |> AsyncSeq.toAsyncEnum
 
-        type Ticker<'T, 'U when 'T: not struct and 'U: not struct> private (hub: FableHubCaller<'T, 'U>, fn) =
+        type HubService<'Request, 'Response when 'Request: not struct and 'Response: not struct>
+            private
+            (
+                hub: FableHubCaller<'Request, 'Response>,
+                fn
+            ) =
             let cts = new CancellationTokenSource ()
-
-            let ticking =
-                AsyncSeq.intervalMs 2000
-                |> AsyncSeq.iterAsync (fun _ -> fn hub |> Async.AwaitTask)
 
             interface IHostedService with
                 member _.StartAsync ct =
-                    async { do Async.Start (ticking, cts.Token) }
-                    |> fun a -> upcast Async.StartAsTask (a, cancellationToken = ct)
+                    async { Async.Start (fn hub, cts.Token) }
+                    |> Async.startAsTask ct
 
                 member _.StopAsync ct =
-                    async { do cts.Cancel () }
-                    |> fun a -> upcast Async.StartAsTask (a, cancellationToken = ct)
+                    async { cts.Cancel () } |> Async.startAsTask ct
 
             static member Create (services: IServiceCollection, fn) =
-                services.AddHostedService<Ticker<'T, 'U>>
-                    (fun s -> Ticker (s.GetRequiredService<FableHubCaller<'T, 'U>> (), fn))
+                services.AddHostedService<HubService<'Request, 'Response>>
+                    (fun s ->
+                        HubService<'Request, 'Response> (
+                            s.GetRequiredService<FableHubCaller<'Request, 'Response>> (),
+                            fn
+                        ))
+
+        let inline withTicker fn serviceCollection =
+            HubService<Sync.Request, Sync.Response>.Create
+                (serviceCollection,
+                 (fun hub ->
+                     AsyncSeq.intervalMs 2000
+                     |> AsyncSeq.iterAsync (fun _ -> fn hub |> Async.AwaitTask)))
+
+        let inline withFileWatcher rootPath fn serviceCollection =
+            HubService<Sync.Request, Sync.Response>.Create
+                (serviceCollection,
+                 (fun hub ->
+                     FileSystem.watch rootPath
+                     |> AsyncSeq.iterAsync
+                         (fun change ->
+                             let getLocals () = $"change={change} {getLocals ()}"
+                             Logger.logDebug (fun () -> "FileSystem.watchFileSystem / onChange") getLocals
+                             fn (hub, change))))
