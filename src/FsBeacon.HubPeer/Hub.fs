@@ -107,6 +107,7 @@ module Hub =
             | Sync.Request.Get (alias, atomPath) ->
                 let atomRef = AtomRef (alias, atomPath)
                 let! value = readFile rootPath atomRef
+                atomWatchlist.[atomRef] <- (Guid.newTicksGuid (), value)
                 let getLocals () = $"value={value} {getLocals ()}"
                 Logger.logDebug (fun () -> "Hub.update (Sync.Request.Get)") getLocals
                 return Sync.Response.GetResult value
@@ -166,12 +167,12 @@ module Hub =
                         let getLocals () =
                             $"alias={alias} atomPath={atomPath} lastKeys=%A{lastKeys} result=%A{result} {getLocals ()}"
 
-                        Logger.logTrace (fun () -> "Hub.tick / keyWatchlist.choose") getLocals
 
                         match lastKeys, result with
                         | (_, None), _ -> None
                         | (_, Some lastKeys), result when lastKeys = result -> None
                         | (_, Some _), result ->
+                            Logger.logTrace (fun () -> "Hub.tick / keyWatchlist.choose") getLocals
                             keyWatchlist.[atomRef] <- (Guid.newTicksGuid (), Some result)
                             Some (alias, atomPath, result)
                         | _ -> None)
@@ -189,11 +190,11 @@ module Hub =
                             let getLocals () =
                                 $"alias={alias} atomPath={atomPath} lastKeys=%A{lastValue} result=%A{result} {getLocals ()}"
 
-                            Logger.logTrace (fun () -> "Hub.tick / atomWatchlist.choose") getLocals
 
                             match lastValue, result with
                             | (_, Some lastValue), Some result when lastValue = result -> ()
                             | (_, Some _), result ->
+                                Logger.logTrace (fun () -> "Hub.tick / atomWatchlist.choose") getLocals
                                 atomWatchlist.[atomRef] <- (Guid.newTicksGuid (), result)
                                 do! sendAll (Sync.Response.GetStream (alias, atomPath, result))
                             | _ -> ()
