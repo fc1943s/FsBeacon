@@ -1,11 +1,153 @@
+#!fsharp
+
+#!about
+
 #!markdown
 
 # Hub
 
+#!pwsh
+
+nuget sources add -name fc1943s -source "https://nuget.pkg.github.com/fc1943s/index.json" -username $env:GITHUB_ACTOR -password $env:GITHUB_READ_PACKAGES_TOKEN
+
+#!pwsh
+
+nuget sources
+
 #!fsharp
 
-let a = 1
+// #i "nuget:https://nuget.pkg.github.com/fc1943s/index.json" // username: "%GITHUB_ACTOR%" password: "%GITHUB_READ_PACKAGES_TOKEN%"
+// #r "nuget: FSharp.Control.AsyncSeq"
+#r "./bin/Debug/net6.0/FSharp.Control.AsyncSeq.dll"
+open FSharp.Control
 
 #!fsharp
 
-a + 2
+// #r "nuget: Hopac"
+// open System
+// open System.Threading
+// open Hopac.Extensions
+// open Hopac.Infixes
+// open Hopac
+
+#!fsharp
+
+let path = "."
+let watcher = new FileSystemWatcher (Path = path, EnableRaisingEvents = true, IncludeSubdirectories = true)
+
+#!fsharp
+
+module Async =
+    let inline map fn op =
+        async {
+            let! x = op
+            let value = fn x
+            return value
+        }
+
+#!fsharp
+
+0
+
+#!fsharp
+
+printfn $"{AsyncSeq.unfoldAsync}"
+
+#!fsharp
+
+open System.Threading.Tasks
+open FSharp.Control
+
+module AsyncSeq =
+    let inline forwardEvent2 event fn =
+        AsyncSeq.unfoldAsync
+            (fun () ->
+                Async.FromContinuations
+                    (fun (res, err, _c) ->
+                        try
+                            fn (fun args -> res (event args))
+                        with
+                        | ex -> err ex)
+                |> Async.map (fun change -> Some (change, ())))
+            ()
+
+    let inline forwardEvent event fn =
+        AsyncSeq.unfoldAsync
+            
+            (fun () ->
+                Async.FromContinuations
+                    (fun (res, err, _c) ->
+                        try
+                            fn (fun args -> res (event args))
+                        with
+                        | ex -> err ex)
+                |> Async.map (fun change -> Some (change, ())))
+            ()
+
+#!fsharp
+
+type FileSystemChange =
+    | Changed of FileSystemEventArgs
+    | Created of FileSystemEventArgs
+    | Deleted of FileSystemEventArgs
+    | Renamed of RenamedEventArgs
+
+#!fsharp
+
+watcher.Changed
+
+#!fsharp
+
+[watcher.Renamed]
+
+#!fsharp
+
+[watcher.Changed; watcher.Created; watcher.Deleted; watcher.Renamed]
+
+#!fsharp
+
+let events =
+    [
+        AsyncSeq.forwardEvent FileSystemChange.Changed watcher.Changed.Add
+        AsyncSeq.forwardEvent FileSystemChange.Created watcher.Created.Add
+        AsyncSeq.forwardEvent FileSystemChange.Deleted watcher.Deleted.Add
+        AsyncSeq.forwardEvent FileSystemChange.Renamed watcher.Renamed.Add
+    ]
+    |> AsyncSeq.mergeAll
+
+#!fsharp
+
+let getLocals () = $""
+
+#!fsharp
+
+let fn (hub, change) = async {
+    printfn $"change={change}"
+}
+
+#!fsharp
+
+let run () =
+     events
+     |> AsyncSeq.iterAsync (fun change ->
+          let getLocals () = $"change={change} {getLocals ()}"
+          fn ((), change))
+     |> Async.RunSynchronously
+
+#!fsharp
+
+#!time
+#!log
+async {
+    do! Async.Sleep 1000
+    printfn $"a=1"
+}
+|> Async.RunSynchronously
+
+#!markdown
+
+Last Wall time: 1060.243ms
+
+#!fsharp
+
+#!whos
