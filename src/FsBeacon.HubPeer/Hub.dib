@@ -43,7 +43,8 @@ let watch () =
   |> AsyncSeq.iterAsync (
     fun event ->
       async {
-          printfn $"event={event} content={File.ReadAllText path}"
+          let! content = File.ReadAllTextAsync path |> Async.AwaitTask
+          printfn $"event={event} content={content}"
       }
   )
 

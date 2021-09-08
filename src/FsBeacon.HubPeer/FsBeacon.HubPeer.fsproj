@@ -8,10 +8,10 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Core.fs" />
-    <Compile Include="FsClr.fs" />
     <Compile Include="Hub.fs" />
     <Compile Include="Hub.fsx" />
     <None Include="Hub.dib" />
+    <Compile Include="Stream.fs" />
     <Compile Include="HubServer.fs" />
     <Compile Include="Main.fs" />
     <Content Include="paket.references" />

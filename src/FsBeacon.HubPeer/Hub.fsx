@@ -7,9 +7,8 @@
 #r "nuget: XPlot.Plotly.Interactive, 4.0.3"
 
 #load "Hub.fs"
-#load "FsClr.fs"
 
-open FsBeacon.HubPeer
+//open FsBeacon.HubPeer
 open FSharp.Control
 //open System
 //open XPlot.Plotly
@@ -35,7 +34,7 @@ open FSharp.Control
 
 let fsx = 2
 
-let load1 () = FileSystem.watch "."
+//let load1 () = FileSystem.watch "."
 
 //#time "on"
 //

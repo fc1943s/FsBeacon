@@ -1,10 +1,7 @@
 ﻿namespace FsBeacon.HubPeer
 
+open FsClr
 open FsCore
-open Serilog.Events
-open Serilog.Sinks.SpectreConsole
-open Giraffe.SerilogExtensions
-open Serilog
 open System.IO
 open Argu
 open Fable.SignalR
@@ -18,13 +15,10 @@ module Main =
     let minimumLogLevel = LogLevel.Information
 
     let inline loggingFn (logging: ILoggingBuilder) =
-        //                        logging.SetMinimumLevel LogLevel.Debug |> ignore
         logging.SetMinimumLevel minimumLogLevel |> ignore
+    //  logging.AddFilter ("Microsoft.", LogLevel.Warning)
+    //  |> ignore
 
-    //                        logging.AddFilter ("Microsoft.", LogLevel.Warning)
-    //                        |> ignore
-
-    //    SerilogAdapter.Enable ()
     let inline getApp port rootPath =
         application {
             url $"https://0.0.0.0:{port}/"
@@ -35,20 +29,6 @@ module Main =
             no_router
             logging loggingFn
             force_ssl
-            //            app_config (fun x -> SerilogAdapter.Enable x.)
-            service_config
-                (fun serviceCollection ->
-                    serviceCollection
-                    |> HubServer.Stream.withTicker
-                        (fun (hub: FableHubCaller<Sync.Request, Sync.Response>) ->
-                            HubServer.tick rootPath hub.Clients.All.Send)
-                    |> HubServer.Stream.withFileWatcher
-                        rootPath
-                        (fun (_hub: FableHubCaller<Sync.Request, Sync.Response>, change) ->
-                            async {
-                                let getLocals () = $"change={change} {getLocals ()}"
-                                Logger.logDebug (fun () -> "service_config withFileWatcher") getLocals
-                            }))
 
             use_cors
                 "cors"
@@ -64,12 +44,23 @@ module Main =
                         |]
                     |> ignore)
 
+            service_config
+                (fun serviceCollection ->
+                    serviceCollection
+                    |> Stream.withTicker
+                        (fun (hub: FableHubCaller<Sync.Request, Sync.Response>) ->
+                            HubServer.tick rootPath hub.Clients.All.Send)
+                    |> Stream.withFileWatcher
+                        rootPath
+                        (fun (hub: FableHubCaller<Sync.Request, Sync.Response>, change) ->
+                            HubServer.fileEvent rootPath hub.Clients.All.Send change))
+
             use_signalr (
                 configure_signalr {
                     endpoint Sync.endpoint
                     send (HubServer.send rootPath)
                     invoke (HubServer.invoke rootPath)
-                    stream_from (HubServer.Stream.sendToClient rootPath)
+                    stream_from (Stream.sendToClient HubServer.update rootPath)
                     //                        use_messagepack
                     with_log_level minimumLogLevel
 
@@ -81,27 +72,36 @@ module Main =
 
                     with_after_routing
                         (fun _applicationBuilder ->
-                            printfn "saturn.with_after_routing()"
+                            let getLocals () =
+                                $"_applicationBuilder=?obj {getLocals ()}"
+
+                            Logger.logInfo (fun () -> "Main.getApp / use_signalr.with_after_routing") getLocals
                             _applicationBuilder)
 
                     with_before_routing
                         (fun _applicationBuilder ->
-                            printfn "saturn.with_before_routing()"
+                            let getLocals () =
+                                $"_applicationBuilder=?obj {getLocals ()}"
+
+                            Logger.logInfo (fun () -> "Main.getApp / use_signalr.with_before_routing") getLocals
                             _applicationBuilder)
 
-                    with_on_disconnected (fun ex _hub -> task { printfn $"saturn.with_on_disconnected() ex={ex}" })
+                    with_on_disconnected
+                        (fun ex _hub ->
+                            task {
+                                let getLocals () = $"ex={ex} {getLocals ()}"
+                                Logger.logInfo (fun () -> "Main.getApp / use_signalr.with_on_disconnected") getLocals
+                            })
 
                     with_on_connected
                         (fun _hub ->
                             task {
-                                //                                    let! result = Model.send Sync.Request.Connect hub
-                                printfn "saturn.with_on_connected()"
-                            //                                    return result
+                                // let! result = Model.send Sync.Request.Connect hub
+                                let getLocals () = $"{getLocals ()}"
+                                Logger.logInfo (fun () -> "Main.getApp / use_signalr.with_on_connected") getLocals
                             })
-                //                                    return result
                 }
             )
-        //                                    return result
         }
 
 module Args =
@@ -119,20 +119,13 @@ module Args =
 module Program =
     [<EntryPoint>]
     let main argv =
-        Log.Logger <-
-            LoggerConfiguration()
-                .Destructure.FSharpTypes()
-                .Enrich.FromLogContext()
-                .MinimumLevel.Verbose()
-                .WriteTo.Console()
-                .WriteTo
-                .spectreConsole(
-                    "{Timestamp:HH:mm:ss} [{Level:u4}] {Message:lj}{NewLine}{Exception}",
-                    minLevel = LogEventLevel.Verbose
-                )
-                .CreateLogger ()
+        Logger.init ()
 
-        let args = Startup.parseArgs argv
+        let args = Cli.parseArgs argv
+
+        let getLocals () = $"args={args} {getLocals ()}"
+        Logger.logInfo (fun () -> "Program.main") getLocals
+
         let port = args.GetResult Args.Port
 
         let rootPath =
@@ -140,10 +133,6 @@ module Program =
             |> System.Environment.ExpandEnvironmentVariables
             |> Path.GetFullPath
 
-        Log.Information $"Hub.fs={Hub.fs} Hub.fsx={Hub.fsx}"
-
-        Log.Information $"starting app. port={port} rootPath={rootPath}"
         let app = Main.getApp port rootPath
-        //        SerilogAdapter.Enable
         run app
         0

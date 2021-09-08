@@ -4,7 +4,7 @@ Fable.SignalR.Saturn
 FSharp.Control.AsyncSeq
 System.Reactive.Linq
 Argu
-FsCore
+FsClr
 Giraffe.SerilogExtensions
 Serilog.Sinks.SpectreConsole
 Serilog.Sinks.Console
