@@ -9,6 +9,7 @@ nuget FSharp.Core ~> 5.0
 // FsBeacon.HubPeer
 nuget Argu ~> 6.1
 nuget Fable.SignalR.Saturn ~> 0.11
+nuget System.Reactive.Linq ~> 5.0
 nuget FSharp.Control.AsyncSeq ~> 3.0
 nuget Giraffe.SerilogExtensions ~> 2.0
 nuget Serilog.Sinks.SpectreConsole ~> 0.1

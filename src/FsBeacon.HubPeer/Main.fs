@@ -39,10 +39,10 @@ module Main =
             service_config
                 (fun serviceCollection ->
                     serviceCollection
-                    |> Hub.Stream.withTicker
+                    |> HubServer.Stream.withTicker
                         (fun (hub: FableHubCaller<Sync.Request, Sync.Response>) ->
-                            Hub.tick rootPath hub.Clients.All.Send)
-                    |> Hub.Stream.withFileWatcher
+                            HubServer.tick rootPath hub.Clients.All.Send)
+                    |> HubServer.Stream.withFileWatcher
                         rootPath
                         (fun (_hub: FableHubCaller<Sync.Request, Sync.Response>, change) ->
                             async {
@@ -67,9 +67,9 @@ module Main =
             use_signalr (
                 configure_signalr {
                     endpoint Sync.endpoint
-                    send (Hub.send rootPath)
-                    invoke (Hub.invoke rootPath)
-                    stream_from (Hub.Stream.sendToClient rootPath)
+                    send (HubServer.send rootPath)
+                    invoke (HubServer.invoke rootPath)
+                    stream_from (HubServer.Stream.sendToClient rootPath)
                     //                        use_messagepack
                     with_log_level minimumLogLevel
 
@@ -139,6 +139,8 @@ module Program =
             args.GetResult Args.Root_Path
             |> System.Environment.ExpandEnvironmentVariables
             |> Path.GetFullPath
+
+        Log.Information $"Hub.fs={Hub.fs} Hub.fsx={Hub.fsx}"
 
         Log.Information $"starting app. port={port} rootPath={rootPath}"
         let app = Main.getApp port rootPath

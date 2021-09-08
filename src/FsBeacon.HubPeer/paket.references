@@ -2,6 +2,7 @@ FSharp.Core
 
 Fable.SignalR.Saturn
 FSharp.Control.AsyncSeq
+System.Reactive.Linq
 Argu
 FsCore
 Giraffe.SerilogExtensions

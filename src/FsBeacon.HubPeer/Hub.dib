@@ -8,7 +8,11 @@
 
 #!pwsh
 
-nuget sources add -name fc1943s -source "https://nuget.pkg.github.com/fc1943s/index.json" -username $env:GITHUB_ACTOR -password $env:GITHUB_READ_PACKAGES_TOKEN
+nuget sources remove -name github
+
+#!pwsh
+
+nuget sources add -name github -source "https://nuget.pkg.github.com/fc1943s/index.json" -username $env:GITHUB_ACTOR -password $env:GITHUB_READ_PACKAGES_TOKEN
 
 #!pwsh
 
@@ -16,108 +20,171 @@ nuget sources
 
 #!fsharp
 
+#load "Hub.fsx"
+
+#!fsharp
+
+#load "Core.fs"
+
+#!fsharp
+
+let stream, disposable = Hub.load1 ()
+
+#!fsharp
+
+open FsBeacon.HubPeer
+open FSharp.Control
+open FSharp.Control.Tasks.V2
+
+let path = "./tmp.txt"
+
+let watch () =
+  stream
+  |> AsyncSeq.iterAsync (
+    fun event ->
+      async {
+          printfn $"event={event} content={File.ReadAllText path}"
+      }
+  )
+
+let write () =
+  task {
+      for i = 0 to 100 do
+          do! File.WriteAllTextAsync (path, $"{i}")
+  }
+
+let run () = 
+  async {
+    let! child = watch () |> Async.StartChild
+    do! write () |> Async.AwaitTask
+    do! child
+  }
+
+
+run () |> Async.runWithTimeout 1000
+// iter () |> Async.RunSynchronously
+  
+
+#!fsharp
+
+#r "nuget: TaskBuilder.fs"
+open FSharp.Control.Tasks.V2
+
+#!fsharp
+
+task {
+    for i = 0 to 100 do
+        do! File.WriteAllTextAsync ("./tmp.txt", $"{i}")
+} |> Async.AwaitTask |> Async.RunSynchronously
+
+#!fsharp
+
+// #i "nuget:https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-tools/nuget/v3/index.json"
+#r "nuget: System.CommandLine"
+#r "nuget: FSharp.Data, 2.2.0"
+#r "nuget: XPlot.Plotly, 4.0.3"
+#r "nuget: XPlot.Plotly.Interactive, 4.0.3"
+
+open XPlot.Plotly
+
+#!fsharp
+
+#!time
+#!log
+let intervalMs id (periodMs:int) = asyncSeq {
+  yield (id, DateTime.UtcNow)
+  while true do
+    do! Async.Sleep periodMs
+    yield (id, DateTime.UtcNow) }
+
+let either : AsyncSeq<string * DateTime> =
+  AsyncSeq.merge (intervalMs "X" 15) (intervalMs "Y" 250)
+
+open System.Collections.Concurrent
+let values = ConcurrentDictionary<int64, string>()
+
+let iter () =
+  either
+  |> AsyncSeq.iterAsync (
+    fun (id, date) ->
+      async {
+          values.[date.Ticks] <- id
+          // printfn $"id={id} ticks={date.Ticks}"
+      }
+try
+  Async.RunSynchronously (iter (), 1000)
+with
+  | :? TimeoutException -> ()
+  | e -> raise e
+  )
+
+try
+  Async.RunSynchronously (iter (), 1000)
+with
+  | :? TimeoutException -> ()
+  | e -> raise e
+
+printfn $"values=%A{values}"
+
+let plot =
+  values
+  |> Seq.map (fun (KeyValue (ticks, id)) ->
+    ticks, id
+  )
+  |> Seq.groupBy snd
+  |> Seq.map (fun (id, items) ->
+    let items = items |> Seq.map fst |> Seq.map (fun n -> n) |> Seq.toList
+    Scatter (
+      x = items,
+      y = List.init items.Length (fun _i -> id),
+      mode = "lines+markers",
+      name = "id",
+      line = Line(shape = "linear")
+    )
+  )
+  |> Chart.Plot
+
+plot
+
+#!fsharp
+
+#!time
+
+async {
+    do! Async.Sleep 1000
+    printfn $"dib cell after 1s"
+}
+|> Async.RunSynchronously
+
+#!pwsh
+
+FsBeacon.HubPeer
+
+#!fsharp
+
 // #i "nuget:https://nuget.pkg.github.com/fc1943s/index.json" // username: "%GITHUB_ACTOR%" password: "%GITHUB_READ_PACKAGES_TOKEN%"
-// #r "nuget: FSharp.Control.AsyncSeq"
-#r "./bin/Debug/net6.0/FSharp.Control.AsyncSeq.dll"
+// #i "nuget:https://pkgs.dev.azure.com/fc1943s/public/_packaging/dotnet-tools/nuget/v3/index.json"
+#r "nuget: FSharp.Core, 5.0"
+#r "nuget: FSharp.Control.AsyncSeq"
+// #r "./bin/Debug/net6.0/FSharp.Control.AsyncSeq.dll"
 open FSharp.Control
 
 #!fsharp
 
-// #r "nuget: Hopac"
+#r "nuget: FsCheck"
+
+#!fsharp
+
+#r "nuget: FsCore, 0.0.1-alpha.12"
+
+#!fsharp
+
+#r "nuget: Hopac"
 // open System
 // open System.Threading
 // open Hopac.Extensions
 // open Hopac.Infixes
 // open Hopac
-
-#!fsharp
-
-let path = "."
-let watcher = new FileSystemWatcher (Path = path, EnableRaisingEvents = true, IncludeSubdirectories = true)
-
-#!fsharp
-
-module Async =
-    let inline map fn op =
-        async {
-            let! x = op
-            let value = fn x
-            return value
-        }
-
-#!fsharp
-
-0
-
-#!fsharp
-
-printfn $"{AsyncSeq.unfoldAsync}"
-
-#!fsharp
-
-open System.Threading.Tasks
-open FSharp.Control
-
-module AsyncSeq =
-    let inline forwardEvent2 event fn =
-        AsyncSeq.unfoldAsync
-            (fun () ->
-                Async.FromContinuations
-                    (fun (res, err, _c) ->
-                        try
-                            fn (fun args -> res (event args))
-                        with
-                        | ex -> err ex)
-                |> Async.map (fun change -> Some (change, ())))
-            ()
-
-    let inline forwardEvent event fn =
-        AsyncSeq.unfoldAsync
-            
-            (fun () ->
-                Async.FromContinuations
-                    (fun (res, err, _c) ->
-                        try
-                            fn (fun args -> res (event args))
-                        with
-                        | ex -> err ex)
-                |> Async.map (fun change -> Some (change, ())))
-            ()
-
-#!fsharp
-
-type FileSystemChange =
-    | Changed of FileSystemEventArgs
-    | Created of FileSystemEventArgs
-    | Deleted of FileSystemEventArgs
-    | Renamed of RenamedEventArgs
-
-#!fsharp
-
-watcher.Changed
-
-#!fsharp
-
-[watcher.Renamed]
-
-#!fsharp
-
-[watcher.Changed; watcher.Created; watcher.Deleted; watcher.Renamed]
-
-#!fsharp
-
-let events =
-    [
-        AsyncSeq.forwardEvent FileSystemChange.Changed watcher.Changed.Add
-        AsyncSeq.forwardEvent FileSystemChange.Created watcher.Created.Add
-        AsyncSeq.forwardEvent FileSystemChange.Deleted watcher.Deleted.Add
-        AsyncSeq.forwardEvent FileSystemChange.Renamed watcher.Renamed.Add
-    ]
-    |> AsyncSeq.mergeAll
-
-#!fsharp
-
-let getLocals () = $""
 
 #!fsharp
 

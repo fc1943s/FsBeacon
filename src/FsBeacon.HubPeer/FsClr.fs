@@ -6,6 +6,7 @@ open System.Reflection
 open Argu
 open FSharp.Control
 open Serilog
+open FsCore
 
 
 module Startup =
@@ -39,21 +40,48 @@ module Logger =
 
 module FileSystem =
     type FileSystemChange =
-        | Changed of FileSystemEventArgs
-        | Created of FileSystemEventArgs
-        | Deleted of FileSystemEventArgs
-        | Renamed of RenamedEventArgs
+        | Error of exn: exn
+        | Changed of path: string
+        | Created of path: string
+        | Deleted of path: string
+        | Renamed of oldPath: string * path: string
 
     let inline watch path =
-        let getLocals () = $"path={path}"
-        Logger.logDebug (fun () -> "FileSystem.watchFileSystem") getLocals
+        let watcher = new FileSystemWatcher (Path = path, EnableRaisingEvents = true, IncludeSubdirectories = true)
 
-        use watcher = new FileSystemWatcher (Path = path, EnableRaisingEvents = true, IncludeSubdirectories = true)
+        let changedStream =
+            AsyncSeq.subscribeEvent watcher.Changed (fun event -> FileSystemChange.Changed event.FullPath)
+        //            |> AsyncSeq.bufferByTime 100
+//            |> AsyncSeq.choose Array.tryLast
 
-        [
-            AsyncSeq.forwardEvent FileSystemChange.Changed watcher.Changed.Add
-            AsyncSeq.forwardEvent FileSystemChange.Created watcher.Created.Add
-            AsyncSeq.forwardEvent FileSystemChange.Deleted watcher.Deleted.Add
-            AsyncSeq.forwardEvent FileSystemChange.Renamed watcher.Renamed.Add
-        ]
-        |> AsyncSeq.mergeAll
+        let createdStream =
+            AsyncSeq.subscribeEvent watcher.Created (fun event -> FileSystemChange.Created event.FullPath)
+
+        let deletedStream =
+            AsyncSeq.subscribeEvent watcher.Deleted (fun event -> FileSystemChange.Deleted event.FullPath)
+
+        let renamedStream =
+            AsyncSeq.subscribeEvent
+                watcher.Renamed
+                (fun event -> FileSystemChange.Renamed (event.OldFullPath, event.FullPath))
+
+        let errorStream =
+            AsyncSeq.subscribeEvent watcher.Error (fun event -> FileSystemChange.Error (event.GetException ()))
+
+        let stream =
+            [
+                changedStream
+                createdStream
+                deletedStream
+                renamedStream
+                errorStream
+            ]
+            |> AsyncSeq.mergeAll
+
+        let disposable =
+            Object.newDisposable
+                (fun () ->
+                    watcher.EnableRaisingEvents <- false
+                    watcher.Dispose ())
+
+        stream, disposable
