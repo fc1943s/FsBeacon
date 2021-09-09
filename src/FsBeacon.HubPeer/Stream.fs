@@ -71,7 +71,7 @@ module Stream =
 
     let inline withFileWatcher rootPath fn serviceCollection =
         let watch, disposable = FileSystem.watch rootPath
-        let getLocals () = $"rootPath={rootPath} {getLocals ()}"
+        let getLocals () = $"{getLocals ()}"
 
         FileWatcher.Create (
             serviceCollection,
@@ -80,11 +80,9 @@ module Stream =
                 |> AsyncSeq.iterAsync
                     (fun (ticks, event) ->
                         async {
-                            let getLocals () =
-                                $"ticks={ticks} event={event} {getLocals ()}"
-
-                            Logger.logDebug (fun () -> "Stream.withWileWatcher / onEvent") getLocals
-                            fn (hub, event)
+                            let getLocals () = $"ticks={ticks} event={event} {getLocals ()}"
+                            Logger.logTrace (fun () -> "Stream.withFileWatcher / fn") getLocals
+                            fn (hub, ticks, event)
                         })),
             (fun () ->
                 Logger.logDebug (fun () -> "Stream.withWileWatcher / dispose") getLocals

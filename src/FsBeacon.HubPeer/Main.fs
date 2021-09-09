@@ -47,13 +47,13 @@ module Main =
             service_config
                 (fun serviceCollection ->
                     serviceCollection
-                    |> Stream.withTicker
-                        (fun (hub: FableHubCaller<Sync.Request, Sync.Response>) ->
-                            HubServer.tick rootPath hub.Clients.All.Send)
                     |> Stream.withFileWatcher
                         rootPath
-                        (fun (hub: FableHubCaller<Sync.Request, Sync.Response>, change) ->
-                            HubServer.fileEvent rootPath hub.Clients.All.Send change))
+                        (fun (hub: FableHubCaller<Sync.Request, Sync.Response>, ticks, change) ->
+                            HubServer.fileEvent rootPath hub.Clients.All.Send ticks change)
+                    |> Stream.withTicker
+                        (fun (hub: FableHubCaller<Sync.Request, Sync.Response>) ->
+                            HubServer.tick rootPath hub.Clients.All.Send))
 
             use_signalr (
                 configure_signalr {

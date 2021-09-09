@@ -43,6 +43,7 @@ module HubServer =
                 let path = Path.Combine (rootPath, alias, atomPath)
 
                 if File.Exists path then
+                    do! FileSystem.waitForFileWriteAsync path
                     let! result = File.ReadAllTextAsync path
                     return result |> Option.ofObj
                 else
@@ -73,7 +74,7 @@ module HubServer =
     let inline update rootPath (msg: Sync.Request) (_hubContext: FableHub<Sync.Request, Sync.Response> option) =
         task {
             let getLocals () =
-                $"rootPath={rootPath} msg={string msg |> substringTo 400} {getLocals ()}"
+                $"msg={string msg |> substringTo 400} {getLocals ()}"
 
             match msg with
             | Sync.Request.Connect _alias ->
@@ -139,7 +140,7 @@ module HubServer =
     let inline tick rootPath sendAll =
         task {
             let getLocals () =
-                $"rootPath={rootPath} keyWatchlist.Count={keyWatchlist.Count} {getLocals ()}"
+                $"keyWatchlist.Count={keyWatchlist.Count} {getLocals ()}"
 
             tryCleanup keyWatchlist
 
@@ -166,31 +167,85 @@ module HubServer =
                 |> Task.WhenAll
         }
 
-    let inline fileEvent rootPath _sendAll event =
+
+    type FileSystem.FileSystemChange with
+        static member inline Path event =
+            match event with
+            | FileSystem.FileSystemChange.Error _ -> None, None
+            | FileSystem.FileSystemChange.Changed path -> None, Some path
+            | FileSystem.FileSystemChange.Created path -> None, Some path
+            | FileSystem.FileSystemChange.Deleted path -> None, Some path
+            | FileSystem.FileSystemChange.Renamed (oldPath, path) -> Some oldPath, Some path
+
+    let inline fileEvent rootPath (sendAll: Sync.Response -> Task) ticks event =
+        let oldPath, newPath = event |> FileSystem.FileSystemChange.Path
+
         let getLocals () =
-            $"rootPath={rootPath} event={event} {getLocals ()}"
+            $"ticks={ticks} oldPath={oldPath} {getLocals ()}"
 
-        Logger.logTrace (fun () -> "Hub.fileEvent") getLocals
+        match newPath with
+        | Some newPath when Directory.Exists newPath |> not ->
+            let fullAtomPath = newPath |> String.replace rootPath ""
 
-//            sendAll (Sync.Response.GetStream (alias))
-//            do!
-//                keyWatchlist
-//                |> Seq.choose
-//                    (fun (KeyValue (AtomRef (alias, atomPath) as atomRef, lastKeys)) ->
-//                        let result = fetchTableKeys rootPath atomRef
-//
-//                        let getLocals () =
-//                            $"alias={alias} atomPath={atomPath} lastKeys=%A{lastKeys} result=%A{result} {getLocals ()}"
-//
-//
-//                        match lastKeys, result with
-//                        | (_, None), _ -> None
-//                        | (_, Some lastKeys), result when lastKeys = result -> None
-//                        | (_, Some _), result ->
-//                            Logger.logTrace (fun () -> "Hub.tick / keyWatchlist.choose") getLocals
-//                            keyWatchlist.[atomRef] <- (Guid.newTicksGuid (), Some result)
-//                            Some (alias, atomPath, result)
-//                        | _ -> None)
-//                |> Seq.toArray
-//                |> Seq.map (Sync.Response.GetStream >> sendAll)
-//                |> Task.WhenAll
+            let nodes =
+                fullAtomPath
+                |> String.split (string Path.DirectorySeparatorChar)
+                |> Array.toList
+
+            match nodes with
+            | _ :: alias :: storeRoot :: tail ->
+                let collection, keys, name =
+                    match tail with
+                    | [ name ] -> None, [], name
+                    | collection :: [ name ] -> Some collection, [], name
+                    | collection :: tail ->
+                        let name = tail |> List.last
+                        let keys = tail |> List.take (tail.Length - 1)
+                        Some collection, keys, name
+                    | _ -> failwith $"invalid newPath {getLocals ()}"
+
+                let atomPath =
+                    [
+                        yield storeRoot
+                        match collection with
+                        | Some collection -> yield collection
+                        | _ -> ()
+                        yield! keys
+                        yield name
+                    ]
+                    |> String.concat "/"
+
+                let getLocals () =
+                    $"alias={alias} atomPath={atomPath} {getLocals ()}"
+
+
+                match collection with
+                | Some collection ->
+                    let collectionRef = AtomRef (alias, $"{storeRoot}/{collection}")
+                    trySubscribeKeys collectionRef
+                | _ -> ()
+
+                async {
+                    let! value =
+                        readFile rootPath (AtomRef (alias, atomPath))
+                        |> Async.AwaitTask
+
+                    let getLocals () =
+                        $"value={string value |> substringTo 400} {getLocals ()}"
+
+                    let response = Sync.Response.GetStream (alias, atomPath, value)
+
+//                    Logger.logTrace (fun () -> "HubServer.fileEvent / will send GetStream") getLocals
+
+                    try
+                        do! sendAll response |> Async.AwaitTask
+                    with
+                    | ex ->
+                        let getLocals () = $"ex={ex} {getLocals ()}"
+                        Logger.logError (fun () -> "HubServer.fileEvent / sendAll error") getLocals
+
+                    Logger.logTrace (fun () -> "HubServer.fileEvent / GetStream sent") getLocals
+                }
+                |> Async.RunSynchronously
+            | _ -> Logger.logTrace (fun () -> "HubServer.fileEvent / skipped 1") getLocals
+        | _ -> Logger.logTrace (fun () -> "HubServer.fileEvent / skipped 2") getLocals

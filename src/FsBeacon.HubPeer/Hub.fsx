@@ -6,7 +6,7 @@
 #r "nuget: XPlot.Plotly, 4.0.3"
 #r "nuget: XPlot.Plotly.Interactive, 4.0.3"
 
-#load "Hub.fs"
+//#load "Hub.fs"
 
 //open FsBeacon.HubPeer
 open FSharp.Control
