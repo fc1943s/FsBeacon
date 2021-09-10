@@ -16,7 +16,7 @@ module MountButton =
     let MountButton () =
         let mounted, setMounted = Store.useState Atoms.Sample.mounted
 
-        let getLocals () = $"mounted={mounted} {getLocals ()}"
+        let inline getLocals () = $"mounted={mounted} {getLocals ()}"
         Profiling.addTimestamp (fun () -> $"{nameof FsBeacon} | MountButton [ render ]") getLocals
 
         Button.Button

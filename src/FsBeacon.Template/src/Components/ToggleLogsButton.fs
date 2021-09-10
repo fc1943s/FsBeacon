@@ -18,7 +18,7 @@ module ToggleLogsButton =
         let showDebug, setShowDebug = Store.useState Atoms.showDebug
         let logLevel, setLogLevel = Store.useState Atoms.logLevel
 
-        let getLocals () =
+        let inline getLocals () =
             $"showDebug={showDebug} logLevel={logLevel}"
 
         let addTimestamp fn getLocals =

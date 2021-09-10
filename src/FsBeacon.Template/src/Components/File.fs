@@ -25,7 +25,7 @@ module File =
         let fileId = Store.useValue fileIdAtom
         let progress = Store.useValue (Selectors.File.progress fileId)
 
-        let getLocals () =
+        let inline getLocals () =
             $"fileId={fileId} index={index + 1} progress={progress} {getLocals ()}"
 
         Profiling.addTimestamp (fun () -> $"{nameof FsBeacon} | File [ render ]") getLocals

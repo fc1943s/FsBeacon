@@ -18,7 +18,7 @@ module SignInButton =
     let SignInButton () =
         let alias = Store.useValue Selectors.Gun.alias
         let _ = Auth.useGunAliasLoader ()
-        let getLocals () = $"alias={alias} {getLocals ()}"
+        let inline getLocals () = $"alias={alias} {getLocals ()}"
         Profiling.addTimestamp (fun () -> $"{nameof FsBeacon} | SignInButton / render") getLocals
 
         let signIn = Store.useSetState Actions.signIn

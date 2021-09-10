@@ -17,7 +17,7 @@ module CounterButton =
     let CounterButton () =
         let testCounter, setTestCounter = Store.useState State.Atoms.Sample.testCounter
 
-        let getLocals () =
+        let inline getLocals () =
             $"testCounter={testCounter} {getLocals ()}"
 
         Profiling.addTimestamp (fun () -> $"{nameof FsBeacon} | CounterButton [ render ]") getLocals

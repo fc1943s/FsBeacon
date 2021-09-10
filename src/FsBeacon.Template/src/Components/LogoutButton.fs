@@ -19,7 +19,7 @@ module LogoutButton =
         let alias = Store.useValue Selectors.Gun.alias
         let logout = Store.useSetState Auth.Actions.logout
 
-        let getLocals () = $"alias={alias} {getLocals ()}"
+        let inline getLocals () = $"alias={alias} {getLocals ()}"
         Profiling.addTimestamp (fun () -> $"{nameof FsBeacon} | LogoutButton / render") getLocals
 
         Button.Button

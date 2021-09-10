@@ -23,7 +23,7 @@ module AddFileButton =
     let AddFileButton () =
         let alias = Store.useValue Selectors.Gun.alias
 
-        let getLocals () = $"alias={alias} {getLocals ()}"
+        let inline getLocals () = $"alias={alias} {getLocals ()}"
         Profiling.addTimestamp (fun () -> $"{nameof FsBeacon} | AddFileButton [ render ]") getLocals
 
         let addFile =

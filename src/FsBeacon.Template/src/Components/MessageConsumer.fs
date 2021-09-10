@@ -26,7 +26,7 @@ module MessageConsumer =
         let ack, setAck = Store.useState (Atoms.Message.ack messageId)
 
 
-        let getLocals () =
+        let inline getLocals () =
             $"messageId={messageId} ack={ack} appMessage={appMessage} {getLocals ()}"
 
         Profiling.addTimestamp (fun () -> $"{nameof FsBeacon} | MessageConsumer [ render ]") getLocals

@@ -16,7 +16,7 @@ module HrefIndicator =
     let HrefIndicator () =
         let _routeTrigger = Store.useValue Atoms.routeTrigger
 
-        let getLocals () =
+        let inline getLocals () =
             $"_routeTrigger={_routeTrigger} {getLocals ()}"
 
         Profiling.addTimestamp (fun () -> $"{nameof FsBeacon} | HrefIndicator [ render ]") getLocals
