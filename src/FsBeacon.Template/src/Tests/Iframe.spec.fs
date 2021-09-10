@@ -166,11 +166,10 @@ module Iframe =
                     |> Promise.iter id
 
                     allFn Cy2.clickTextEl "disable logs"
-
                     Cy2.clickTextEl (get3 ()) "sign in"
-
-                    Cy2.waitForEl (get2 ()) "logout (alias@"
                     Cy2.waitForEl (get3 ()) "logout (alias@"
+                    Cy2.waitForEl (get2 ()) "logout (alias@"
+
 
                     Cy2.clickTextEl (get1 ()) "reset counter"
 
