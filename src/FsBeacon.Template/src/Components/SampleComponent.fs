@@ -31,7 +31,6 @@ module SampleComponent =
                     DisableSyncButton.DisableSyncButton ()
                     CounterButton.CounterButton ()
                     ResetCounterButton.ResetCounterButton ()
-                    MessagesListener.MessagesListener ()
                     InnerComponent.InnerComponent ()
 
                 DebugPanel.DebugPanel DebugPanel.DebugPanelDisplay.Inline

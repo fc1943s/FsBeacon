@@ -17,8 +17,6 @@
         <Compile Include="src\Components\DisableSyncButton.fs" />
         <Compile Include="src\Components\CounterButton.fs" />
         <Compile Include="src\Components\ResetCounterButton.fs" />
-        <Compile Include="src\Components\MessageConsumer.fs" />
-        <Compile Include="src\Components\MessagesListener.fs" />
         <Compile Include="src\Components\File.fs" />
         <Compile Include="src\Components\Files.fs" />
         <Compile Include="src\Components\SignInButton.fs" />

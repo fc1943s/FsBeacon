@@ -113,6 +113,9 @@ module Iframe =
 
                     allFn Cy2.clickTextEl "mount"
 
+                    Cy2.clickTextEl (get2 ()) "disable logs"
+                    Cy2.clickTextEl (get3 ()) "disable logs"
+
                     allFn Cy2.clickTextEl "disable sync"
 
                     Cy2.clickTextEl (get1 ()) "enable gun sync"
@@ -161,11 +164,10 @@ module Iframe =
                             })
                     |> Promise.iter id
 
-                    allFn Cy2.clickTextEl "disable logs"
-                    
+                    Cy2.clickTextEl (get1 ()) "disable logs"
+
                     Cy2.waitForEl (get3 ()) "logout (alias@"
                     Cy2.waitForEl (get2 ()) "logout (alias@"
-
 
                     Cy2.clickTextEl (get1 ()) "reset counter"
 

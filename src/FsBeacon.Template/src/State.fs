@@ -95,8 +95,6 @@ module State =
             let fileIdAtoms =
                 Engine.subscribeCollection FsStore.storeRoot Atoms.File.collection (Engine.parseGuidKey FileId)
 
-            let messageIdAtoms =
-                Engine.subscribeCollection FsStore.storeRoot Atoms.Message.collection (Engine.parseGuidKey MessageId)
 
     module Actions =
         let enableGunSync =
@@ -128,7 +126,7 @@ module State =
 
         let signIn =
             Atom.Primitives.setSelector
-                (fun getter setter () ->
+                (fun _getter setter () ->
                     promise {
                         Profiling.addTimestamp
                             (fun () -> $"{nameof FsBeacon} | SignInContainer [ render ] starting sign up...")
