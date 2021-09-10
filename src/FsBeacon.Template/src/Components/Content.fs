@@ -1,5 +1,6 @@
 namespace FsBeacon.Template.Components
 
+open FsCore
 open Feliz
 open FsJs
 open FsStore.Hooks
@@ -12,7 +13,7 @@ open FsUi.Components
 module Content =
     [<ReactComponent>]
     let LoggedContent () =
-        Profiling.addTimestamp (fun () -> $"{nameof FsBeacon} | LoggedContent [ render ] ")
+        Profiling.addTimestamp (fun () -> $"{nameof FsBeacon} | LoggedContent [ render ] ") getLocals
 
         React.suspense (
             [
@@ -34,7 +35,7 @@ module Content =
     let Content () =
         let deviceInfo = Store.useValue Selectors.deviceInfo
 
-        Profiling.addTimestamp (fun () -> $"{nameof FsBeacon} | Content [ render ] ")
+        Profiling.addTimestamp (fun () -> $"{nameof FsBeacon} | Content [ render ] ") getLocals
 
         Ui.flex
             (fun x ->

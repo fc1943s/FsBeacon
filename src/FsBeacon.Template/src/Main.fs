@@ -1,5 +1,6 @@
 namespace FsBeacon.Template
 
+open FsCore
 open Fable.Core
 open FsUi.Bindings
 open Feliz
@@ -9,7 +10,7 @@ open FsJs
 
 module Main =
     exportDefault (
-        Profiling.addTimestamp (fun () -> $"{nameof FsBeacon} | Main body")
+        Profiling.addTimestamp (fun () -> $"{nameof FsBeacon} | Main body") getLocals
 
         let cmp = React.strictMode [ App.App true ]
 

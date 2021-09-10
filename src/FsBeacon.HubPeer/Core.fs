@@ -14,7 +14,7 @@ module FileSystem =
                 let getLocals () = $"path={path} {getLocals ()}"
 
                 Logger.logWarning
-                    (fun () -> "FileSystem.getStreamAsync. Error opening file for writing. Waiting...")
+                    (fun () -> $"{nameof FsBeacon} | FileSystem.getStreamAsync. Error opening file for writing. Waiting...")
                     getLocals
 
                 do! Async.Sleep 100

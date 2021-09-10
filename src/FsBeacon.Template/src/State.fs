@@ -1,9 +1,11 @@
 namespace FsBeacon.Template
 
-open FsStore.Bindings
+open FsJs
 open FsCore
 open FsCore.BaseModel
 open FsStore
+open FsStore.Bindings.Gun
+open FsStore.Hooks
 open FsStore.Model
 open FsStore.State
 open FsUi.State
@@ -35,7 +37,7 @@ module State =
                                 collection,
                                 accordionType
                                 |> string
-                                |> Gun.AtomKeyFragment
+                                |> AtomKeyFragment
                                 |> List.singleton,
                                 (AtomName (nameof accordionHiddenFlag))
                             ))
@@ -43,16 +45,6 @@ module State =
 
 
         module Sample =
-            let rec syncHydrateStarted =
-                Atom.create
-                    (RootAtomPath (FsBeacon.storeRoot, AtomName (nameof syncHydrateStarted)))
-                    (AtomType.Atom false)
-
-            let rec syncHydrateCompleted =
-                Atom.create
-                    (RootAtomPath (FsBeacon.storeRoot, AtomName (nameof syncHydrateCompleted)))
-                    (AtomType.Atom false)
-
             let rec mounted =
                 Atom.create (RootAtomPath (FsBeacon.storeRoot, AtomName (nameof mounted))) (AtomType.Atom false)
 
@@ -105,3 +97,76 @@ module State =
 
             let messageIdAtoms =
                 Engine.subscribeCollection FsStore.storeRoot Atoms.Message.collection (Engine.parseGuidKey MessageId)
+
+    module Actions =
+        let enableGunSync =
+            Atom.Primitives.setSelector
+                (fun _getter setter () ->
+                    Profiling.addTimestamp (fun () -> $"{nameof FsBeacon} | Actions.enableGunSync") getLocals
+
+                    Atom.set
+                        setter
+                        Atoms.gunOptions
+                        (GunOptions.Sync [|
+                            GunPeer "https://localhost:49221/gun"
+                         |]))
+
+        let enableHubSync =
+            Atom.Primitives.setSelector
+                (fun _getter setter () ->
+                    Profiling.addTimestamp (fun () -> $"{nameof FsBeacon} | Actions.enableHubSync") getLocals
+
+                    Atom.set setter Atoms.hubUrl (Some "https://localhost:49211"))
+
+        let disableSync =
+            Atom.Primitives.setSelector
+                (fun _getter setter () ->
+                    Profiling.addTimestamp (fun () -> $"{nameof FsBeacon} | Actions.disableSync") getLocals
+
+                    Atom.set setter Atoms.gunOptions GunOptions.Minimal
+                    Atom.set setter Atoms.hubUrl None)
+
+        let signIn =
+            Atom.Primitives.setSelector
+                (fun getter setter () ->
+                    promise {
+                        Profiling.addTimestamp
+                            (fun () -> $"{nameof FsBeacon} | SignInContainer [ render ] starting sign up...")
+                            getLocals
+
+                        let credentials = $"alias@{Dom.deviceTag}"
+                        //
+//                            match! signIn (credentials, credentials) with
+//                            | Ok _ -> ()
+//                            | Error error ->
+//                                toast (fun x -> x.description <- $"1: {error}")
+//
+//                                match! signUp (credentials, credentials) with
+//                                | Ok _ -> ()
+//                                | Error error -> toast (fun x -> x.description <- $"2: {error}")
+
+                        Atom.set setter Auth.Actions.signUp (credentials, credentials)
+
+                        //                            let gun = Atom.value getter Selectors.Gun.gun
+//                            let user = gun.user()
+//                            let! ack = Gun.createUser user (Gun.Alias deviceId) (Gun.Pass deviceId)
+//                            printfn $"ack={ack}"
+
+
+                        //                        let! hexString = hexStringPromise
+//                        let fileId = Hydrate.hydrateFile setter (Model.AtomScope.Current, hexString)
+//
+//                        Atom.set setter (State.Device.fileId deviceInfo.DeviceId) fileId
+
+                        let fileId = null
+
+                        let logger = Atom.get getter Selectors.logger
+                        let getLocals () = $"fileId={fileId} {getLocals ()}"
+
+                        logger.Info
+                            (fun () ->
+                                $"{nameof FsBeacon} | Component.HydrateContainer().useEffectOnce()  (currently null)")
+                            getLocals
+
+                    }
+                    |> Promise.start)

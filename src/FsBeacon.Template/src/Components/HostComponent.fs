@@ -1,5 +1,6 @@
 namespace FsBeacon.Template.Components
 
+open FsCore
 open Fable.Core.JsInterop
 open Fable.React
 open Feliz
@@ -13,7 +14,7 @@ module HostComponent =
 
     [<ReactComponent>]
     let HostComponent () =
-        Profiling.addTimestamp (fun () -> $"{nameof FsBeacon} | HostComponent [ render ] ")
+        Profiling.addTimestamp (fun () -> $"{nameof FsBeacon} | HostComponent [ render ] ") getLocals
 
         Ui.stack
             (fun x -> x.flex <- "1")

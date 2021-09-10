@@ -141,9 +141,10 @@ module Iframe =
                                     | Some window -> window?btoa json
                                     | None -> ""
 
+                                let getLocals () = $"json={json} base64={base64} {getLocals ()}"
                                 Logger.logWarning
                                     (fun () ->
-                                        $"test: keys get2 waitForElSelectorObjectKey. json={json} base64={base64}")
+                                        $"test: keys get2 waitForElSelectorObjectKey") getLocals
 
                                 if base64 <> "" then
                                     let! _ =

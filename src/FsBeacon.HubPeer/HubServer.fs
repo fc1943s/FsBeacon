@@ -78,7 +78,7 @@ module HubServer =
 
             match msg with
             | Sync.Request.Connect _alias ->
-                Logger.logDebug (fun () -> "Hub.update (Sync.Request.Connect)") getLocals
+                Logger.logDebug (fun () -> $"{nameof FsBeacon} | Hub.update (Sync.Request.Connect)") getLocals
                 return Sync.Response.ConnectResult
             | Sync.Request.Set (alias, atomPath, value) ->
                 let atomRef = AtomRef (alias, atomPath)
@@ -87,7 +87,7 @@ module HubServer =
                 let getLocals () =
                     $"result={result} value={value |> substringTo 400} {getLocals ()}"
 
-                Logger.logDebug (fun () -> "Hub.update (Sync.Request.Set)") getLocals
+                Logger.logDebug (fun () -> $"{nameof FsBeacon} | Hub.update (Sync.Request.Set)") getLocals
                 return Sync.Response.SetResult result
             | Sync.Request.Get (alias, atomPath) ->
                 let atomRef = AtomRef (alias, atomPath)
@@ -96,14 +96,14 @@ module HubServer =
                 let getLocals () =
                     $"value={value |> Option.map (substringTo 400)} {getLocals ()}"
 
-                Logger.logDebug (fun () -> "Hub.update (Sync.Request.Get)") getLocals
+                Logger.logDebug (fun () -> $"{nameof FsBeacon} | Hub.update (Sync.Request.Get)") getLocals
                 return Sync.Response.GetResult value
             | Sync.Request.Filter (alias, atomPath) ->
                 let collectionRef = AtomRef (alias, atomPath)
                 trySubscribeKeys collectionRef
                 let result = fetchTableKeys rootPath collectionRef
                 let getLocals () = $"result=%A{result} {getLocals ()}"
-                Logger.logDebug (fun () -> "Hub.update (Sync.Request.Filter)") getLocals
+                Logger.logDebug (fun () -> $"{nameof FsBeacon} | Hub.update (Sync.Request.Filter)") getLocals
                 return Sync.Response.FilterResult result
         }
 
@@ -132,7 +132,8 @@ module HubServer =
                         $"minutes={minutes} ticksDiff{ticksDiff} lastValue={lastValue} atomRef={atomRef} {getLocals ()}"
 
                     Logger.logDebug
-                        (fun () -> "Hub.tryCleanup / dict.iter() (ticksDiff. removing from watchlist)")
+                        (fun () ->
+                            $"{nameof FsBeacon} | Hub.tryCleanup / dict.iter() (ticksDiff. removing from watchlist)")
                         getLocals
 
                     dict.TryRemove atomRef |> ignore)
@@ -158,7 +159,7 @@ module HubServer =
                         | (_, None), _ -> None
                         | (_, Some lastKeys), result when lastKeys = result -> None
                         | (_, Some _), result ->
-                            Logger.logTrace (fun () -> "Hub.tick / keyWatchlist.choose") getLocals
+                            Logger.logTrace (fun () -> $"{nameof FsBeacon} | Hub.tick / keyWatchlist.choose") getLocals
                             keyWatchlist.[atomRef] <- (Guid.newTicksGuid (), Some result)
                             Some (alias, atomPath, result)
                         | _ -> None)
@@ -235,17 +236,17 @@ module HubServer =
 
                     let response = Sync.Response.GetStream (alias, atomPath, value)
 
-//                    Logger.logTrace (fun () -> "HubServer.fileEvent / will send GetStream") getLocals
+                    //                    Logger.logTrace (fun () -> "HubServer.fileEvent / will send GetStream") getLocals
 
                     try
                         do! sendAll response |> Async.AwaitTask
                     with
                     | ex ->
                         let getLocals () = $"ex={ex} {getLocals ()}"
-                        Logger.logError (fun () -> "HubServer.fileEvent / sendAll error") getLocals
+                        Logger.logError (fun () -> $"{nameof FsBeacon} | HubServer.fileEvent / sendAll error") getLocals
 
-                    Logger.logTrace (fun () -> "HubServer.fileEvent / GetStream sent") getLocals
+                    Logger.logTrace (fun () -> $"{nameof FsBeacon} | HubServer.fileEvent / GetStream sent") getLocals
                 }
                 |> Async.RunSynchronously
-            | _ -> Logger.logTrace (fun () -> "HubServer.fileEvent / skipped 1") getLocals
-        | _ -> Logger.logTrace (fun () -> "HubServer.fileEvent / skipped 2") getLocals
+            | _ -> Logger.logTrace (fun () -> $"{nameof FsBeacon} | HubServer.fileEvent / skipped 1") getLocals
+        | _ -> Logger.logTrace (fun () -> $"{nameof FsBeacon} | HubServer.fileEvent / skipped 2") getLocals

@@ -1,22 +1,13 @@
 namespace FsBeacon.Template.Tests
 
 open Fable.Core.JsInterop
-open Fable.Jester
 open FsJs
-open FsJs.Bindings
 open FsJs.Bindings.Cypress
-open Fable.Jester
-open Fable.ReactTestingLibrary
-open Fable.Core.JsInterop
-open FsJs
 open FsJs.Dom
 open Microsoft.FSharp.Core.Operators
 open Fable.Core
 open FsCore
-open Fable.Core.JsInterop
 open Fable.Extras
-open FsJs
-open FsJs.Bindings.Cypress
 open FsStore
 open FsStore.Bindings
 open FsStore.Model
@@ -128,7 +119,7 @@ module Iframe2 =
 
                     Profiling.measureTimeN 1 "measure test" (fun () -> printfn "measuring")
 
-                    let load () =
+                    let _load () =
                         Cy2.waitFor "\"IsTesting\": true,"
 
                         allFn (fun node () -> node.should "not.be.empty") ()
@@ -161,9 +152,10 @@ module Iframe2 =
                                         | Some window -> window?btoa json
                                         | None -> ""
 
+                                    let getLocals () = $"json={json} base64={base64} {getLocals ()}"
                                     Logger.logWarning
                                         (fun () ->
-                                            $"test: keys get2 waitForElSelectorObjectKey. json={json} base64={base64}")
+                                            $"test: keys get2 waitForElSelectorObjectKey") getLocals
 
                                     if base64 <> "" then
                                         let! _ =
