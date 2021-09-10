@@ -125,6 +125,7 @@ module Iframe =
                     allFn Cy2.clickTextEl "clear logs"
 
                     Cy2.clickTextEl (get1 ()) "sign in"
+                    Cy2.clickTextEl (get3 ()) "sign in"
 
                     waitForElSelectorValueIndicator<Gun.GunKeys> get1 "#debug" "privateKeys"
                     |> Promise.bind
@@ -154,11 +155,6 @@ module Iframe =
                                     let! _ =
                                         (getIframeN 2)
                                             .invoke ("attr", "src", $"https://localhost:49222/#{base64}")
-
-                                    let! _ =
-                                        (getIframeN 3)
-                                            .invoke ("attr", "src", $"https://localhost:49222/#{base64}")
-
                                     ()
 
                                 ()
@@ -166,7 +162,7 @@ module Iframe =
                     |> Promise.iter id
 
                     allFn Cy2.clickTextEl "disable logs"
-                    Cy2.clickTextEl (get3 ()) "sign in"
+                    
                     Cy2.waitForEl (get3 ()) "logout (alias@"
                     Cy2.waitForEl (get2 ()) "logout (alias@"
 
