@@ -41,7 +41,7 @@ module HostComponent =
                                         Ui.flex
                                             (fun x ->
                                                 x.``as`` <- "iframe"
-                                                x.src <- "https://localhost:49212/#1"
+                                                x.src <- "https://localhost:49222/#1"
                                                 x?``data-cy`` <- "iframe1"
                                                 x.flex <- "1")
                                             []

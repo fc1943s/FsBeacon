@@ -105,24 +105,28 @@ module Iframe =
                     Cy2.waitFor "\"IsTesting\": true,"
 
                     Cy2.waitFor
-                        "160. FsStore | Engine.createAtomWithSubscription [ debouncedSync ](a2) | localAdaptersAtom=atom54 atomType=Data,System.Boolean atomPath=FsUi/systemUiFont defaultValue=true"
-
+                        "158. FsStore | Engine.createAtomWithSubscription [ debouncedSync ](a2) localAdaptersAtom=atom58 atomType=Data,System.Boolean atomPath=FsUi/systemUiFont defaultValue=true"
 
                     allFn (fun node () -> node.should "not.be.empty") ()
 
                     allFn Cy2.waitForEl "alias=null"
-                    allFn Cy2.clickTextEl "mount"
-                    allFn Cy2.clickTextEl "hydrate"
 
-                    [
-                        get1
-                        get2
-                    ]
-                    |> someFn Cy2.clickTextEl "sign in"
+                    allFn Cy2.clickTextEl "mount"
+
+                    allFn Cy2.clickTextEl "disable sync"
+
+                    Cy2.clickTextEl (get1 ()) "enable gun sync"
+
+                    Cy2.clickTextEl (get2 ()) "enable gun sync"
+                    Cy2.clickTextEl (get2 ()) "enable hub sync"
+
+                    Cy2.clickTextEl (get3 ()) "enable hub sync"
 
                     allFn Cy2.clickTextEl "clear logs"
 
-                    waitForElSelectorValueIndicator<Gun.GunKeys> get2 "#debug" "privateKeys"
+                    Cy2.clickTextEl (get1 ()) "sign in"
+
+                    waitForElSelectorValueIndicator<Gun.GunKeys> get1 "#debug" "privateKeys"
                     |> Promise.bind
                         (fun privateKeys ->
                             promise {
@@ -141,12 +145,16 @@ module Iframe =
                                     | Some window -> window?btoa json
                                     | None -> ""
 
-                                let getLocals () = $"json={json} base64={base64} {getLocals ()}"
-                                Logger.logWarning
-                                    (fun () ->
-                                        $"test: keys get2 waitForElSelectorObjectKey") getLocals
+                                let getLocals () =
+                                    $"json={json} base64={base64} {getLocals ()}"
+
+                                Logger.logWarning (fun () -> "test: keys get1 waitForElSelectorObjectKey") getLocals
 
                                 if base64 <> "" then
+                                    let! _ =
+                                        (getIframeN 2)
+                                            .invoke ("attr", "src", $"https://localhost:49222/#{base64}")
+
                                     let! _ =
                                         (getIframeN 3)
                                             .invoke ("attr", "src", $"https://localhost:49222/#{base64}")
@@ -157,23 +165,28 @@ module Iframe =
                             })
                     |> Promise.iter id
 
-                    allFn Cy2.clickTextEl "clear logs"
                     allFn Cy2.clickTextEl "disable logs"
 
+                    Cy2.clickTextEl (get3 ()) "sign in"
+
+                    Cy2.waitForEl (get2 ()) "logout (alias@"
                     Cy2.waitForEl (get3 ()) "logout (alias@"
 
-                    let fileCount = 5
+                    Cy2.clickTextEl (get1 ()) "reset counter"
+
+                    let fileCount = 3
 
                     for i = 1 to fileCount do
-                        Cy2.clickTextEl (get2 ()) "add file"
+                        Cy2.clickTextEl (get1 ()) "add file"
                         Cy2.clickTextEl (get3 ()) "add file"
 
                     for i = fileCount * 2 downto 1 do
-                        Cy2.waitForEl (get2 ()) $"index={i} progress=100%%"
-                        Cy2.waitForEl (get3 ()) $"index={i} progress=100%%"
+                        allFn Cy2.waitForEl $"index={i} progress=100%%"
 
                     for i = fileCount * 2 downto 1 do
                         Cy2.clickTextEl (get2 ()) $"[{i}]:delete"
 
-                    Cy2.waitForEl (get3 ()) "file count: 0"
-                    ))
+                    allFn Cy2.waitForEl "file count: 0"
+
+                    Cy2.clickTextEl (get1 ()) "counter (+0)"
+                    Cy2.waitForEl (get3 ()) "counter (+1)"))

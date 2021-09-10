@@ -146,27 +146,5 @@ module State =
 //                                | Error error -> toast (fun x -> x.description <- $"2: {error}")
 
                         Atom.set setter Auth.Actions.signUp (credentials, credentials)
-
-                        //                            let gun = Atom.value getter Selectors.Gun.gun
-//                            let user = gun.user()
-//                            let! ack = Gun.createUser user (Gun.Alias deviceId) (Gun.Pass deviceId)
-//                            printfn $"ack={ack}"
-
-
-                        //                        let! hexString = hexStringPromise
-//                        let fileId = Hydrate.hydrateFile setter (Model.AtomScope.Current, hexString)
-//
-//                        Atom.set setter (State.Device.fileId deviceInfo.DeviceId) fileId
-
-                        let fileId = null
-
-                        let logger = Atom.get getter Selectors.logger
-                        let getLocals () = $"fileId={fileId} {getLocals ()}"
-
-                        logger.Info
-                            (fun () ->
-                                $"{nameof FsBeacon} | Component.HydrateContainer().useEffectOnce()  (currently null)")
-                            getLocals
-
                     }
                     |> Promise.start)

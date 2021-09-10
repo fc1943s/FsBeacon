@@ -30,6 +30,7 @@ module SampleComponent =
                     EnableHubSyncButton.EnableHubSyncButton ()
                     DisableSyncButton.DisableSyncButton ()
                     CounterButton.CounterButton ()
+                    ResetCounterButton.ResetCounterButton ()
                     MessagesListener.MessagesListener ()
                     InnerComponent.InnerComponent ()
 

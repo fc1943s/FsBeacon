@@ -53,13 +53,15 @@ module MessageConsumer =
                                 getLocals
 
                             setAck (Some true)
-                        | _ -> failwith $"{nameof FsBeacon} | MessageConsumer. invalid command"
-
+                        | message ->
+                            let getLocals () = $"message={message} {getLocals ()}"
+                            logger.Info (fun () -> $"{nameof FsBeacon} | MessageConsumer. skipping message") getLocals
                     | _ -> ()
                 }
                 |> Promise.start),
             [|
                 box logger
+                box messageId
                 box consumeCommands
                 box appMessage
                 box ack

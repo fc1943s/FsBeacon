@@ -41,13 +41,13 @@ module Sync =
 
                     //                    Cy2.clickText "clear logs"
 
-                    Cy2.clickText "mount"
-                    Cy2.clickText "hydrate"
-                    Cy2.clickText "sign in"
-
-                    Cy2.waitFor "alias=\"alias@"
-
-                    Cy2.clickText "clear logs"
+//                    Cy2.clickText "mount"
+//                    Cy2.clickText "hydrate"
+//                    Cy2.clickText "sign in"
+//
+//                    Cy2.waitFor "alias=\"alias@"
+//
+//                    Cy2.clickText "clear logs"
 
 
 

@@ -16,6 +16,7 @@
         <Compile Include="src\Components\EnableHubSyncButton.fs" />
         <Compile Include="src\Components\DisableSyncButton.fs" />
         <Compile Include="src\Components\CounterButton.fs" />
+        <Compile Include="src\Components\ResetCounterButton.fs" />
         <Compile Include="src\Components\MessageConsumer.fs" />
         <Compile Include="src\Components\MessagesListener.fs" />
         <Compile Include="src\Components\File.fs" />
