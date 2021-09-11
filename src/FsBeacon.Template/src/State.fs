@@ -126,23 +126,26 @@ module State =
 
         let signIn =
             Atom.Primitives.setSelector
-                (fun _getter setter () ->
+                (fun getter setter () ->
                     promise {
                         Profiling.addTimestamp
                             (fun () -> $"{nameof FsBeacon} | SignInContainer [ render ] starting sign up...")
                             getLocals
 
                         let credentials = $"alias@{Dom.deviceTag}"
-                        //
-//                            match! signIn (credentials, credentials) with
-//                            | Ok _ -> ()
-//                            | Error error ->
-//                                toast (fun x -> x.description <- $"1: {error}")
-//
-//                                match! signUp (credentials, credentials) with
-//                                | Ok _ -> ()
-//                                | Error error -> toast (fun x -> x.description <- $"2: {error}")
 
-                        Atom.set setter Auth.Actions.signUp (credentials, credentials)
+                        match! Auth.signIn getter setter (credentials, credentials) with
+                        | Ok _ -> ()
+                        | Error error ->
+                            //                                toast (fun x -> x.description <- $"1: {error}")
+                            let getLocals () = $"error={error} {getLocals ()}"
+                            Logger.logError (fun () -> "State.Actions.signIn") getLocals
+
+                            match! Auth.signUp getter setter (credentials, credentials) with
+                            | Ok _ -> ()
+                            | Error error ->
+                                //                                    toast (fun x -> x.description <- $"2: {error}")
+                                let getLocals () = $"error={error} {getLocals ()}"
+                                Logger.logError (fun () -> "State.Actions.signIn signUp") getLocals
                     }
                     |> Promise.start)
