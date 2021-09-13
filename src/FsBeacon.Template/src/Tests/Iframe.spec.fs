@@ -185,8 +185,6 @@ module Iframe =
 
                     Cy2.clickTextEl (get1 ()) "reset counter"
 
-                    Cy2.clickTextEl (get2 ()) "disable logs"
-
                     let fileCount = 3
 
                     for i = 1 to fileCount do
