@@ -131,6 +131,8 @@ module Iframe =
 
                     allFn Cy2.clickTextEl "clear logs"
 
+                    Cy2.clickTextEl (get2 ()) "enable logs"
+
                     waitForElSelectorValueIndicator<Gun.GunKeys> get1 "#debug" "privateKeys"
                     |> Promise.bind
                         (fun privateKeys ->
