@@ -146,43 +146,43 @@ module Iframe =
                             })
                     |> Promise.iter id
 
-                    // TODO: remove
-                    Cy2.clickTextEl (get2 ()) "sign in"
-
-                    Cy2.clickTextEl (get1 ()) "disable logs"
-
-                    Cy2.waitForEl (get3 ()) "logout (alias@"
-
-                    waitForElSelectorValueIndicator<Gun.GunKeys> get2 "#debug" "privateKeys"
-                    |> Promise.bind
-                        (fun privateKeys ->
-                            promise {
-                                let getLocals () =
-                                    $"privateKeys={privateKeys} {getLocals ()}"
-
-                                Logger.logWarning (fun () -> "test: keys get2 waitForElSelectorObjectKey") getLocals
-                            })
-                    |> Promise.iter id
-
-                    let fileCount = 2
-
-                    Cy2.clickTextEl (get2 ()) "disable logs"
-
-                    Cy2.clickTextEl (get2 ()) "reset counter"
-                    Cy2.clickTextEl (get2 ()) "counter (+0)"
-
-                    for i = 1 to fileCount do
-                        Cy2.clickTextEl (get1 ()) "add file"
-                        Cy2.clickTextEl (get3 ()) "add file"
-
-                    for i = 1 to fileCount * 2 do
-                        allFn Cy2.waitForEl $"index={i} progress=100%%"
-
-                    for i = fileCount * 2 downto 1 do
-                        Cy2.clickTextEl (get2 ()) $"[{i}]:delete"
-
-                    allFn Cy2.waitForEl "file count: 0"
-                    Cy2.waitForEl (get1 ()) "counter (+1)"
-                    Cy2.waitForEl (get3 ()) "counter (+1)"
+////                    // TODO: remove
+////                    Cy2.clickTextEl (get2 ()) "sign in"
+//
+//                    Cy2.clickTextEl (get1 ()) "disable logs"
+//
+//                    Cy2.waitForEl (get3 ()) "logout (alias@"
+//
+//                    waitForElSelectorValueIndicator<Gun.GunKeys> get2 "#debug" "privateKeys"
+//                    |> Promise.bind
+//                        (fun privateKeys ->
+//                            promise {
+//                                let getLocals () =
+//                                    $"privateKeys={privateKeys} {getLocals ()}"
+//
+//                                Logger.logWarning (fun () -> "test: keys get2 waitForElSelectorObjectKey") getLocals
+//                            })
+//                    |> Promise.iter id
+//
+//                    let fileCount = 2
+//
+//                    Cy2.clickTextEl (get2 ()) "disable logs"
+//
+//                    Cy2.clickTextEl (get2 ()) "reset counter"
+//                    Cy2.clickTextEl (get2 ()) "counter (+0)"
+//
+//                    for i = 1 to fileCount do
+//                        Cy2.clickTextEl (get1 ()) "add file"
+//                        Cy2.clickTextEl (get3 ()) "add file"
+//
+//                    for i = 1 to fileCount * 2 do
+//                        allFn Cy2.waitForEl $"index={i} progress=100%%"
+//
+//                    for i = fileCount * 2 downto 1 do
+//                        Cy2.clickTextEl (get2 ()) $"[{i}]:delete"
+//
+//                    allFn Cy2.waitForEl "file count: 0"
+//                    Cy2.waitForEl (get1 ()) "counter (+1)"
+//                    Cy2.waitForEl (get3 ()) "counter (+1)"
 
                     ))
