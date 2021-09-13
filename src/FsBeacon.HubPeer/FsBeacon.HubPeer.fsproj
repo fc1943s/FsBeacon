@@ -17,6 +17,7 @@
     <Content Include="paket.references" />
     <Content Include=".gitignore" />
     <Content Include="Dockerfile" />
+    <Content Include="published.Dockerfile" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\FsBeacon.Shared\FsBeacon.Shared.fsproj" />

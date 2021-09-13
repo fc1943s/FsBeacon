@@ -43,6 +43,8 @@ jobs:
       - run: dotnet nuget add source https://nuget.pkg.github.com/${{ github.actor }}/index.json --name github
       - run: dotnet nuget push src/FsBeacon.Shared/bin/Release/*.nupkg --source github --api-key ${{ secrets.GITHUB_TOKEN }} --skip-duplicate
 
+      - run: dotnet publish src/FsBeacon.HubPeer/FsBeacon.HubPeer.fsproj --self-contained --runtime linux-x64 --configuration Release --output /hubpeer
+
       - uses: actions/upload-artifact@v2
         if: failure()
         with:
@@ -84,15 +86,11 @@ jobs:
           GITHUB_ACTOR: ${{ github.actor }}
           GITHUB_READ_PACKAGES_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          context: .
-          file: src/FsBeacon.HubPeer/Dockerfile
+          context: /hubpeer
+          file: src/FsBeacon.HubPeer/published.Dockerfile
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.hubpeer_meta.outputs.tags }}
           labels: ${{ steps.hubpeer_meta.outputs.labels }}
-          pull: true
-          secrets: |
-            "GITHUB_ACTOR=${{ github.actor }}"
-            "GITHUB_READ_PACKAGES_TOKEN=${{ secrets.GITHUB_TOKEN }}"
 
       - id: gunpeer_meta
         uses: docker/metadata-action@v3
