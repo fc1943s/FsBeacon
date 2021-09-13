@@ -105,7 +105,8 @@ module Iframe =
                     Cy2.waitFor "\"IsTesting\": true,"
 
                     Cy2.waitFor
-                        "158. FsStore | Engine.createAtomWithSubscription [ debouncedSync ](a2) localAdaptersAtom=atom58 atomType=Data,System.Boolean atomPath=FsUi/systemUiFont defaultValue=true"
+                        "164. FsStore | Engine.createAtomWithSubscription [ debouncedSync ](a2) localAdaptersAtom=atom58 atomType=Data,System.Boolean atomPath=FsUi/systemUiFont defaultValue=true"
+
 
                     allFn (fun node () -> node.should "not.be.empty") ()
 

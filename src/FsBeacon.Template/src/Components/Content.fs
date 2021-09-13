@@ -33,7 +33,7 @@ module Content =
 
     [<ReactComponent>]
     let Content () =
-        let deviceInfo = Store.useValue Selectors.deviceInfo
+        let deviceInfo = Store.useValue Selectors.Store.deviceInfo
 
         Profiling.addTimestamp (fun () -> $"{nameof FsBeacon} | Content [ render ] ") getLocals
 
