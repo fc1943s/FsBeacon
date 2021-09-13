@@ -5,7 +5,6 @@ open FsCore
 open Feliz
 open FsJs
 open FsBeacon.Template.State
-open FsStore.Hooks
 open FsUi.Bindings
 open FsUi.Hooks
 
@@ -13,7 +12,6 @@ open FsUi.Hooks
 module InnerComponent =
     [<ReactComponent>]
     let InnerComponent () =
-        let _ = Auth.useGunAliasLoader ()
         Profiling.addTimestamp (fun () -> $"{nameof FsBeacon} | InnerComponent [ render ] ") getLocals
 
         React.useEffect (

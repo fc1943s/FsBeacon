@@ -168,6 +168,7 @@ module Iframe =
                             })
                     |> Promise.iter id
 
+
                     Cy2.clickTextEl (get1 ()) "disable logs"
 
                     Cy2.waitForEl (get3 ()) "logout (alias@"
@@ -183,13 +184,15 @@ module Iframe =
                             })
                     |> Promise.iter id
 
-                    Cy2.clickTextEl (get1 ()) "reset counter"
-
                     let fileCount = 3
 
                     for i = 1 to fileCount do
                         Cy2.clickTextEl (get1 ()) "add file"
                         Cy2.clickTextEl (get3 ()) "add file"
+
+                    Cy2.clickTextEl (get1 ()) "reset counter"
+                    allFn Cy2.waitForEl "file count: 0"
+                    Cy2.clickTextEl (get1 ()) "counter (+0)"
 
                     for i = 1 to fileCount * 2 do
                         allFn Cy2.waitForEl $"index={i} progress=100%%"
@@ -197,7 +200,4 @@ module Iframe =
                     for i = fileCount * 2 downto 1 do
                         Cy2.clickTextEl (get2 ()) $"[{i}]:delete"
 
-                    allFn Cy2.waitForEl "file count: 0"
-
-                    Cy2.clickTextEl (get1 ()) "counter (+0)"
                     Cy2.waitForEl (get3 ()) "counter (+1)"))
