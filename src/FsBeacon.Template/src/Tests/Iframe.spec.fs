@@ -161,6 +161,7 @@ module Iframe =
                                     let! _ =
                                         (getIframeN 2)
                                             .invoke ("attr", "src", $"https://localhost:49222/#{base64}")
+
                                     ()
 
                                 ()
@@ -170,9 +171,21 @@ module Iframe =
                     Cy2.clickTextEl (get1 ()) "disable logs"
 
                     Cy2.waitForEl (get3 ()) "logout (alias@"
-                    Cy2.waitForEl (get2 ()) "logout (alias@"
+
+                    waitForElSelectorValueIndicator<Gun.GunKeys> get2 "#debug" "privateKeys"
+                    |> Promise.bind
+                        (fun privateKeys ->
+                            promise {
+                                let getLocals () =
+                                    $"privateKeys={privateKeys} {getLocals ()}"
+
+                                Logger.logWarning (fun () -> "test: keys get2 waitForElSelectorObjectKey") getLocals
+                            })
+                    |> Promise.iter id
 
                     Cy2.clickTextEl (get1 ()) "reset counter"
+
+                    Cy2.clickTextEl (get2 ()) "disable logs"
 
                     let fileCount = 3
 

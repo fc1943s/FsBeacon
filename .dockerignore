@@ -10,3 +10,5 @@
 **/.git
 **/.paket
 **/.run
+**/cra_output
+**/cypress/videos
