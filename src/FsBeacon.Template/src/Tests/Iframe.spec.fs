@@ -146,8 +146,8 @@ module Iframe =
                             })
                     |> Promise.iter id
 
-                    // TODO: remove
-                    Cy2.clickTextEl (get2 ()) "sign in"
+//                    // TODO: remove
+//                    Cy2.clickTextEl (get2 ()) "sign in"
 
                     Cy2.clickTextEl (get1 ()) "disable logs"
 
