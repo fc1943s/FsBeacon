@@ -1,11 +1,13 @@
 ﻿namespace FsBeacon.HubPeer
 
+open System
 open FsClr
 open FsCore
 open System.IO
 open Argu
 open Fable.SignalR
 open FsBeacon.Shared
+open Microsoft.AspNetCore.Cors.Infrastructure
 open Microsoft.Extensions.Logging
 open FSharp.Control.Tasks.V2
 open Saturn
@@ -26,23 +28,42 @@ module Main =
             disable_diagnostics
             use_developer_exceptions
             memory_cache
-            no_router
             logging loggingFn
             force_ssl
-
+            no_router
+            //            use_router (text (nameof FsBeacon))
             use_cors
-                "cors"
+                (nameof CorsPolicyBuilder)
                 (fun corsBuilder ->
                     corsBuilder
-                        .AllowCredentials()
                         .AllowAnyHeader()
+                        .AllowAnyMethod()
+                        .WithMethods(
+                            [|
+                                "POST"
+                                "GET"
+                                "OPTIONS"
+                            |]
+                        )
+                        .SetIsOriginAllowed(fun host ->
+                            let getLocals () = $"host={host} {getLocals ()}"
+                            Logger.logInfo (fun () -> "Main.getApp / use_cors / SetIsOriginAllowed") getLocals
+                            true)
+//                        .AllowCredentials()
                         .WithOrigins [|
-                            "https://localhost:33929"
-                            "https://localhost:33922"
-                            "https://localhost:9769"
                             "https://localhost:9762"
+                            "https://localhost:9769"
+                            "https://localhost:33922"
+                            "https://localhost:33929"
+                            "http://localhost:9771"
                         |]
                     |> ignore)
+
+            pipe_through
+                (fun handler ->
+                    let getLocals () = $"handler={handler} {getLocals ()}"
+                    Logger.logInfo (fun () -> "Main.getApp / pipe_through") getLocals
+                    handler)
 
             service_config
                 (fun serviceCollection ->
@@ -123,14 +144,14 @@ module Program =
 
         let args = Cli.parseArgs argv
 
-        let getLocals () = $"args={args} {getLocals ()}"
+        let getLocals () = $"n=0 args={args} {getLocals ()}"
         Logger.logInfo (fun () -> "Program.main") getLocals
 
         let port = args.GetResult Args.Port
 
         let rootPath =
             args.GetResult Args.Root_Path
-            |> System.Environment.ExpandEnvironmentVariables
+            |> Environment.ExpandEnvironmentVariables
             |> Path.GetFullPath
 
         let app = Main.getApp port rootPath

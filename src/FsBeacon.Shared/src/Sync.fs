@@ -18,4 +18,5 @@ module Sync =
         | FilterResult of keys: string []
         | FilterStream of alias: string * atomPath: string * keys: string []
 
+//    let endpoint = $"/{nameof FsBeacon}"
     let endpoint = "/fsbeacon"
