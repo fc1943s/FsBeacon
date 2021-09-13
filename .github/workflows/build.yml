@@ -40,10 +40,14 @@ jobs:
           GITHUB_READ_PACKAGES_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: cd src/FsBeacon.Shared; ./pack.ps1
 
+      - shell: pwsh
+        env:
+          GITHUB_READ_PACKAGES_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_ACTOR: ${{ github.actor }}
+        run: cd src/FsBeacon.HubPeer; dotnet publish --self-contained --runtime linux-x64 --configuration Release --output /hubpeer
+
       - run: dotnet nuget add source https://nuget.pkg.github.com/${{ github.actor }}/index.json --name github
       - run: dotnet nuget push src/FsBeacon.Shared/bin/Release/*.nupkg --source github --api-key ${{ secrets.GITHUB_TOKEN }} --skip-duplicate
-
-      - run: dotnet publish src/FsBeacon.HubPeer/FsBeacon.HubPeer.fsproj --no-restore --self-contained --runtime linux-x64 --configuration Release --output /hubpeer
 
       - uses: actions/upload-artifact@v2
         if: failure()
