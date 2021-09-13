@@ -1,5 +1,6 @@
 namespace FsBeacon.Template.Tests
 
+open System
 open Fable.Core
 open FsCore
 open Fable.Core.JsInterop
@@ -38,29 +39,6 @@ module Iframe =
                 match matches with
                 | _ :: x :: _ -> x |> Json.decode<'T> |> Some
                 | _ -> None)
-
-    //    let inline actorSignIn elFn fn =
-//        waitForElSelectorObjectKey<Gun.GunKeys> elFn "#component" "PrivateKeys" "SessionRestored"
-//        |> Promise.bind
-//            (fun privateKeys ->
-//                promise {
-//                    let keysJson = JS.JSON.stringify privateKeys
-//                    do! fn keysJson
-//                })
-//        |> Promise.iter id
-
-
-    //    let typeText (el: Cy.Chainable2<_>) (text: string) =
-//        el.invoke ("val", text |> String.substring 0 (text.Length - 1))
-//        |> ignore
-//
-//        el.``type``
-//            (text |> String.substringFrom -1)
-//            {|
-//                force = false
-//                parseSpecialCharSequences = false
-//            |}
-//        |> ignore
 
     let inline someFn fn p elFnList =
         elFnList |> List.iter (fun elFn -> fn (elFn ()) p)
@@ -168,6 +146,8 @@ module Iframe =
                             })
                     |> Promise.iter id
 
+                    // TODO: remove
+                    Cy2.clickTextEl (get2 ()) "sign in"
 
                     Cy2.clickTextEl (get1 ()) "disable logs"
 
@@ -190,17 +170,19 @@ module Iframe =
                         Cy2.clickTextEl (get1 ()) "add file"
                         Cy2.clickTextEl (get3 ()) "add file"
 
-                    Cy2.clickTextEl (get1 ()) "reset counter"
-                    Cy2.clickTextEl (get1 ()) "counter (+0)"
+                    Cy2.clickTextEl (get2 ()) "disable logs"
+
+                    Cy2.clickTextEl (get2 ()) "reset counter"
+                    Cy2.clickTextEl (get2 ()) "counter (+0)"
 
                     for i = 1 to fileCount * 2 do
                         allFn Cy2.waitForEl $"index={i} progress=100%%"
-
-                    Cy2.waitForEl (get3 ()) "counter (+1)"
 
                     for i = fileCount * 2 downto 1 do
                         Cy2.clickTextEl (get2 ()) $"[{i}]:delete"
 
                     allFn Cy2.waitForEl "file count: 0"
+                    Cy2.waitForEl (get1 ()) "counter (+1)"
+                    Cy2.waitForEl (get3 ()) "counter (+1)"
 
                     ))
