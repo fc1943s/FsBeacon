@@ -126,10 +126,10 @@ module Iframe =
 
                     Cy2.clickTextEl (get3 ()) "enable hub sync"
 
-                    allFn Cy2.clickTextEl "clear logs"
-
                     Cy2.clickTextEl (get1 ()) "sign in"
                     Cy2.clickTextEl (get3 ()) "sign in"
+
+                    allFn Cy2.clickTextEl "clear logs"
 
                     waitForElSelectorValueIndicator<Gun.GunKeys> get1 "#debug" "privateKeys"
                     |> Promise.bind

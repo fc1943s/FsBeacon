@@ -50,12 +50,12 @@ jobs:
           path: ./src/FsBeacon.Template/cypress/screenshots
 
       - uses: actions/upload-artifact@v2
-        if: failure()
         with:
           name: cypress-screenshots
           path: ./src/FsBeacon.Template/cypress/screenshots
 
       - uses: actions/upload-artifact@v2
+        if: failure()
         with:
           name: cypress-videos
           path: ./src/FsBeacon.Template/cypress/videos
