@@ -89,6 +89,7 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.hubpeer_meta.outputs.tags }}
           labels: ${{ steps.hubpeer_meta.outputs.labels }}
+          pull: true
           secrets: |
             "GITHUB_ACTOR=${{ github.actor }}"
             "GITHUB_READ_PACKAGES_TOKEN=${{ secrets.GITHUB_TOKEN }}"

@@ -302,7 +302,7 @@ NUGET
       System.ValueTuple (>= 4.4)
     Wcwidth (0.4)
   remote: https://nuget.pkg.github.com/fc1943s/index.json
-    FsBeacon.Shared (0.0.1-alpha.1)
+    FsBeacon.Shared (0.0.1-alpha.2)
       FSharp.Core (>= 5.0 < 6.0)
     FsClr (0.0.1-alpha.2)
       Argu (>= 6.1 < 7.0)
@@ -323,7 +323,7 @@ NUGET
       FsCore (>= 0.0.0-prerelease < 1.0.0-prerelease)
       FSharp.Core (>= 5.0 < 6.0)
       Thoth.Json (>= 6.0 < 7.0)
-    FsStore (0.2.0-alpha.50)
+    FsStore (0.2.0-alpha.51)
       Fable.SignalR (>= 0.11 < 1.0)
       FsBeacon.Shared (>= 0.0.0-prerelease < 1.0.0-prerelease)
       FsCore (>= 0.0.0-prerelease < 1.0.0-prerelease)
