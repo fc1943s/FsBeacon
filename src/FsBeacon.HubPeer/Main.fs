@@ -49,7 +49,7 @@ module Main =
                             let getLocals () = $"host={host} {getLocals ()}"
                             Logger.logInfo (fun () -> "Main.getApp / use_cors / SetIsOriginAllowed") getLocals
                             true)
-//                        .AllowCredentials()
+                        //                        .AllowCredentials()
                         .WithOrigins [|
                             "https://localhost:9762"
                             "https://localhost:9769"
@@ -153,6 +153,9 @@ module Program =
             args.GetResult Args.Root_Path
             |> Environment.ExpandEnvironmentVariables
             |> Path.GetFullPath
+
+        if rootPath.Trim().Length > 0 then
+            Directory.CreateDirectory rootPath |> ignore
 
         let app = Main.getApp port rootPath
         run app

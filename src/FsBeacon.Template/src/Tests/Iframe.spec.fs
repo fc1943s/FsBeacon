@@ -193,7 +193,7 @@ module Iframe =
                         Cy2.clickTextEl (get1 ()) "add file"
                         Cy2.clickTextEl (get3 ()) "add file"
 
-                    for i = fileCount * 2 downto 1 do
+                    for i = 1 to fileCount * 2 do
                         allFn Cy2.waitForEl $"index={i} progress=100%%"
 
                     for i = fileCount * 2 downto 1 do
