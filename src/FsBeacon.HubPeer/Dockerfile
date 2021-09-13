@@ -1,4 +1,8 @@
 FROM mcr.microsoft.com/dotnet/sdk:6.0-alpine AS build
+ARG GITHUB_ACTOR
+ARG GITHUB_READ_PACKAGES_TOKEN
+ENV GITHUB_ACTOR=$GITHUB_ACTOR
+ENV GITHUB_READ_PACKAGES_TOKEN=$GITHUB_READ_PACKAGES_TOKEN
 WORKDIR /repo
 COPY .config/dotnet-tools.json .config/dotnet-tools.json
 COPY paket.dependencies paket.dependencies
