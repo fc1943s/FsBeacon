@@ -191,13 +191,16 @@ module Iframe =
                         Cy2.clickTextEl (get3 ()) "add file"
 
                     Cy2.clickTextEl (get1 ()) "reset counter"
-                    allFn Cy2.waitForEl "file count: 0"
                     Cy2.clickTextEl (get1 ()) "counter (+0)"
 
                     for i = 1 to fileCount * 2 do
                         allFn Cy2.waitForEl $"index={i} progress=100%%"
 
+                    Cy2.waitForEl (get3 ()) "counter (+1)"
+
                     for i = fileCount * 2 downto 1 do
                         Cy2.clickTextEl (get2 ()) $"[{i}]:delete"
 
-                    Cy2.waitForEl (get3 ()) "counter (+1)"))
+                    allFn Cy2.waitForEl "file count: 0"
+
+                    ))
