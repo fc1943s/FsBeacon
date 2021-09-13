@@ -40,14 +40,15 @@ jobs:
           GITHUB_READ_PACKAGES_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: cd src/FsBeacon.Shared; ./pack.ps1
 
+      - run: dotnet nuget add source https://nuget.pkg.github.com/${{ github.actor }}/index.json --name github -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text
+
       - shell: pwsh
         env:
           GITHUB_READ_PACKAGES_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_ACTOR: ${{ github.actor }}
-        run: cd src/FsBeacon.HubPeer; dotnet publish --self-contained --runtime linux-x64 --configuration Release --output /hubpeer
+        run: cd src/FsBeacon.HubPeer; dotnet publish --self-contained --runtime linux-x64 --configuration Release --output ./output
 
-      - run: dotnet nuget add source https://nuget.pkg.github.com/${{ github.actor }}/index.json --name github
-      - run: dotnet nuget push src/FsBeacon.Shared/bin/Release/*.nupkg --source github --api-key ${{ secrets.GITHUB_TOKEN }} --skip-duplicate
+      - run: dotnet nuget push src/FsBeacon.Shared/bin/Release/*.nupkg --source github --skip-duplicate
 
       - uses: actions/upload-artifact@v2
         if: failure()
@@ -90,7 +91,7 @@ jobs:
           GITHUB_ACTOR: ${{ github.actor }}
           GITHUB_READ_PACKAGES_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          context: /hubpeer
+          context: src/FsBeacon.HubPeer/output
           file: src/FsBeacon.HubPeer/published.Dockerfile
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.hubpeer_meta.outputs.tags }}
