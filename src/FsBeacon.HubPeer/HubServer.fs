@@ -13,13 +13,13 @@ open System
 
 
 module HubServer =
-    let inline createParentDirectory path =
+    let createParentDirectory path =
         Directory.CreateDirectory (Directory.GetParent(path).FullName)
         |> ignore
 
     type AtomRef = AtomRef of alias: string * atomPath: string
 
-    let inline writeFile rootPath (AtomRef (alias, atomPath)) value =
+    let writeFile rootPath (AtomRef (alias, atomPath)) value =
         task {
             try
                 let path = Path.Combine (rootPath, alias, atomPath)
@@ -37,7 +37,7 @@ module HubServer =
                 return false
         }
 
-    let inline readFile rootPath (AtomRef (alias, atomPath)) =
+    let readFile rootPath (AtomRef (alias, atomPath)) =
         task {
             try
                 let path = Path.Combine (rootPath, alias, atomPath)
@@ -56,7 +56,7 @@ module HubServer =
 
     let keyWatchlist = ConcurrentDictionary<AtomRef, TicksGuid * string [] option> ()
 
-    let inline fetchTableKeys rootPath (AtomRef (alias, atomPath)) =
+    let fetchTableKeys rootPath (AtomRef (alias, atomPath)) =
         let path = Path.Combine (rootPath, alias, atomPath)
         Directory.CreateDirectory path |> ignore
 
@@ -64,14 +64,16 @@ module HubServer =
         |> Seq.map Path.GetFileName
         |> Seq.toArray
 
-    let inline trySubscribeKeys atomRef =
+    let trySubscribeKeys atomRef =
         if keyWatchlist.ContainsKey atomRef |> not then
             keyWatchlist.[atomRef] <- (Guid.newTicksGuid (), Some [||])
 
-    let inline substringTo n (str: string) =
-        if str.Length > n then str |> String.substring 0 n else str
+    let substringTo n (str: string) =
+        match str with
+        | String.Valid _ when str.Length > n -> str |> String.substring 0 n
+        | _ -> str
 
-    let inline update rootPath (msg: Sync.Request) (_hubContext: FableHub<Sync.Request, Sync.Response> option) =
+    let update rootPath (msg: Sync.Request) (_hubContext: FableHub<Sync.Request, Sync.Response> option) =
         task {
             let getLocals () =
                 $"msg={string msg |> substringTo 400} {getLocals ()}"
@@ -107,15 +109,15 @@ module HubServer =
                 return Sync.Response.FilterResult result
         }
 
-    let inline invoke rootPath (msg: Sync.Request) _ = update rootPath msg None
+    let invoke rootPath (msg: Sync.Request) _ = update rootPath msg None
 
-    let inline send rootPath (msg: Sync.Request) (hubContext: FableHub<Sync.Request, Sync.Response>) =
+    let send rootPath (msg: Sync.Request) (hubContext: FableHub<Sync.Request, Sync.Response>) =
         task {
             let! response = update rootPath msg (Some hubContext)
             do! hubContext.Clients.Caller.Send response
         }
 
-    let inline tryCleanup (dict: ConcurrentDictionary<AtomRef, TicksGuid * _>) =
+    let tryCleanup (dict: ConcurrentDictionary<AtomRef, TicksGuid * _>) =
         dict
         |> Seq.iter
             (fun (KeyValue (atomRef, (lastTicks, lastValue))) ->
@@ -138,7 +140,7 @@ module HubServer =
 
                     dict.TryRemove atomRef |> ignore)
 
-    let inline tick rootPath sendAll =
+    let tick rootPath sendAll =
         task {
             let getLocals () =
                 $"keyWatchlist.Count={keyWatchlist.Count} {getLocals ()}"
@@ -170,7 +172,7 @@ module HubServer =
 
 
     type FileSystem.FileSystemChange with
-        static member inline Path event =
+        static member Path event =
             match event with
             | FileSystem.FileSystemChange.Error _ -> None, None
             | FileSystem.FileSystemChange.Changed path -> None, Some path
@@ -178,7 +180,7 @@ module HubServer =
             | FileSystem.FileSystemChange.Deleted path -> None, Some path
             | FileSystem.FileSystemChange.Renamed (oldPath, path) -> Some oldPath, Some path
 
-    let inline fileEvent rootPath (sendAll: Sync.Response -> Task) ticks event =
+    let fileEvent rootPath (sendAll: Sync.Response -> Task) ticks event =
         let oldPath, newPath = event |> FileSystem.FileSystemChange.Path
 
         let getLocals () =

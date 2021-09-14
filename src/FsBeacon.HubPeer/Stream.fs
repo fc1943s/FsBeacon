@@ -12,7 +12,7 @@ open Microsoft.Extensions.Hosting
 
 
 module Stream =
-    let inline sendToClient update rootPath (msg: Sync.Request) (hubContext: FableHub<Sync.Request, Sync.Response>) =
+    let sendToClient update rootPath (msg: Sync.Request) (hubContext: FableHub<Sync.Request, Sync.Response>) =
         update rootPath msg (Some hubContext)
         |> Async.AwaitTask
         |> Async.initAsyncSeq
@@ -56,7 +56,7 @@ module Stream =
                     let hub = serviceProvider.GetRequiredService<FableHubCaller<Sync.Request, Sync.Response>> ()
                     FileWatcher (hub, fn, dispose))
 
-    let inline withTicker fn serviceCollection =
+    let withTicker fn serviceCollection =
         Ticker.Create (
             serviceCollection,
             (fun hub ->
@@ -69,7 +69,7 @@ module Stream =
             fun () -> Logger.logDebug (fun () -> "Stream.withTicker / dispose") getLocals
         )
 
-    let inline withFileWatcher rootPath fn serviceCollection =
+    let withFileWatcher rootPath fn serviceCollection =
         let watch, disposable = FileSystem.watch rootPath
         let getLocals () = $"{getLocals ()}"
 

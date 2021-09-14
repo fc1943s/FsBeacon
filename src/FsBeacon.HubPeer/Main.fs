@@ -17,12 +17,12 @@ open Saturn
 module Main =
     let minimumLogLevel = LogLevel.Information
 
-    let inline loggingFn (logging: ILoggingBuilder) =
+    let loggingFn (logging: ILoggingBuilder) =
         logging.SetMinimumLevel minimumLogLevel |> ignore
     //  logging.AddFilter ("Microsoft.", LogLevel.Warning)
     //  |> ignore
 
-    let inline getApp port rootPath =
+    let getApp port rootPath =
         application {
             url $"https://0.0.0.0:{port}/"
             use_gzip
