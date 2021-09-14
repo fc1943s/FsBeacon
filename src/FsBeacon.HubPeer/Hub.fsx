@@ -1,15 +1,15 @@
-#r "nuget: FSharp.Control.AsyncSeq"
-#r "nuget: Hopac"
-#r "nuget: FsCheck"
-#r "nuget: TaskBuilder.fs"
-#r "nuget: FsCore, 0.0.1-alpha.12"
-#r "nuget: XPlot.Plotly, 4.0.3"
-#r "nuget: XPlot.Plotly.Interactive, 4.0.3"
+//#r "nuget: FSharp.Control.AsyncSeq"
+//#r "nuget: Hopac"
+//#r "nuget: FsCheck"
+//#r "nuget: TaskBuilder.fs"
+//#r "nuget: FsCore, 0.0.1-alpha.12"
+//#r "nuget: XPlot.Plotly, 4.0.3"
+//#r "nuget: XPlot.Plotly.Interactive, 4.0.3"
 
 //#load "Hub.fs"
 
 //open FsBeacon.HubPeer
-open FSharp.Control
+//open FSharp.Control
 //open System
 //open XPlot.Plotly
 

@@ -81,22 +81,22 @@ module Main =
                                     corsBuilder
                                         .AllowAnyHeader()
                                         .AllowAnyMethod()
-                                        .SetIsOriginAllowed(fun host ->
-                                            let getLocals () = $"host={host} {getLocals ()}"
-
-                                            Logger.logInfo
-                                                (fun () -> "Main.getApp / use_cors / SetIsOriginAllowed")
-                                                getLocals
+                                        .SetIsOriginAllowed(fun _host ->
+                                            //                                            let getLocals () = $"host={host} {getLocals ()}"
+//
+//                                            Logger.logInfo
+//                                                (fun () -> "Main.getApp / use_cors / SetIsOriginAllowed")
+//                                                getLocals
 
                                             true)
-                                        .AllowCredentials()
-                                        .WithOrigins [|
-                                            "https://localhost:9762"
-                                            "https://localhost:9769"
-                                            "https://localhost:33922"
-                                            "https://localhost:33929"
-                                            "http://localhost:9771"
-                                        |]
+                                        .AllowCredentials ()
+                                    //                                        .WithOrigins [|
+//                                            "https://localhost:9762"
+//                                            "https://localhost:9769"
+//                                            "https://localhost:33922"
+//                                            "https://localhost:33929"
+//                                            "http://localhost:9771"
+//                                        |]
                                     |> ignore))
 
                     with_before_routing
