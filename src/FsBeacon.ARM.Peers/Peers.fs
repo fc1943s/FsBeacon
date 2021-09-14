@@ -44,12 +44,7 @@ module Peers =
                             "package.json", (File.ReadAllBytes $"../{projectDir}/package.json")
                             "yarn.lock", (File.ReadAllBytes $"../{projectDir}/yarn.lock")
                             "server.js", (File.ReadAllBytes $"../{projectDir}/server.js")
-
-                            "cert.pem",
-                            (File.ReadAllBytes $"../{projectDir}/ssl/{containerId}.eastus.azurecontainer.io.pem")
-
-                            "key.pem",
-                            (File.ReadAllBytes $"../{projectDir}/ssl/{containerId}.eastus.azurecontainer.io-key.pem")
+                            "start.ps1", (File.ReadAllBytes $"../{projectDir}/start.ps1")
                         ]
                     volume_mount.azureFile
                         fileShareId
