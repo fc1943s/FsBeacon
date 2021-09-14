@@ -7,8 +7,9 @@ open System.IO
 open Argu
 open Fable.SignalR
 open FsBeacon.Shared
-open Microsoft.AspNetCore.Cors.Infrastructure
+open Microsoft.AspNetCore.Builder
 open Microsoft.Extensions.Logging
+open Microsoft.Extensions.DependencyInjection
 open FSharp.Control.Tasks.V2
 open Saturn
 
@@ -32,25 +33,9 @@ module Main =
             force_ssl
             no_router
             //            use_router (text (nameof FsBeacon))
-            use_cors
-                (nameof CorsPolicyBuilder)
-                (fun corsBuilder ->
-                    corsBuilder
-                        .AllowAnyHeader()
-                        .AllowAnyMethod()
-                        .SetIsOriginAllowed(fun host ->
-                            let getLocals () = $"host={host} {getLocals ()}"
-                            Logger.logInfo (fun () -> "Main.getApp / use_cors / SetIsOriginAllowed") getLocals
-                            true)
-                        .AllowCredentials()
-                        .WithOrigins [|
-                            "https://localhost:9762"
-                            "https://localhost:9769"
-                            "https://localhost:33922"
-                            "https://localhost:33929"
-                            "http://localhost:9771"
-                        |]
-                    |> ignore)
+//            use_cors
+//                (nameof CorsPolicyBuilder)
+
 
             pipe_through
                 (fun handler ->
@@ -60,7 +45,7 @@ module Main =
 
             service_config
                 (fun serviceCollection ->
-                    serviceCollection
+                    serviceCollection.AddCors ()
                     |> Stream.withFileWatcher
                         rootPath
                         (fun (hub: FableHubCaller<Sync.Request, Sync.Response>, ticks, change) ->
@@ -90,7 +75,29 @@ module Main =
                                 $"_applicationBuilder=?obj {getLocals ()}"
 
                             Logger.logInfo (fun () -> "Main.getApp / use_signalr.with_after_routing") getLocals
-                            _applicationBuilder)
+
+                            _applicationBuilder.UseCors
+                                (fun corsBuilder ->
+                                    corsBuilder
+                                        .AllowAnyHeader()
+                                        .AllowAnyMethod()
+                                        .SetIsOriginAllowed(fun host ->
+                                            let getLocals () = $"host={host} {getLocals ()}"
+
+                                            Logger.logInfo
+                                                (fun () -> "Main.getApp / use_cors / SetIsOriginAllowed")
+                                                getLocals
+
+                                            true)
+                                        .AllowCredentials()
+                                        .WithOrigins [|
+                                            "https://localhost:9762"
+                                            "https://localhost:9769"
+                                            "https://localhost:33922"
+                                            "https://localhost:33929"
+                                            "http://localhost:9771"
+                                        |]
+                                    |> ignore))
 
                     with_before_routing
                         (fun _applicationBuilder ->
@@ -126,7 +133,7 @@ module Args =
             member this.Usage =
                 match this with
                 | Root_Path _ ->
-                    "Where data will be stored in the format of $root_path/$username/$atomPath/$timestampHash."
+                    "Where data will be stored in the format of $alias/$storeRoot/$collection/$ticksGuid/$atomName."
                 | Port _ -> "Port to serve the signalr websocket server."
 
 
