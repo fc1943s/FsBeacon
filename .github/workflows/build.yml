@@ -26,6 +26,8 @@ jobs:
 
       - run: cd ./src/FsBeacon.Template && yarn install && rm -rf node_modules/gun/examples/iris
 
+      - run: dotnet nuget add source https://nuget.pkg.github.com/${{ github.actor }}/index.json --name github -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text
+
       - uses: cypress-io/github-action@v2
         env:
           GITHUB_READ_PACKAGES_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -39,14 +41,6 @@ jobs:
         env:
           GITHUB_READ_PACKAGES_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: cd src/FsBeacon.Shared; ./pack.ps1
-
-      - run: dotnet nuget add source https://nuget.pkg.github.com/${{ github.actor }}/index.json --name github -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text
-
-      - shell: pwsh
-        env:
-          GITHUB_READ_PACKAGES_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_ACTOR: ${{ github.actor }}
-        run: cd src/FsBeacon.HubPeer; dotnet publish --self-contained --runtime linux-x64 --configuration Release --output ./output
 
       - run: dotnet nuget push src/FsBeacon.Shared/bin/Release/*.nupkg --source github --skip-duplicate
 
@@ -91,11 +85,14 @@ jobs:
           GITHUB_ACTOR: ${{ github.actor }}
           GITHUB_READ_PACKAGES_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          context: src/FsBeacon.HubPeer/output
-          file: src/FsBeacon.HubPeer/published.Dockerfile
+          context: .
+          file: src/FsBeacon.HubPeer/Dockerfile
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.hubpeer_meta.outputs.tags }}
           labels: ${{ steps.hubpeer_meta.outputs.labels }}
+          build-args: |
+            GITHUB_ACTOR=${{ github.actor }}
+            GITHUB_READ_PACKAGES_TOKEN=${{ secrets.GITHUB_TOKEN }}
 
       - id: gunpeer_meta
         uses: docker/metadata-action@v3

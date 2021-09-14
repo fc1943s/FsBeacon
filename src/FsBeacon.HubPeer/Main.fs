@@ -38,18 +38,11 @@ module Main =
                     corsBuilder
                         .AllowAnyHeader()
                         .AllowAnyMethod()
-                        .WithMethods(
-                            [|
-                                "POST"
-                                "GET"
-                                "OPTIONS"
-                            |]
-                        )
                         .SetIsOriginAllowed(fun host ->
                             let getLocals () = $"host={host} {getLocals ()}"
                             Logger.logInfo (fun () -> "Main.getApp / use_cors / SetIsOriginAllowed") getLocals
                             true)
-                        //                        .AllowCredentials()
+                        .AllowCredentials()
                         .WithOrigins [|
                             "https://localhost:9762"
                             "https://localhost:9769"
@@ -82,7 +75,7 @@ module Main =
                     send (HubServer.send rootPath)
                     invoke (HubServer.invoke rootPath)
                     stream_from (Stream.sendToClient HubServer.update rootPath)
-                    //                        use_messagepack
+                    //                    use_messagepack
                     with_log_level minimumLogLevel
 
                     with_hub_options
