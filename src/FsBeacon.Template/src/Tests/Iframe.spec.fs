@@ -181,7 +181,7 @@ module Iframe =
 //                        Cy2.clickTextEl (get2 ()) $"[{i}]:delete"
 
                     allFn Cy2.waitForEl "file count: 0"
-                    Cy2.waitForEl (get1 ()) "counter (+1)"
-                    Cy2.waitForEl (get3 ()) "counter (+1)"
+//                    Cy2.waitForEl (get1 ()) "counter (+1)"
+//                    Cy2.waitForEl (get3 ()) "counter (+1)"
 
                     ))
