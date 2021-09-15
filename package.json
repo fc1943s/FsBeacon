@@ -1,8 +1,0 @@
-{
-  "scripts": {
-    "gun":"cd src/FsBeacon.GunPeer && yarn install && yarn start",
-    "start": "yarn gun"
-  },
-  "devDependencies": {
-  }
-}

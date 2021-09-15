@@ -74,6 +74,7 @@ module Peers =
                         memory 0.2<Gb>
                         add_volume_mount fileShareId $"/data/{fileShareId}"
                         add_volume_mount ``share-gun-peer`` "/app"
+                        command_line [ "yarn"; "start-ci" ]
                     }
                 ]
             }
@@ -125,6 +126,10 @@ module Peers =
                         add_volume_mount ``share-hub-peer`` "/app"
 
                         command_line [
+                            "dotnet"
+                            "FsBeacon.HubPeer.dll"
+                            "--port"
+                            (string port)
                             "--root-path"
                             $"/data/{fileShareId}/{containerId}-hubdata"
                         ]
