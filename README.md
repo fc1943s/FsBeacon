@@ -1,4 +1,3 @@
 # FsBeacon
 
-
-![image](https://user-images.githubusercontent.com/688618/133402345-d72be30e-52f0-4bfd-aec4-f405c4935a2d.png)
+![image](https://user-images.githubusercontent.com/688618/133404574-694ff2bf-1dd3-4c40-bc8a-fc67e3ba4cb0.png)
