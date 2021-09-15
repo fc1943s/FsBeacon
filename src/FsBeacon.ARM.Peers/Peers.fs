@@ -125,8 +125,6 @@ module Peers =
                         add_volume_mount ``share-hub-peer`` "/app"
 
                         command_line [
-                            "--port"
-                            (string port)
                             "--root-path"
                             $"/data/{fileShareId}/{containerId}-hubdata"
                         ]
