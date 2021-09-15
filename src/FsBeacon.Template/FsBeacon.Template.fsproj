@@ -39,6 +39,7 @@
         <Content Include="src\wdyr.js" />
         <Content Include="tsconfig.json" />
         <Content Include="paket.references" />
+        <Content Include="README.md" />
         <Content Include="yarn.lock" />
         <Content Include="package.json" />
         <Content Include="cypress.json" />
