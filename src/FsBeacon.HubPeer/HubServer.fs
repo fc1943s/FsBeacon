@@ -187,7 +187,10 @@ module HubServer =
             $"ticks={ticks} oldPath={oldPath} {getLocals ()}"
 
         match newPath with
-        | Some newPath when Directory.Exists newPath |> not ->
+        | Some newPath when
+            Directory.Exists newPath |> not
+            && newPath.EndsWith ".tmp" |> not
+            ->
             let fullAtomPath = newPath |> String.replace rootPath ""
 
             let nodes =

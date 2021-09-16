@@ -8,13 +8,17 @@ module FileSystem =
     let rec getStreamAsync path =
         async {
             try
-                return new FileStream (path, FileMode.Open, FileAccess.Write)
+                if File.Exists path then
+                    return Some (new FileStream (path, FileMode.Open, FileAccess.Write))
+                else
+                    return None
             with
             | _ ->
                 let getLocals () = $"path={path} {getLocals ()}"
 
                 Logger.logWarning
-                    (fun () -> $"{nameof FsBeacon} | FileSystem.getStreamAsync. Error opening file for writing. Waiting...")
+                    (fun () ->
+                        $"{nameof FsBeacon} | FileSystem.getStreamAsync. Error opening file for writing. Waiting...")
                     getLocals
 
                 do! Async.Sleep 100
@@ -22,8 +26,5 @@ module FileSystem =
         }
 
     let waitForFileWriteAsync path =
-        async {
-            do!
-                getStreamAsync path
-                |> Async.map (fun stream -> stream.Close ())
-        }
+        getStreamAsync path
+        |> Async.map (Option.iter (fun stream -> stream.Close ()))
