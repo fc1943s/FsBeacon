@@ -19,3 +19,4 @@ nuget Feliz ~> 1.51
 
 // Deploy
 nuget Farmer ~> 1.6
+nuget Pulumi.FSharp.Kubernetes ~> 3.6

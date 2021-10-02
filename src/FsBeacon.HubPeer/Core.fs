@@ -28,3 +28,7 @@ module FileSystem =
     let waitForFileWriteAsync path =
         getStreamAsync path
         |> Async.map (Option.iter (fun stream -> stream.Close ()))
+
+
+module String =
+    let inline trim (str: string) = str.Trim ()

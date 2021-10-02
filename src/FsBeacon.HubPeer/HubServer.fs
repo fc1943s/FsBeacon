@@ -14,7 +14,7 @@ open System
 
 module HubServer =
     let createParentDirectory path =
-        Directory.CreateDirectory (Directory.GetParent(path).FullName)
+        Directory.CreateDirectory (Directory.GetParent path).FullName
         |> ignore
 
     type AtomRef = AtomRef of alias: string * atomPath: string

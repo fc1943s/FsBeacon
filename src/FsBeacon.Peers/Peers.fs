@@ -1,9 +1,9 @@
-namespace FsBeacon.ARM.Peers
+namespace FsBeacon.Peers
 
 open System
 open System.IO
-open Farmer
-open Farmer.Builders
+open Pulumi.FSharp.Kubernetes
+
 
 module Peers =
     module Storage =
@@ -71,7 +71,7 @@ module Peers =
                         ]
 
                         cpu_cores 1
-                        memory 0.5<Gb>
+                        memory 0.2<Gb>
                         add_volume_mount fileShareId $"/data/{fileShareId}"
                         add_volume_mount ``share-gun-peer`` "/app"
                         command_line [ "yarn"; "start-ci" ]
@@ -121,7 +121,7 @@ module Peers =
                         image "ghcr.io/fc1943s/fsbeacon:hub-main"
                         add_public_ports [ uint16 port ]
                         cpu_cores 1
-                        memory 0.5<Gb>
+                        memory 0.2<Gb>
                         add_volume_mount fileShareId $"/data/{fileShareId}"
                         add_volume_mount ``share-hub-peer`` "/app"
 

@@ -66,7 +66,7 @@ module Main =
                     with_hub_options
                         (fun options ->
                             options.MaximumReceiveMessageSize <- 5L * 1024L * 1024L
-                            options.MaximumParallelInvocationsPerClient <- 32
+                            options.MaximumParallelInvocationsPerClient <- 512
                             options.EnableDetailedErrors <- true)
 
                     with_after_routing
@@ -153,10 +153,12 @@ module Program =
             args.GetResult Args.Root_Path
             |> Environment.ExpandEnvironmentVariables
             |> Path.GetFullPath
+            |> String.trim
 
-        if rootPath.Trim().Length > 0 then
+        if rootPath.Length > 0 then
             Directory.CreateDirectory rootPath |> ignore
 
-        let app = Main.getApp port rootPath
-        run app
+            let app = Main.getApp port rootPath
+            run app
+
         0
