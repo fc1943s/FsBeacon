@@ -9,7 +9,7 @@ if (cluster.isMaster) {
   });
 }
 
-console.log('argv', process.argv, 'env', process.env);
+console.log('argv', process.argv);
 
 const config = (() => {
   const port = process.env.PORT || "8765";
