@@ -17,14 +17,7 @@ module InnerComponent =
         React.useEffect (
             (fun () ->
                 match Dom.window () with
-                | Some window ->
-                    window.scrollTo (
-                        {|
-                            left = 0.
-                            top = 0.
-                            behavior = ScrollBehavior.Smooth
-                        |}: ScrollToOptions
-                    )
+                | Some window -> window.scrollTo (0., 0., ScrollBehavior.Smooth)
                 | None -> ()),
             [||]
         )

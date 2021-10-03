@@ -102,27 +102,38 @@ module State =
                 (fun _getter setter () ->
                     Profiling.addTimestamp (fun () -> $"{nameof FsBeacon} | Actions.enableGunSync") getLocals
 
+                    Atom.set setter Atoms.gunSync true
+
                     Atom.set
                         setter
-                        Atoms.gunOptions
-                        (GunOptions.Sync [|
+                        Atoms.gunPeers
+                        [|
                             GunPeer "https://localhost:49221/gun"
-                         |]))
+                        |])
 
         let enableHubSync =
             Atom.Primitives.setSelector
                 (fun _getter setter () ->
                     Profiling.addTimestamp (fun () -> $"{nameof FsBeacon} | Actions.enableHubSync") getLocals
 
-                    Atom.set setter Atoms.hubUrl (Some "https://localhost:49211"))
+                    Atom.set setter Atoms.hubSync true
+
+                    Atom.set
+                        setter
+                        Atoms.hubUrls
+                        [|
+                            "https://localhost:49211"
+                        |])
 
         let disableSync =
             Atom.Primitives.setSelector
                 (fun _getter setter () ->
                     Profiling.addTimestamp (fun () -> $"{nameof FsBeacon} | Actions.disableSync") getLocals
 
-                    Atom.set setter Atoms.gunOptions GunOptions.Minimal
-                    Atom.set setter Atoms.hubUrl None)
+                    Atom.set setter Atoms.gunSync false
+                    Atom.set setter Atoms.gunPeers [||]
+                    Atom.set setter Atoms.hubSync false
+                    Atom.set setter Atoms.hubUrls [||])
 
         let signIn =
             Atom.Primitives.setSelector
