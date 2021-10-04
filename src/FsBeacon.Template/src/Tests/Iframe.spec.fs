@@ -20,7 +20,7 @@ module Iframe =
         textPromise
         |> Promise.map
             (fun text ->
-                let regex = JSe.RegExp $"\[{key}=(.*?)\]\["
+                let regex = JSe.RegExp (sprintf "\[%s=(.*?)\]\[" key)
 
                 let textFmt =
                     text
@@ -82,7 +82,7 @@ module Iframe =
                     Cy2.waitFor "\"IsTesting\": true,"
 
                     Cy2.waitFor
-                        "167. FsStore | Engine.createAtomWithSubscription [ debouncedSync ](a2) localAdaptersAtom=atom64 atomType=Data,System.Boolean atomPath=FsUi/systemUiFont defaultValue=true"
+                        "168. FsStore | Engine.createAtomWithSubscription [ debouncedSync ](a2) localAdaptersAtom=atom64 atomType=Data,System.Boolean atomPath=FsUi/systemUiFont defaultValue=true"
 
 
                     allFn (fun node () -> node.should "not.be.empty") ()
@@ -145,8 +145,8 @@ module Iframe =
                             })
                     |> Promise.iter id
 
-                    // TODO: remove
-                    Cy2.clickTextEl (get2 ()) "sign in"
+//                    // TODO: remove
+//                    Cy2.clickTextEl (get2 ()) "sign in"
 
                     Cy2.clickTextEl (get1 ()) "disable logs"
 
@@ -170,18 +170,18 @@ module Iframe =
                     Cy2.clickTextEl (get2 ()) "reset counter"
                     Cy2.clickTextEl (get2 ()) "counter (+0)"
 
-//                    for i = 1 to fileCount do
-//                        Cy2.clickTextEl (get1 ()) "add file"
-//                        Cy2.clickTextEl (get3 ()) "add file"
-//
-//                    for i = 1 to fileCount * 2 do
-//                        allFn Cy2.waitForEl $"index={i} progress=100%%"
-//
-//                    for i = fileCount * 2 downto 1 do
-//                        Cy2.clickTextEl (get2 ()) $"[{i}]:delete"
+                    for i = 1 to fileCount do
+                        Cy2.clickTextEl (get1 ()) "add file"
+                        Cy2.clickTextEl (get3 ()) "add file"
+
+                    for i = 1 to fileCount * 2 do
+                        allFn Cy2.waitForEl $"index={i} progress=100%%"
+
+                    for i = fileCount * 2 downto 1 do
+                        Cy2.clickTextEl (get2 ()) $"[{i}]:delete"
 
                     allFn Cy2.waitForEl "file count: 0"
-//                    Cy2.waitForEl (get1 ()) "counter (+1)"
-//                    Cy2.waitForEl (get3 ()) "counter (+1)"
+                    Cy2.waitForEl (get1 ()) "counter (+1)"
+                    Cy2.waitForEl (get3 ()) "counter (+1)"
 
                     ))

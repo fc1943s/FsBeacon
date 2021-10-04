@@ -41,6 +41,7 @@ module.exports = {
     'react/jsx-filename-extension': [1, { extensions: ['.js', '.jsx', '.ts', '.tsx'] }],
     'react-hooks/exhaustive-deps': ['warn', { additionalHooks: '(.*?useCallback.*?|.*?useEffect.*?|.*?useMemo.*?)' }],
     'react-hooks/rules-of-hooks': 'warn',
+    'react/no-children-prop': 'off',
 
     'react/display-name': 'off',
   },
