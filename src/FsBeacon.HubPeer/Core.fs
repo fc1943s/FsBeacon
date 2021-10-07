@@ -8,10 +8,11 @@ module FileSystem =
     let rec getStreamAsync path =
         async {
             try
-                if File.Exists path then
-                    return Some (new FileStream (path, FileMode.Open, FileAccess.Write))
-                else
-                    return None
+                return
+                    if File.Exists path then
+                        Some (new FileStream (path, FileMode.Open, FileAccess.Write))
+                    else
+                        None
             with
             | _ ->
                 let getLocals () = $"path={path} {getLocals ()}"
