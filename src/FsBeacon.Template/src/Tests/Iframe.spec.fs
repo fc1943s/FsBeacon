@@ -103,8 +103,8 @@ module Iframe =
 
                     Cy2.clickTextEl (get3 ()) "enable hub sync"
 
-                    Cy2.clickTextEl (get1 ()) "sign in"
                     Cy2.clickTextEl (get3 ()) "sign in"
+                    Cy2.clickTextEl (get1 ()) "sign in"
 
                     allFn Cy2.clickTextEl "clear logs"
 
@@ -168,11 +168,12 @@ module Iframe =
                     Cy2.clickTextEl (get2 ()) "disable logs"
 
                     Cy2.clickTextEl (get2 ()) "reset counter"
-                    Cy2.clickTextEl (get2 ()) "counter (+0)"
 
                     for i = 1 to fileCount do
                         Cy2.clickTextEl (get1 ()) "add file"
                         Cy2.clickTextEl (get3 ()) "add file"
+
+                    Cy2.clickTextEl (get2 ()) "counter (+0)"
 
                     for i = 1 to fileCount * 2 do
                         allFn Cy2.waitForEl $"index={i} progress=100%%"

@@ -15,7 +15,7 @@ open FsUi.Components
 
 module AddFileButton =
     let dataChar = "#"
-    let dataBlob = Fable.SimpleHttp.Blob.fromText (String.init (Hydrate.fileChunkSize * 1) (fun _ -> dataChar))
+    let dataBlob = Fable.SimpleHttp.Blob.fromText (String.init (Hydrate.fileChunkSize * 2) (fun _ -> dataChar))
     let hexStringPromise = Js.blobToHexString dataBlob
 
 
