@@ -54,7 +54,7 @@ module HubServer =
                 return None
         }
 
-    let keyWatchlist = ConcurrentDictionary<AtomRef, TicksGuid * string [] option> ()
+    //    let keyWatchlist = ConcurrentDictionary<AtomRef, TicksGuid * string [] option> ()
 
     let fetchTableKeys rootPath (AtomRef (alias, atomPath)) =
         let path = Path.Combine (rootPath, alias, atomPath)
@@ -64,9 +64,9 @@ module HubServer =
         |> Seq.map Path.GetFileName
         |> Seq.toArray
 
-    let trySubscribeKeys atomRef =
-        if keyWatchlist.ContainsKey atomRef |> not then
-            keyWatchlist.[atomRef] <- (Guid.newTicksGuid (), Some [||])
+    //    let trySubscribeKeys atomRef =
+//        if keyWatchlist.ContainsKey atomRef |> not then
+//            keyWatchlist.[atomRef] <- (Guid.newTicksGuid (), Some [||])
 
     let substringTo n (str: string) =
         match str with
@@ -100,13 +100,13 @@ module HubServer =
 
                 Logger.logDebug (fun () -> $"{nameof FsBeacon} | Hub.update (Sync.Request.Get)") getLocals
                 return Sync.Response.GetResult value
-            | Sync.Request.Filter (alias, atomPath) ->
-                let collectionRef = AtomRef (alias, atomPath)
-                trySubscribeKeys collectionRef
+            | Sync.Request.Keys (alias, collectionPath) ->
+                let collectionRef = AtomRef (alias, collectionPath)
+                //                trySubscribeKeys collectionRef
                 let result = fetchTableKeys rootPath collectionRef
                 let getLocals () = $"result=%A{result} {getLocals ()}"
                 Logger.logDebug (fun () -> $"{nameof FsBeacon} | Hub.update (Sync.Request.Filter)") getLocals
-                return Sync.Response.FilterResult result
+                return Sync.Response.KeysResult result
         }
 
     let invoke rootPath (msg: Sync.Request) _ = update rootPath msg None
@@ -140,35 +140,35 @@ module HubServer =
 
                     dict.TryRemove atomRef |> ignore)
 
-    let tick rootPath sendAll =
-        task {
-            let getLocals () =
-                $"keyWatchlist.Count={keyWatchlist.Count} {getLocals ()}"
-
-            tryCleanup keyWatchlist
-
-            do!
-                keyWatchlist
-                |> Seq.choose
-                    (fun (KeyValue (AtomRef (alias, atomPath) as atomRef, lastKeys)) ->
-                        let result = fetchTableKeys rootPath atomRef
-
-                        let getLocals () =
-                            $"alias={alias} atomPath={atomPath} lastKeys=%A{lastKeys} result=%A{result} {getLocals ()}"
-
-
-                        match lastKeys, result with
-                        | (_, None), _ -> None
-                        | (_, Some lastKeys), result when lastKeys = result -> None
-                        | (_, Some _), result ->
-                            Logger.logTrace (fun () -> $"{nameof FsBeacon} | Hub.tick / keyWatchlist.choose") getLocals
-                            keyWatchlist.[atomRef] <- (Guid.newTicksGuid (), Some result)
-                            Some (alias, atomPath, result)
-                        | _ -> None)
-                |> Seq.toArray
-                |> Seq.map (Sync.Response.FilterStream >> sendAll)
-                |> Task.WhenAll
-        }
+    //    let tick rootPath sendAll =
+//        task {
+//            let getLocals () =
+//                $"keyWatchlist.Count={keyWatchlist.Count} {getLocals ()}"
+//
+//            tryCleanup keyWatchlist
+//
+//            do!
+//                keyWatchlist
+//                |> Seq.choose
+//                    (fun (KeyValue (AtomRef (alias, atomPath) as atomRef, lastKeys)) ->
+//                        let result = fetchTableKeys rootPath atomRef
+//
+//                        let getLocals () =
+//                            $"alias={alias} atomPath={atomPath} lastKeys=%A{lastKeys} result=%A{result} {getLocals ()}"
+//
+//
+//                        match lastKeys, result with
+//                        | (_, None), _ -> None
+//                        | (_, Some lastKeys), result when lastKeys = result -> None
+//                        | (_, Some _), result ->
+//                            Logger.logTrace (fun () -> $"{nameof FsBeacon} | Hub.tick / keyWatchlist.choose") getLocals
+//                            keyWatchlist.[atomRef] <- (Guid.newTicksGuid (), Some result)
+//                            Some (alias, atomPath, result)
+//                        | _ -> None)
+//                |> Seq.toArray
+//                |> Seq.map (Sync.Response.FilterStream >> sendAll)
+//                |> Task.WhenAll
+//        }
 
 
     type FileSystem.FileSystemChange with
@@ -225,11 +225,11 @@ module HubServer =
                     $"alias={alias} atomPath={atomPath} {getLocals ()}"
 
 
-                match collection with
-                | Some collection ->
-                    let collectionRef = AtomRef (alias, $"{storeRoot}/{collection}")
-                    trySubscribeKeys collectionRef
-                | _ -> ()
+                //                match collection with
+//                | Some collection ->
+//                    let collectionRef = AtomRef (alias, $"{storeRoot}/{collection}")
+//                    trySubscribeKeys collectionRef
+//                | _ -> ()
 
                 async {
                     let! value =

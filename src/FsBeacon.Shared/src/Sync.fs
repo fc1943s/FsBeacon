@@ -7,7 +7,7 @@ module Sync =
         | Connect of alias: string
         | Set of alias: string * atomPath: string * value: string
         | Get of alias: string * atomPath: string
-        | Filter of alias: string * atomPath: string
+        | Keys of alias: string * collectionPath: string
 
     [<RequireQualifiedAccess>]
     type Response =
@@ -15,8 +15,8 @@ module Sync =
         | SetResult of ok: bool
         | GetResult of value: string option
         | GetStream of alias: string * atomPath: string * value: string option
-        | FilterResult of keys: string []
-        | FilterStream of alias: string * atomPath: string * keys: string []
+        | KeysResult of keys: string []
+        | KeysStream of alias: string * collectionPath: string * updatedKeys: string [] * removedKeys: string []
 
 //    let endpoint = $"/{nameof FsBeacon}"
     let endpoint = "/fsbeacon"

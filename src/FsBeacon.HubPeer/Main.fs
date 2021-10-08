@@ -50,9 +50,10 @@ module Main =
                         rootPath
                         (fun (hub: FableHubCaller<Sync.Request, Sync.Response>, ticks, change) ->
                             HubServer.fileEvent rootPath hub.Clients.All.Send ticks change)
-                    |> Stream.withTicker
-                        (fun (hub: FableHubCaller<Sync.Request, Sync.Response>) ->
-                            HubServer.tick rootPath hub.Clients.All.Send))
+                    //                    |> Stream.withTicker
+//                        (fun (hub: FableHubCaller<Sync.Request, Sync.Response>) ->
+//                            HubServer.tick rootPath hub.Clients.All.Send)
+                    )
 
             use_signalr (
                 configure_signalr {
