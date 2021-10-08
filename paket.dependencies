@@ -10,9 +10,10 @@ nuget FSharp.Core ~> 5.0
 nuget Argu ~> 6.1
 nuget Fable.SignalR.Saturn ~> 0.11
 nuget Giraffe.SerilogExtensions ~> 2.0
+nuget FsBeacon.Shared ~> 0.0 prerelease
+nuget FsClr ~> 0.0 prerelease
 
 // FsBeacon.Template
-nuget FsClr ~> 0.0 prerelease
 nuget FsUi ~> 0.0 prerelease
 
 nuget Feliz ~> 1.51

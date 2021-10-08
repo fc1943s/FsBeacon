@@ -143,7 +143,7 @@ NUGET
       Fable.Core (>= 3.1.5)
       Fable.Parsimmon (>= 4.0)
       FSharp.Core (>= 4.7)
-    Farmer (1.6.16)
+    Farmer (1.6.17)
       FSharp.Core (>= 5.0)
     Feliz (1.53)
       Fable.Core (>= 3.1.5)

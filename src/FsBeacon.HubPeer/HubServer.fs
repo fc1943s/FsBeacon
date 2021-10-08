@@ -100,13 +100,13 @@ module HubServer =
 
                 Logger.logDebug (fun () -> $"{nameof FsBeacon} | Hub.update (Sync.Request.Get)") getLocals
                 return Sync.Response.GetResult value
-            | Sync.Request.Keys (alias, collectionPath) ->
+            | Sync.Request.Filter (alias, collectionPath) ->
                 let collectionRef = AtomRef (alias, collectionPath)
                 //                trySubscribeKeys collectionRef
                 let result = fetchTableKeys rootPath collectionRef
                 let getLocals () = $"result=%A{result} {getLocals ()}"
                 Logger.logDebug (fun () -> $"{nameof FsBeacon} | Hub.update (Sync.Request.Filter)") getLocals
-                return Sync.Response.KeysResult result
+                return Sync.Response.FilterResult result
         }
 
     let invoke rootPath (msg: Sync.Request) _ = update rootPath msg None
