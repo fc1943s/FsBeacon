@@ -2,20 +2,15 @@ namespace FsBeacon.Template.Components
 
 open FsStore
 open FsCore
-open Browser.Types
 open Fable.React
 open Feliz
 open FsJs
-open FsStore.Bindings.Gun
 open FsStore.Hooks
-open FsStore.Model
 open FsStore.State
 open FsBeacon.Template.State
-open FsBeacon.Template
 open FsUi.Bindings
 open FsUi.Hooks
 open FsUi.State
-open FsUi.Components
 
 
 module Files =

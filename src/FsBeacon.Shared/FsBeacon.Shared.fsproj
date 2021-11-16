@@ -4,7 +4,7 @@
         <TargetFramework>net6.0</TargetFramework>
         <LangVersion>preview</LangVersion>
         <PackageId>FsBeacon.Shared</PackageId>
-        <Version>0.0.1-alpha.3</Version>
+        <Version>0.0.1-alpha.4</Version>
     </PropertyGroup>
     <ItemGroup>
         <Compile Include="src\Sync.fs" />

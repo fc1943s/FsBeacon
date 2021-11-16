@@ -5,6 +5,8 @@
         <LangVersion>preview</LangVersion>
     </PropertyGroup>
     <ItemGroup>
+        <Content Include="cypress\plugins\index.js" />
+        <Content Include="cypress\support\index.js" />
         <Compile Include="src\State.fs" />
         <Compile Include="src\StateTemp.fs" />
         <Compile Include="src\Components\HostComponent.fs" />
@@ -32,8 +34,8 @@
         <Compile Include="src\Tests\Iframe2.spec.fs" />
         <Compile Include="src\App.fs" />
         <Compile Include="src\Main.fs" />
-        <TypeScriptCompile Include="src\index.ts" />
-        <TypeScriptCompile Include="src\react-app-env.d.ts" />
+        <Content Include="src\index.ts" />
+        <Content Include="src\react-app-env.d.ts" />
         <Content Include="src\react-app-env.d.js" />
         <Content Include="src\setupProxy.js" />
         <Content Include="src\wdyr.js" />
@@ -43,8 +45,6 @@
         <Content Include="yarn.lock" />
         <Content Include="package.json" />
         <Content Include="cypress.json" />
-        <Content Include="cypress\plugins\index.js" />
-        <Content Include="cypress\support\index.js" />
     </ItemGroup>
     <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>
