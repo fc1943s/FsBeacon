@@ -19,7 +19,8 @@
     "analyze": "npx source-map-explorer 'cra_output/**/*.js'",
     "enable-build-watch": "yarn cra-build-watch",
     "disable-build-watch": "yarn --check-files",
-    "build": "yarn build:fable && yarn build:react",
+    "fix-extras": "replace-in-file \"/unbox<int> /g\" \"box \" ./fable_modules/Fable.Extras.0.4.2/Extras.fs --isRegex",
+    "build": "yarn build:fable && yarn fix-extras && yarn build:react",
     "test-parallel": "cross-env NODE_OPTIONS=--experimental-modules jest --rootDir . --ci --watchAll=false --forceExit --testNamePattern=",
     "test-sequential": "yarn test-parallel --runInBand --detectOpenHandles",
     "test": "yarn test-sequential",
@@ -94,6 +95,8 @@
     "download-crx": "~1.1",
     "node-7z-archive": "~1.0",
     "run-script-os": "~1.1",
+
+    "replace-in-file": "~6.3",
 
     "typescript": "~4.5",
     "ts-node": "~10.4",
