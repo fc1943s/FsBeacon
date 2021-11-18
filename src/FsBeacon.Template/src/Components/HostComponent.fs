@@ -11,7 +11,6 @@ open FsUi.Bindings
 open FsUi.Components
 
 module HostComponent =
-
     [<ReactComponent>]
     let HostComponent () =
         Profiling.addTimestamp (fun () -> $"{nameof FsBeacon} | HostComponent [ render ] ") getLocals
