@@ -1,12 +1,11 @@
+FSharp.Core
 
 Fable.SignalR.Saturn
 FSharp.Control.AsyncSeq
 System.Reactive.Linq
 Argu
 FsClr
+FsBeacon.Shared
 Giraffe.SerilogExtensions
 Serilog.Sinks.SpectreConsole
 Serilog.Sinks.Console
-
-group HubPeer
-    FSharp.Core

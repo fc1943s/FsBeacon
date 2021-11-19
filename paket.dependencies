@@ -1,10 +1,10 @@
 version 6.0
-framework: net5.0, net6.0
+framework: net6.0
 storage: none
 source https://api.nuget.org/v3/index.json
 source https://nuget.pkg.github.com/fc1943s/index.json username: "%GITHUB_ACTOR%" password: "%GITHUB_READ_PACKAGES_TOKEN%"
 
-nuget FSharp.Core >= 5.0 prerelease
+nuget FSharp.Core >= 6.0 prerelease
 
 // FsBeacon.HubPeer
 nuget Argu ~> 6.1
@@ -20,10 +20,3 @@ nuget Feliz ~> 1.51
 // Deploy
 nuget Farmer ~> 1.6
 nuget Pulumi.FSharp.Kubernetes ~> 3.6
-
-group HubPeer
-    version 6.0
-    framework: net6.0
-    storage: none
-    source https://api.nuget.org/v3/index.json
-    nuget FSharp.Core >= 6.0 prerelease

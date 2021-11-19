@@ -19,8 +19,5 @@
     <Content Include="Dockerfile" />
     <Content Include="published.Dockerfile" />
   </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\FsBeacon.Shared\FsBeacon.Shared.fsproj" />
-  </ItemGroup>
   <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>
