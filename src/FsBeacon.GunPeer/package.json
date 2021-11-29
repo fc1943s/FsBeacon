@@ -12,10 +12,11 @@
     "start-dev-local": "cross-env-shell ROOT_PATH=./radata \"yarn start-dev\""
   },
   "dependencies": {
-    "gun": "amark/gun.git#master"
+    "gun": "0.2020.1234"
   },
   "devDependencies": {
     "cross-env": "~7.0",
+    "request": "~2.88",
     "mkcert-prebuilt": "~1.0"
   }
 }
