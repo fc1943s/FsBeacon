@@ -6,6 +6,7 @@
   "video": true,
   "videoCompression": false,
   "pageLoadTimeout": 180000,
+  "defaultCommandTimeout": 12000,
   "viewportWidth": 1400,
   "viewportHeight": 1100
 }
