@@ -22,10 +22,12 @@ jobs:
           include-prerelease: true
 
       - uses: actions/setup-node@v2
+        env:
+          CYPRESS_CACHE_FOLDER: ./tmp/Cypress
         with:
           node-version: 16
 
-      - run: npx cypress info
+      # - run: npx cypress info
 
       # - run: sudo apt-get install libnss3-tools && echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p
 
@@ -37,10 +39,11 @@ jobs:
       - uses: cypress-io/github-action@v2
         env:
           GITHUB_READ_PACKAGES_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CYPRESS_CACHE_FOLDER: ./tmp/Cypress
         with:
           working-directory: ./src/FsBeacon.Template
           build: yarn build:fable
-          start: yarn cypress-install && yarn cypress-serve
+          start: yarn cypress-serve
           command: yarn cypress-run-delay
 
       - shell: pwsh
