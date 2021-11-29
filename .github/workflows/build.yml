@@ -7,7 +7,12 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        os: [ windows-latest ]
+
     steps:
       - uses: actions/checkout@v2
 
@@ -42,7 +47,7 @@ jobs:
           GITHUB_READ_PACKAGES_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: cd src/FsBeacon.Shared; ./pack.ps1
 
-      - run: dotnet nuget push src/FsBeacon.Shared/bin/Release/*.nupkg --source github --skip-duplicate
+      - run: cd src/FsBeacon.Shared/bin/Release; dotnet nuget push "*.nupkg" --source github --skip-duplicate
 
       - uses: actions/upload-artifact@v2
         if: failure()
