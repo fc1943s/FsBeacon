@@ -4,7 +4,7 @@
   "integrationFolder": "src/Tests",
   "testFiles": "**/*.spec.fs.js",
   "video": true,
-  "videoCompression": 8,
+  "videoCompression": false,
   "viewportWidth": 1400,
   "viewportHeight": 1100
 }
