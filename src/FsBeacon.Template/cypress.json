@@ -4,7 +4,7 @@
   "integrationFolder": "src/Tests",
   "testFiles": "**/*.spec.fs.js",
   "video": true,
-  "videoCompression": false,
+  "videoCompression": 4,
   "pageLoadTimeout": 180000,
   "defaultCommandTimeout": 12000,
   "viewportWidth": 1400,

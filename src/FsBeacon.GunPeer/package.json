@@ -17,6 +17,6 @@
   "devDependencies": {
     "cross-env": "~7.0",
     "request": "~2.88",
-    "mkcert-prebuilt": "~1.0"
+    "mkcert": "~1.4"
   }
 }
