@@ -1,6 +1,7 @@
 namespace FsBeacon.HubPeer
 
 open FsClr
+open FsClr.FileSystem
 open FsCore
 open System.Collections.Concurrent
 open System.IO
@@ -75,11 +76,9 @@ module HubServer =
 
     let update rootPath (msg: Sync.Request) (_hubContext: FableHub<Sync.Request, Sync.Response> option) =
         task {
-            let getLocals () =
-                $"msg={string msg |> substringTo 400} {getLocals ()}"
-
             match msg with
-            | Sync.Request.Connect _alias ->
+            | Sync.Request.Connect alias ->
+                let getLocals () = $"alias={alias} {getLocals ()}"
                 Logger.logDebug (fun () -> $"{nameof FsBeacon} | Hub.update (Sync.Request.Connect)") getLocals
                 return Sync.Response.ConnectResult
             | Sync.Request.Set (alias, atomPath, value) ->
@@ -87,7 +86,7 @@ module HubServer =
                 let! result = writeFile rootPath atomRef value
 
                 let getLocals () =
-                    $"result={result} value={value |> substringTo 400} {getLocals ()}"
+                    $"alias={alias} atomPath={atomPath} value={value |> substringTo 40} result={result}  {getLocals ()}"
 
                 Logger.logDebug (fun () -> $"{nameof FsBeacon} | Hub.update (Sync.Request.Set)") getLocals
                 return Sync.Response.SetResult result
@@ -96,7 +95,7 @@ module HubServer =
                 let! value = readFile rootPath atomRef
 
                 let getLocals () =
-                    $"value={value |> Option.map (substringTo 400)} {getLocals ()}"
+                    $"alias={alias} atomPath={atomPath} value={value |> Option.map (substringTo 40)} {getLocals ()}"
 
                 Logger.logDebug (fun () -> $"{nameof FsBeacon} | Hub.update (Sync.Request.Get)") getLocals
                 return Sync.Response.GetResult value
@@ -104,7 +103,10 @@ module HubServer =
                 let collectionRef = AtomRef (alias, collectionPath)
                 //                trySubscribeKeys collectionRef
                 let result = fetchTableKeys rootPath collectionRef
-                let getLocals () = $"result=%A{result} {getLocals ()}"
+
+                let getLocals () =
+                    $"alias={alias} collectionPath={collectionPath} result=%A{result} {getLocals ()}"
+
                 Logger.logDebug (fun () -> $"{nameof FsBeacon} | Hub.update (Sync.Request.Filter)") getLocals
                 return Sync.Response.KeysResult result
         }
@@ -170,21 +172,11 @@ module HubServer =
 //                |> Task.WhenAll
 //        }
 
-
-    type FileSystem.FileSystemChange with
-        static member Path event =
-            match event with
-            | FileSystem.FileSystemChange.Error _ -> None, None
-            | FileSystem.FileSystemChange.Changed path -> None, Some path
-            | FileSystem.FileSystemChange.Created path -> None, Some path
-            | FileSystem.FileSystemChange.Deleted path -> None, Some path
-            | FileSystem.FileSystemChange.Renamed (oldPath, path) -> Some oldPath, Some path
-
     let fileEvent rootPath (sendAll: Sync.Response -> Task) ticks event =
-        let oldPath, newPath = event |> FileSystem.FileSystemChange.Path
+        let oldPath, newPath = event |> FileSystemChange.Path
 
         let getLocals () =
-            $"ticks={ticks} oldPath={oldPath} {getLocals ()}"
+            $"ticks={ticks} oldPath={oldPath} newPath={newPath} {getLocals ()}"
 
         match newPath with
         | Some newPath when
@@ -210,19 +202,25 @@ module HubServer =
                         Some collection, keys, name
                     | _ -> failwith $"invalid newPath {getLocals ()}"
 
-                let atomPath =
+                let collectionPath =
                     [
                         yield storeRoot
                         match collection with
                         | Some collection -> yield collection
                         | _ -> ()
+                    ]
+                    |> String.concat "/"
+
+                let atomPath =
+                    [
+                        yield collectionPath
                         yield! keys
                         yield name
                     ]
                     |> String.concat "/"
 
                 let getLocals () =
-                    $"alias={alias} atomPath={atomPath} {getLocals ()}"
+                    $"alias={alias} atomPath={atomPath} keys={keys} {getLocals ()}"
 
 
                 //                match collection with
@@ -237,20 +235,56 @@ module HubServer =
                         |> Async.AwaitTask
 
                     let getLocals () =
-                        $"value={string value |> substringTo 400} {getLocals ()}"
+                        $"value={string value |> substringTo 40} {getLocals ()}"
 
-                    let response = Sync.Response.GetStream (alias, atomPath, value)
+                    match value with
+                    | Some value ->
+                        try
+                            let response = Sync.Response.GetStream (alias, atomPath, Some value)
+                            do! sendAll response |> Async.AwaitTask
 
-                    //                    Logger.logTrace (fun () -> "HubServer.fileEvent / will send GetStream") getLocals
+                            Logger.logTrace
+                                (fun () -> $"{nameof FsBeacon} | HubServer.fileEvent / GetStream sent")
+                                getLocals
 
-                    try
-                        do! sendAll response |> Async.AwaitTask
-                    with
-                    | ex ->
-                        let getLocals () = $"ex={ex} {getLocals ()}"
-                        Logger.logError (fun () -> $"{nameof FsBeacon} | HubServer.fileEvent / sendAll error") getLocals
+                            match keys with
+                            | [ key ] ->
+                                let response =
+                                    Sync.Response.KeysStream (alias, collectionPath, Array.singleton key, [||])
 
-                    Logger.logTrace (fun () -> $"{nameof FsBeacon} | HubServer.fileEvent / GetStream sent") getLocals
+                                do! sendAll response |> Async.AwaitTask
+
+                                Logger.logTrace
+                                    (fun () -> $"{nameof FsBeacon} | HubServer.fileEvent / KeysStream sent (update)")
+                                    getLocals
+                            | _ ->
+                                Logger.logTrace
+                                    (fun () -> $"{nameof FsBeacon} | HubServer.fileEvent / KeysStream update skipped")
+                                    getLocals
+                        with
+                        | ex ->
+                            let getLocals () = $"ex={ex} {getLocals ()}"
+
+                            Logger.logError
+                                (fun () -> $"{nameof FsBeacon} | HubServer.fileEvent / sendAll error")
+                                getLocals
+
+                    | None ->
+                        match keys with
+                        | [ key ] when
+                            event |> FileSystemChange.Type = FileSystemChangeType.Deleted
+                            && Directory.Exists collectionPath |> not
+                            ->
+                            let response = Sync.Response.KeysStream (alias, collectionPath, [||], Array.singleton key)
+                            do! sendAll response |> Async.AwaitTask
+
+                            Logger.logTrace
+                                (fun () -> $"{nameof FsBeacon} | HubServer.fileEvent / KeysStream sent (delete)")
+                                getLocals
+                        | _ ->
+                            Logger.logTrace
+                                (fun () -> $"{nameof FsBeacon} | HubServer.fileEvent / GetStream skipped")
+                                getLocals
                 }
                 |> Async.RunSynchronously
             | _ -> Logger.logTrace (fun () -> $"{nameof FsBeacon} | HubServer.fileEvent / skipped 1") getLocals

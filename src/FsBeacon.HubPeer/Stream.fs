@@ -1,6 +1,7 @@
 namespace FsBeacon.HubPeer
 
 open System
+open System.IO
 open FsClr
 open FsCore
 open FSharp.Control
@@ -71,7 +72,10 @@ module Stream =
 
     let withFileWatcher rootPath fn serviceCollection =
         let watch, disposable = FileSystem.watch rootPath
-        let getLocals () = $"{getLocals ()}"
+
+        let getLocals () = $"rootPath={rootPath} {getLocals ()}"
+
+        Logger.logTrace (fun () -> "Stream.withFileWatcher / creating FileWatcher") getLocals
 
         FileWatcher.Create (
             serviceCollection,
@@ -80,7 +84,9 @@ module Stream =
                 |> AsyncSeq.iterAsync
                     (fun (ticks, event) ->
                         async {
-                            let getLocals () = $"ticks={ticks} event={event} {getLocals ()}"
+                            let getLocals () =
+                                $"ticks={ticks} event={event} {getLocals ()}"
+
                             Logger.logTrace (fun () -> "Stream.withFileWatcher / fn") getLocals
                             fn (hub, ticks, event)
                         })),

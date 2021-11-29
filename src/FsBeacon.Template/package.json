@@ -60,7 +60,7 @@
     "rooks": "~5.8",
     "binconv": "~0.2",
     "@shelf/fast-chunk-string": "~2.0",
-    "date-fns": "~2.25",
+    "date-fns": "~2.26",
     "jssha": "~3.2",
 
     "@pmmmwh/react-refresh-webpack-plugin": "~0.5",
@@ -70,8 +70,8 @@
 
     "@microsoft/signalr": "~6.0",
 
-    "react": "18.0.0-beta-96ca8d915-20211115",
-    "react-dom": "18.0.0-beta-96ca8d915-20211115",
+    "react": "18.0.0-beta-0cc724c77-20211125",
+    "react-dom": "18.0.0-beta-0cc724c77-20211125",
 
     "jotai": "~1.4",
 
@@ -79,7 +79,7 @@
     "@chakra-ui/system": "~1.8",
     "@chakra-ui/theme-tools": "~1.3",
     "@chakra-ui/media-query": "~1.2",
-    "@emotion/react": "~11.6",
+    "@emotion/react": "~11.7",
     "@emotion/styled": "~11.6",
     "framer-motion": "~5.3",
 
@@ -101,7 +101,7 @@
     "typescript": "~4.5",
     "ts-node": "~10.4",
     "@types/node" : "~16.11",
-    "ts2fable" : "0.8.0-build.620",
+    "ts2fable" : "0.8.0-build.632",
 
     "@welldone-software/why-did-you-render": "~6.2",
 
@@ -110,14 +110,14 @@
 
     "@typescript-eslint/eslint-plugin": "~5.4",
     "@typescript-eslint/parser": "~5.4",
-    "eslint": "~8.2",
+    "eslint": "~8.3",
     "eslint-plugin-react": "~7.27",
     "eslint-plugin-import": "~2.25",
     "eslint-plugin-jsx-a11y": "~6.5",
     "eslint-plugin-react-hooks": "~4.3",
     "eslint-plugin-jest-dom": "~3.9",
 
-    "postcss": "~8.3",
+    "postcss": "~8.4",
 
     "jest": "~27.3",
     "jest-environment-jsdom": "~27.3",
@@ -135,7 +135,7 @@
     "file-loader": "~6.2",
     "babel-jest": "~27.3",
 
-    "cypress": "~9.0",
+    "cypress": "~9.1",
     "cypress-terminal-report": "~3.4",
     "cypress-browser-extension-plugin": "~0.1",
 

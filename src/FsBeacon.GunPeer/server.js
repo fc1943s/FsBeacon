@@ -2,12 +2,12 @@ const cluster = require('cluster');
 const fs = require('fs');
 const path = require('path');
 
-if (cluster.isMaster) {
-  return cluster.fork() && cluster.on('exit', () => {
-    cluster.fork();
-    require('gun/lib/crashed');
-  });
-}
+// if (cluster.isMaster) {
+//   return cluster.fork() && cluster.on('exit', () => {
+//     cluster.fork();
+//     require('gun/lib/crashed');
+//   });
+// }
 
 console.log('argv', process.argv);
 
