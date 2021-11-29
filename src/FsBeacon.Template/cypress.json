@@ -5,6 +5,7 @@
   "testFiles": "**/*.spec.fs.js",
   "video": true,
   "videoCompression": false,
+  "pageLoadTimeout": 180000,
   "viewportWidth": 1400,
   "viewportHeight": 1100
 }
