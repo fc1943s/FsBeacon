@@ -29,7 +29,8 @@ jobs:
 
       # - run: sudo apt-get install libnss3-tools && echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p
 
-      - run: cd ./src/FsBeacon.Template && yarn install && rm -rf node_modules/gun/examples/iris
+      #- run: cd ./src/FsBeacon.Template && yarn install && rm -rf node_modules/gun/examples/iris
+      - run: cd ./src/FsBeacon.Template && yarn install && rm -r node_modules/gun/examples/iris
 
       - run: dotnet nuget add source https://nuget.pkg.github.com/${{ github.actor }}/index.json --name github -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text
 
